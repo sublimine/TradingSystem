@@ -1,0 +1,16 @@
+﻿name: Feature request
+description: Propuesta de mejora
+labels: [enhancement]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto/Problema
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterios de aceptación

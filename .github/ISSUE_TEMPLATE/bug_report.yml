@@ -1,0 +1,22 @@
+﻿name: Bug report
+description: Reporta un fallo reproducible
+labels: [bug]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      description: Qué hiciste, con qué datos, y qué pasó
+      placeholder: 1) ... 2) ... 3) ...
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado actual
+  - type: input
+    id: logs
+    attributes:
+      label: Log / evidencia (ruta o fragmento)
