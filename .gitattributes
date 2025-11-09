@@ -1,7 +1,8 @@
-﻿* text=auto
-*.ps1 eol=crlf
-*.sh  eol=lf
-*.py  eol=lf
-*.yml eol=lf
-*.yaml eol=lf
-*.md  eol=lf
+*.py      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.ini     text eol=lf
+*.md      text eol=lf
+*.sh      text eol=lf
+*.ps1     text eol=crlf
+*.bat     text eol=crlf

@@ -1,4 +1,4 @@
-﻿name: Bug report
+name: Bug report
 description: Reporta un fallo reproducible
 labels: [bug]
 body:

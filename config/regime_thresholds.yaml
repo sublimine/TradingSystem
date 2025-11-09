@@ -8,7 +8,7 @@ EURUSD.pro:
   spread_bp_shutdown: 5.0  # FX tiene spreads muy tight
   follow_through_trend_min: 0.60
   hurst_trend_min: 0.55
-  vol_ratio_shock_min: 1.8  # FX menos volátil
+  vol_ratio_shock_min: 1.8  # FX menos volÃ¡til
 
 GBPUSD.pro:
   adx_trend_enter: 28.0
@@ -29,7 +29,7 @@ USDJPY.pro:
 EURGBP.pro:
   adx_trend_enter: 26.0
   adx_trend_exit: 20.0
-  spread_bp_shutdown: 4.0  # Cross muy líquido
+  spread_bp_shutdown: 4.0  # Cross muy lÃ­quido
   follow_through_trend_min: 0.58
   hurst_trend_min: 0.55
   vol_ratio_shock_min: 1.8
@@ -62,10 +62,10 @@ AUDUSD.pro:
 XAUUSD.pro:
   adx_trend_enter: 30.0
   adx_trend_exit: 24.0
-  spread_bp_shutdown: 15.0  # Oro tiene spreads más anchos
+  spread_bp_shutdown: 15.0  # Oro tiene spreads mÃ¡s anchos
   follow_through_trend_min: 0.65
   hurst_trend_min: 0.56
-  vol_ratio_shock_min: 1.5  # Oro más volátil
+  vol_ratio_shock_min: 1.5  # Oro mÃ¡s volÃ¡til
 
 # Crypto (extreme vol, wide spreads)
 BTCUSD:
@@ -74,7 +74,7 @@ BTCUSD:
   spread_bp_shutdown: 50.0  # Crypto spreads muy anchos
   follow_through_trend_min: 0.65
   hurst_trend_min: 0.58
-  vol_ratio_shock_min: 1.3  # Crypto extremadamente volátil
+  vol_ratio_shock_min: 1.3  # Crypto extremadamente volÃ¡til
 
 ETHUSD:
   adx_trend_enter: 32.0
