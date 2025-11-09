@@ -16,7 +16,7 @@ jobs:
       - name: Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Cache pip
         uses: actions/cache@v4
@@ -40,7 +40,7 @@ jobs:
       - name: Run tests (si existen)
         shell: pwsh
         run: |
-          if (Test-Path "test" -or Test-Path "tests") {
+          if (Test-Path "tests" -or Test-Path "test") {
             pip install pytest
             python -m pytest -q
           } else {
