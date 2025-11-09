@@ -1,1 +1,7 @@
-﻿scikit-learn==1.3.0
+﻿# Pin para Windows/Py311 con wheels disponibles
+scikit-learn==1.3.2
+numpy==1.24.3
+pandas==2.0.3
+pyyaml==6.0.1
+python-dateutil==2.8.2
+pytz==2023.3

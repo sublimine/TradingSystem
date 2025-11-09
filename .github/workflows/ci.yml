@@ -37,14 +37,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install --upgrade setuptools wheel
 
-      - name: Install dependencies
+      - name: Install deps (editable)
         shell: pwsh
         run: |
-          if (Test-Path "constraints/py311.txt") {
+          if (Test-Path "requirements.txt") {
             pip install --only-binary=:all: -r requirements.txt -c constraints/py311.txt
-          } else {
-            pip install --only-binary=:all: -r requirements.txt
           }
+          pip install -e .
           pip install pytest
 
       - name: Sanity path
@@ -52,8 +51,9 @@ jobs:
         run: |
           Write-Host "PYTHONPATH=$env:PYTHONPATH"
           python - << 'PY'
-import sys
-print("sys.path[:5] =>", sys.path[:5])
+import sys, os
+print("sys.path[0:5] =>", sys.path[0:5])
+print("exists src/strategies:", os.path.isdir("src/strategies"))
 PY
 
       - name: Run tests (unitarios)
