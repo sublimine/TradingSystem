@@ -9,11 +9,14 @@ on:
 jobs:
   tests:
     runs-on: windows-latest
+    env:
+      PIP_ONLY_BINARY: ":all:"   # evita compilar desde sdist
+      CI_PYTEST_FILTER: "not integration and not live and not mt5"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Python 3.11
+      - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -22,27 +25,38 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt', 'constraints/py311.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Upgrade pip + build deps
+      - name: Upgrade pip tooling
         shell: pwsh
         run: |
           python -m pip install --upgrade pip
           pip install --upgrade setuptools wheel
 
-      - name: Install deps
+      - name: Install dependencies (constraints Py3.11)
         shell: pwsh
         run: |
-          if (Test-Path "requirements.txt") { pip install -r requirements.txt }
+          if (Test-Path "requirements.txt") {
+            pip install --only-binary=:all: -r requirements.txt -c constraints/py311.txt
+          } elseif (Test-Path "requirements.lock") {
+            pip install --only-binary=:all: -r requirements.lock -c constraints/py311.txt
+          } else {
+            Write-Host "No requirements file found; skipping install."
+          }
 
-      - name: Run tests (si existen)
+      - name: Run tests (unitarios solamente)
         shell: pwsh
         run: |
-          if (Test-Path "tests" -or Test-Path "test") {
+          if (Test-Path "tests") {
             pip install pytest
-            python -m pytest -q
+            python - << 'PY'
+import os, sys, subprocess, pathlib
+filtro = os.environ.get("CI_PYTEST_FILTER","")
+args = ["-m", filtro] if filtro else []
+sys.exit(subprocess.call(["python","-m","pytest"] + args))
+PY
           } else {
             Write-Host "No tests/ folder; skipping."
           }

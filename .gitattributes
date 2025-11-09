@@ -3,3 +3,5 @@
 *.sh  eol=lf
 *.py  eol=lf
 *.yml eol=lf
+*.yaml eol=lf
+*.md  eol=lf
