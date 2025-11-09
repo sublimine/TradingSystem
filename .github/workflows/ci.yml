@@ -11,7 +11,7 @@ jobs:
   tests:
     runs-on: windows-latest
     env:
-      PIP_ONLY_BINARY: ":all:"        # solo wheels
+      PIP_ONLY_BINARY: ":all:"
       CI_PYTEST_FILTER: "not integration and not live and not mt5"
     steps:
       - name: Checkout
@@ -52,12 +52,12 @@ jobs:
         run: |
           if (Test-Path "tests") {
             pip install pytest
-            python - << 'PY'
-import os, sys, subprocess
-flt = os.environ.get("CI_PYTEST_FILTER","")
-args = ["-m", flt] if flt else []
-sys.exit(subprocess.call(["python","-m","pytest"] + args))
-PY
+            $filter = "${{ env.CI_PYTEST_FILTER }}"
+            if ($filter) {
+              python -m pytest -k "$filter"
+            } else {
+              python -m pytest
+            }
           } else {
             Write-Host "No tests/ folder; skipping."
           }
