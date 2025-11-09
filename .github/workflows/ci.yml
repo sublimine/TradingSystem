@@ -5,12 +5,13 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   tests:
     runs-on: windows-latest
     env:
-      PIP_ONLY_BINARY: ":all:"   # evita compilar desde sdist
+      PIP_ONLY_BINARY: ":all:"        # solo wheels
       CI_PYTEST_FILTER: "not integration and not live and not mt5"
     steps:
       - name: Checkout
@@ -46,15 +47,15 @@ jobs:
             Write-Host "No requirements file found; skipping install."
           }
 
-      - name: Run tests (unitarios solamente)
+      - name: Run tests (unitarios)
         shell: pwsh
         run: |
           if (Test-Path "tests") {
             pip install pytest
             python - << 'PY'
-import os, sys, subprocess, pathlib
-filtro = os.environ.get("CI_PYTEST_FILTER","")
-args = ["-m", filtro] if filtro else []
+import os, sys, subprocess
+flt = os.environ.get("CI_PYTEST_FILTER","")
+args = ["-m", flt] if flt else []
 sys.exit(subprocess.call(["python","-m","pytest"] + args))
 PY
           } else {
