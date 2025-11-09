@@ -1,0 +1,56 @@
+﻿[
+    {
+        "module":  "breakout_volume_confirmation",
+        "params":  "Extracted from source",
+        "signature_ok":  true,
+        "class":  "BreakoutVolumeConfirmation"
+    },
+    {
+        "module":  "correlation_divergence",
+        "params":  "Extracted from source",
+        "signature_ok":  true,
+        "class":  "CorrelationDivergence"
+    },
+    {
+        "module":  "kalman_pairs_trading",
+        "params":  "Extracted from source",
+        "signature_ok":  true,
+        "class":  "KalmanPairsTrading"
+    },
+    {
+        "module":  "liquidity_sweep",
+        "params":  "Extracted from source",
+        "signature_ok":  true,
+        "class":  "LiquiditySweep"
+    },
+    {
+        "module":  "mean_reversion_statistical",
+        "params":  "Extracted from source",
+        "signature_ok":  true,
+        "class":  "MeanReversionStatistical"
+    },
+    {
+        "module":  "momentum_quality",
+        "params":  "Extracted from source",
+        "signature_ok":  true,
+        "class":  "MomentumQuality"
+    },
+    {
+        "module":  "news_event_positioning",
+        "params":  "Extracted from source",
+        "signature_ok":  true,
+        "class":  "NewsEventPositioning"
+    },
+    {
+        "module":  "order_flow_toxicity",
+        "params":  "Extracted from source",
+        "signature_ok":  true,
+        "class":  "OrderFlowToxicity"
+    },
+    {
+        "module":  "volatility_regime_adaptation",
+        "params":  "Extracted from source",
+        "signature_ok":  true,
+        "class":  "VolatilityRegimeAdaptation"
+    }
+]

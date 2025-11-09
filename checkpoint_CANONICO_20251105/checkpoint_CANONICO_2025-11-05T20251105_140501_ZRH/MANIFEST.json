@@ -1,0 +1,12 @@
+﻿{
+    "mode":  "DEMO",
+    "scan_interval_s":  60,
+    "timezone":  "Europe/Zurich",
+    "cooldown_s":  300,
+    "created_at_iso":  "2025-11-05T14:05:01",
+    "symbols_monitored":  11,
+    "name":  "checkpoint_CANONICO_2025-11-05T20251105_140501_ZRH",
+    "strategies_active_count":  9,
+    "engine_build":  "20251105_FINAL",
+    "commit_hash_if_any":  "N/A"
+}

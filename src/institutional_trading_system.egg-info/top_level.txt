@@ -1,0 +1,6 @@
+core
+gatekeepers
+governance
+risk
+signal_generator
+strategies

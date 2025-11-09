@@ -1,0 +1,72 @@
+{
+  "config": {
+    "valor_actual": {
+      "enabled": true,
+      "symbols": [
+        "EURUSD.pro"
+      ]
+    },
+    "tipo": "dict",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "correlation_cache": {
+    "valor_actual": {},
+    "tipo": "dict",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "enabled": {
+    "valor_actual": true,
+    "tipo": "bool",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "hedge_ratios": {
+    "valor_actual": {},
+    "tipo": "dict",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "kalman_filters": {
+    "valor_actual": {},
+    "tipo": "dict",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "lookback_period": {
+    "valor_actual": 150,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "measurement_variance": {
+    "valor_actual": 0.01,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "min_correlation": {
+    "valor_actual": 0.7,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "monitored_pairs": {
+    "valor_actual": [],
+    "tipo": "list",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "name": {
+    "valor_actual": "KalmanPairsTrading",
+    "tipo": "str",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "process_variance": {
+    "valor_actual": 0.001,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "z_entry_threshold": {
+    "valor_actual": 1.5,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "z_exit_threshold": {
+    "valor_actual": 0.5,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  }
+}

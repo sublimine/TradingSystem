@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-11-05T14:14:56.868439",
+  "checkpoint_num": 3,
+  "active_strategies": 1,
+  "signals_by_strategy": {
+    "mean_reversion_statistical": 3
+  },
+  "trades_by_strategy": {
+    "mean_reversion_statistical": 3
+  },
+  "total_signals": 3,
+  "total_trades": 3,
+  "errors": [
+    "2025-11-05 13:21:25,846 -   ERROR minimal_test: No module named 'strategies.minimal_test'",
+    "2025-11-05 13:29:37,425 -   ERROR minimal_test: No module named 'strategies.minimal_test'",
+    "2025-11-05 13:30:26,552 -   ERROR minimal_test: No module named 'strategies.minimal_test'",
+    "2025-11-05 13:34:38,356 -   ERROR minimal_test: No module named 'strategies.minimal_test'"
+  ],
+  "system_latency_ms": 0,
+  "risk_utilization_pct": 0,
+  "notes": "Checkpoint automatico"
+}

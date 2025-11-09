@@ -1,0 +1,462 @@
+{
+  "058ea175-f190-575e-8a2b-182cbfe024f5": {
+    "timestamp": "2025-11-06T22:10:46.458716",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000001_20251106_221046_421014",
+      "group": "EURUSD.pro_intraday",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221046_458671",
+      "timestamp": "2025-11-06T22:10:46.458703"
+    }
+  },
+  "786ff84c-8eec-5144-9eeb-5695bbc3d327": {
+    "timestamp": "2025-11-06T22:10:46.458759",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000001_20251106_221046_421014",
+      "group": "EURUSD.pro_swing",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221046_458745",
+      "timestamp": "2025-11-06T22:10:46.458756"
+    }
+  },
+  "4d22b192-da87-5879-aec8-d665dd2d1955": {
+    "timestamp": "2025-11-06T22:10:47.072905",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000002_20251106_221046_996074",
+      "group": "EURUSD.pro_intraday",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221047_072838",
+      "timestamp": "2025-11-06T22:10:47.072892"
+    }
+  },
+  "2a9adca0-baf6-5680-a361-f1d1475c715d": {
+    "timestamp": "2025-11-06T22:10:47.072937",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000002_20251106_221046_996074",
+      "group": "EURUSD.pro_swing",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221047_072923",
+      "timestamp": "2025-11-06T22:10:47.072934"
+    }
+  },
+  "737c2d96-4f7f-56d3-b68f-0ea44bc9101a": {
+    "timestamp": "2025-11-06T22:10:47.072960",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000002_20251106_221046_996074",
+      "group": "GBPUSD.pro_intraday",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221047_072947",
+      "timestamp": "2025-11-06T22:10:47.072957"
+    }
+  },
+  "c6a1edda-d274-5aa3-90a2-e38c79438523": {
+    "timestamp": "2025-11-06T22:10:47.072979",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000002_20251106_221046_996074",
+      "group": "GBPUSD.pro_swing",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221047_072968",
+      "timestamp": "2025-11-06T22:10:47.072977"
+    }
+  },
+  "000e0c48-477d-5e05-89f9-c2bf541d4298": {
+    "timestamp": "2025-11-06T22:10:47.072998",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000002_20251106_221046_996074",
+      "group": "XAUUSD.pro_intraday",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "NET_WEIGHT_BELOW_THRESHOLD"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.328548,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221047_072988",
+      "timestamp": "2025-11-06T22:10:47.072996"
+    }
+  },
+  "059e67ea-59b8-5729-bc1a-41c8d3fc99ed": {
+    "timestamp": "2025-11-06T22:10:47.073016",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000002_20251106_221046_996074",
+      "group": "XAUUSD.pro_swing",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "NET_WEIGHT_BELOW_THRESHOLD"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.328548,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221047_073006",
+      "timestamp": "2025-11-06T22:10:47.073014"
+    }
+  },
+  "7fcbfe72-f5b1-539a-ab30-332dc19c0ff4": {
+    "timestamp": "2025-11-06T22:10:47.601603",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000003_20251106_221047_589324",
+      "group": "XAUUSD.pro_intraday",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "NET_WEIGHT_BELOW_THRESHOLD"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": -0.328548,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221047_601559",
+      "timestamp": "2025-11-06T22:10:47.601592"
+    }
+  },
+  "7b9fe57f-cefd-508b-8d3c-4058def8bc6d": {
+    "timestamp": "2025-11-06T22:10:47.601649",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000003_20251106_221047_589324",
+      "group": "XAUUSD.pro_swing",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "NET_WEIGHT_BELOW_THRESHOLD"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": -0.328548,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221047_601636",
+      "timestamp": "2025-11-06T22:10:47.601646"
+    }
+  },
+  "109f12f1-83c0-519c-b4b4-5596caa905eb": {
+    "timestamp": "2025-11-06T22:10:48.192269",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000004_20251106_221048_138801",
+      "group": "EURUSD.pro_intraday",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221048_192220",
+      "timestamp": "2025-11-06T22:10:48.192257"
+    }
+  },
+  "5a3f7a93-b500-5e1c-aa7a-315bcbe856d9": {
+    "timestamp": "2025-11-06T22:10:48.192312",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000004_20251106_221048_138801",
+      "group": "EURUSD.pro_swing",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221048_192295",
+      "timestamp": "2025-11-06T22:10:48.192308"
+    }
+  },
+  "ba656dcb-2fac-55a1-ba32-4ec64ee72def": {
+    "timestamp": "2025-11-06T22:10:48.192336",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000004_20251106_221048_138801",
+      "group": "GBPUSD.pro_intraday",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221048_192323",
+      "timestamp": "2025-11-06T22:10:48.192333"
+    }
+  },
+  "840a7575-dd6d-54c1-919c-73d3377bfcf7": {
+    "timestamp": "2025-11-06T22:10:48.192368",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000004_20251106_221048_138801",
+      "group": "GBPUSD.pro_swing",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221048_192346",
+      "timestamp": "2025-11-06T22:10:48.192356"
+    }
+  },
+  "94ac19f6-07c9-5f9d-8644-9c654e82190a": {
+    "timestamp": "2025-11-06T22:10:48.192391",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000004_20251106_221048_138801",
+      "group": "XAUUSD.pro_intraday",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "NET_WEIGHT_BELOW_THRESHOLD"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.328548,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221048_192378",
+      "timestamp": "2025-11-06T22:10:48.192389"
+    }
+  },
+  "a7d3cab3-866f-5a83-8cc1-0dc385a82055": {
+    "timestamp": "2025-11-06T22:10:48.192414",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000004_20251106_221048_138801",
+      "group": "XAUUSD.pro_swing",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "NET_WEIGHT_BELOW_THRESHOLD"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.328548,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221048_192401",
+      "timestamp": "2025-11-06T22:10:48.192411"
+    }
+  },
+  "1fdcc415-691b-5b23-9ddd-75b49a3f8db0": {
+    "timestamp": "2025-11-06T22:10:48.732640",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000005_20251106_221048_711395",
+      "group": "EURUSD.pro_intraday",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221048_732594",
+      "timestamp": "2025-11-06T22:10:48.732632"
+    }
+  },
+  "d46ffe59-1754-5c9e-9df6-1cf44c7071f5": {
+    "timestamp": "2025-11-06T22:10:48.732662",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000005_20251106_221048_711395",
+      "group": "EURUSD.pro_swing",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "EV_INSUFFICIENT"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.0,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221048_732652",
+      "timestamp": "2025-11-06T22:10:48.732660"
+    }
+  },
+  "4baf18af-280e-58cc-880a-4ef8c8a18f48": {
+    "timestamp": "2025-11-06T22:10:48.732675",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000005_20251106_221048_711395",
+      "group": "XAUUSD.pro_intraday",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "NET_WEIGHT_BELOW_THRESHOLD"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.05260199999999998,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221048_732667",
+      "timestamp": "2025-11-06T22:10:48.732673"
+    }
+  },
+  "c6e859a4-0eb4-525b-8c75-77a5f54cf17d": {
+    "timestamp": "2025-11-06T22:10:48.732687",
+    "ulid_temporal": null,
+    "payload": {
+      "batch_id": "BATCH_00000005_20251106_221048_711395",
+      "group": "XAUUSD.pro_swing",
+      "decision": "SILENCE",
+      "reason_codes": [
+        "NET_WEIGHT_BELOW_THRESHOLD"
+      ],
+      "instrument": null,
+      "horizon": null,
+      "winner": null,
+      "net_direction_weight": 0.05260199999999998,
+      "regime_probs": {
+        "trend": 0.33,
+        "range": 0.33,
+        "shock": 0.33
+      },
+      "ulid": "ULID_20251106_221048_732680",
+      "timestamp": "2025-11-06T22:10:48.732685"
+    }
+  }
+}

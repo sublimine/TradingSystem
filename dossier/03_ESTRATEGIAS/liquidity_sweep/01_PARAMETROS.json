@@ -1,0 +1,81 @@
+{
+  "active_monitors": {
+    "valor_actual": {},
+    "tipo": "dict",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "config": {
+    "valor_actual": {
+      "enabled": true,
+      "symbols": [
+        "EURUSD.pro"
+      ]
+    },
+    "tipo": "dict",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "enabled": {
+    "valor_actual": true,
+    "tipo": "bool",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "identified_levels": {
+    "valor_actual": {},
+    "tipo": "dict",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "imbalance_threshold": {
+    "valor_actual": 0.3,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "lookback_periods": {
+    "valor_actual": [
+      720,
+      1440,
+      2160
+    ],
+    "tipo": "list",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "min_confirmation_score": {
+    "valor_actual": 3,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "name": {
+    "valor_actual": "LiquiditySweepStrategy",
+    "tipo": "str",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "penetration_max": {
+    "valor_actual": 15,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "penetration_min": {
+    "valor_actual": 3,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "proximity_threshold": {
+    "valor_actual": 10,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "reversal_velocity_min": {
+    "valor_actual": 3.5,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "volume_threshold": {
+    "valor_actual": 1.5,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "vpin_threshold": {
+    "valor_actual": 0.55,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  }
+}

@@ -1,0 +1,73 @@
+﻿
+# ==============================================================================
+# ESTRATEGIAS INSTITUCIONALES AVANZADAS - PARÁMETROS DE NIVEL CUANTITATIVO
+# ==============================================================================
+
+ofi_refinement:
+  enabled: false
+  window_ticks: 100
+  window_minutes: 5
+  z_entry_threshold: 2.5              # Percentil 99.4 (institucional vs 2.0 retail)
+  vpin_minimum: 0.65                  # Easley threshold para informed trading
+  price_coherence_required: true
+  stop_loss_atr_multiplier: 2.5
+  take_profit_atr_multiplier: 4.0     # R:R 1.6:1 institucional
+
+order_block_institutional:
+  enabled: false
+  volume_sigma_threshold: 2.5         # 3-sigma sería ultra-conservador
+  displacement_atr_multiplier: 2.0    # Gatheral institutional impact threshold
+  no_retest_enforcement: true
+  buffer_atr: 0.5
+  stop_loss_buffer_atr: 0.75
+  take_profit_r_multiple: [1.5, 3.0]  # Escalonado institucional
+
+fvg_institutional:
+  enabled: false
+  gap_atr_minimum: 0.75               # Harris microstructure threshold
+  volume_anomaly_required: true
+  volume_anomaly_sigma: 2.0           # Requiere 2-sigma volume spike
+  target_fill_percentage: 0.618       # Golden ratio (Fibonacci institucional)
+  target_fill_percentage_max: 0.786   # 78.6% Fibonacci
+  stop_loss_gap_fraction: 0.382       # 38.2% Fibonacci
+  take_profit_gap_fraction: 0.786
+
+htf_ltf_liquidity:
+  enabled: false
+  htf_timeframes: ["H4", "D1"]
+  projection_tolerance_pips: 2
+  triggers: ["ofi", "rejection_candle", "volume_climax"]
+  stop_loss_buffer_atr: 0.75
+  take_profit_structure_based: true
+  min_htf_touches: 2                  # Validación de zona institucional
+
+idp_inducement_distribution:
+  enabled: false
+  penetration_pips_min: 5             # Kyle strategic trading range
+  penetration_pips_max: 20
+  volume_multiplier: 2.5              # Cartea predatory threshold
+  distribution_range_bars_min: 3
+  distribution_range_bars_max: 8
+  displacement_velocity_pips_per_minute: 7
+  stop_loss_beyond_inducement: true
+  take_profit_r_multiple: 3.0         # Institucional risk-reward
+
+iceberg_detection:
+  enabled: false
+  mode: "degraded"                    # "full" requiere L2
+  volume_advancement_ratio_threshold: 15.0  # Hautsch institutional threshold
+  stall_duration_bars: 5
+  replenishment_detection: true       # Biais iceberg signature
+  stop_loss_behind_level_atr: 1.0
+  take_profit_r_multiple: 2.5
+
+adaptive_participation_rate:
+  enabled: false
+  base_rate: 0.10                     # 10% participation (institucional)
+  momentum_alpha: 0.05                # Obizhaeva momentum factor
+  volatility_beta: 0.15               # Almgren-Chriss volatility adjustment
+  rate_floor: 0.05                    # 5% mínimo
+  rate_ceiling: 0.25                  # 25% máximo (anti-impact)
+  minimum_notional_for_activation: 100000  # USD 100k threshold
+  slippage_monitoring: true
+  market_impact_tracking: true

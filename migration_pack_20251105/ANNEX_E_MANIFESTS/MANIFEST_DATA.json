@@ -1,0 +1,22 @@
+﻿{
+    "source":  "MetaTrader5",
+    "timeframe":  "M1",
+    "dependencies":  [
+                         "MT5 connection",
+                         "Symbol availability"
+                     ],
+    "lookback_bars":  500,
+    "symbols":  [
+                    "EURUSD.pro",
+                    "GBPUSD.pro",
+                    "USDJPY.pro",
+                    "AUDUSD.pro",
+                    "USDCAD.pro",
+                    "USDCHF.pro",
+                    "NZDUSD.pro",
+                    "EURGBP.pro",
+                    "XAUUSD.pro",
+                    "BTCUSD",
+                    "ETHUSD"
+                ]
+}

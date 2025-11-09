@@ -1,0 +1,31 @@
+Metadata-Version: 2.4
+Name: institutional-trading-system
+Version: 0.1.0
+Summary: Institutional-grade algorithmic trading system
+Author: Trading System Developer
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Financial and Insurance Industry
+Classifier: Topic :: Office/Business :: Financial :: Investment
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.24.0
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: python-dateutil>=2.8.0
+Requires-Dist: pytz>=2023.0
+Requires-Dist: scikit-learn>=1.3.0
+Requires-Dist: scipy>=1.11.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: hypothesis>=6.82.0; extra == "dev"
+Provides-Extra: optimization
+Requires-Dist: cvxpy>=1.4.0; extra == "optimization"
+Dynamic: author
+Dynamic: classifier
+Dynamic: description-content-type
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

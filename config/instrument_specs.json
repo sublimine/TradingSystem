@@ -1,0 +1,65 @@
+{
+  "EURUSD.pro": {
+    "asset_class": "FX_MAJOR",
+    "tick_size": 1e-05,
+    "point_value": 100000,
+    "pip_value": 10.0,
+    "bp_per_pip": 1.0,
+    "spread_bp_shutdown": 5.0,
+    "adv_daily_lots": 50000
+  },
+  "GBPUSD.pro": {
+    "asset_class": "FX_MAJOR",
+    "tick_size": 1e-05,
+    "point_value": 100000,
+    "pip_value": 10.0,
+    "bp_per_pip": 1.0,
+    "spread_bp_shutdown": 6.0,
+    "adv_daily_lots": 40000
+  },
+  "USDJPY.pro": {
+    "asset_class": "FX_MAJOR",
+    "tick_size": 0.001,
+    "point_value": 100000,
+    "pip_value": 10.0,
+    "bp_per_pip": 1.0,
+    "spread_bp_shutdown": 5.0,
+    "adv_daily_lots": 45000
+  },
+  "XAUUSD.pro": {
+    "asset_class": "COMMODITY",
+    "tick_size": 0.01,
+    "point_value": 100.0,
+    "pip_value": 0.01,
+    "bp_per_pip": 1.0,
+    "spread_bp_shutdown": 15.0,
+    "adv_daily_lots": 10000
+  },
+  "BTCUSD": {
+    "asset_class": "CRYPTO",
+    "tick_size": 0.01,
+    "point_value": 1.0,
+    "pip_value": 1.0,
+    "bp_per_pip": 1.0,
+    "spread_bp_shutdown": 50.0,
+    "adv_daily_lots": 500
+  },
+  "ETHUSD": {
+    "asset_class": "CRYPTO",
+    "tick_size": 0.01,
+    "point_value": 1.0,
+    "pip_value": 1.0,
+    "bp_per_pip": 1.0,
+    "spread_bp_shutdown": 50.0,
+    "adv_daily_lots": 800
+  },
+  "DEFAULT": {
+    "asset_class": "UNKNOWN",
+    "tick_size": 1e-05,
+    "point_value": 100000,
+    "pip_value": 10.0,
+    "bp_per_pip": 1.0,
+    "spread_bp_shutdown": 50.0,
+    "adv_daily_lots": 1000
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "atr_contraction_threshold": {
+    "valor_actual": 0.7,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "atr_lookback": {
+    "valor_actual": 20,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "config": {
+    "valor_actual": {
+      "enabled": true,
+      "symbols": [
+        "EURUSD.pro"
+      ]
+    },
+    "tipo": "dict",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "enabled": {
+    "valor_actual": true,
+    "tipo": "bool",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "imbalance_confirmation_threshold": {
+    "valor_actual": 0.25,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "min_consolidation_bars": {
+    "valor_actual": 15,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "name": {
+    "valor_actual": "BreakoutVolumeConfirmation",
+    "tipo": "str",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "swing_point_order": {
+    "valor_actual": 5,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "volume_breakout_multiplier": {
+    "valor_actual": 2.0,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "vpin_non_exhaustion_max": {
+    "valor_actual": 0.65,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  }
+}

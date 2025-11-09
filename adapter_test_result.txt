@@ -1,0 +1,2 @@
+SUCCESS: Adapter imported and instantiated
+Regime: GREEN

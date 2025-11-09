@@ -1,0 +1,77 @@
+{
+  "config": {
+    "valor_actual": {
+      "enabled": true,
+      "symbols": [
+        "EURUSD.pro"
+      ]
+    },
+    "tipo": "dict",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "enabled": {
+    "valor_actual": true,
+    "tipo": "bool",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "high_vol_entry_threshold": {
+    "valor_actual": 2.0,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "high_vol_sizing_reduction": {
+    "valor_actual": 0.7,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "high_vol_stop_multiplier": {
+    "valor_actual": 2.5,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "lookback_period": {
+    "valor_actual": 20,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "low_vol_entry_threshold": {
+    "valor_actual": 1.2,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "low_vol_sizing_boost": {
+    "valor_actual": 1.2,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "low_vol_stop_multiplier": {
+    "valor_actual": 1.5,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "min_regime_confidence": {
+    "valor_actual": 0.6,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "name": {
+    "valor_actual": "VolatilityRegimeAdaptation",
+    "tipo": "str",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "regime_confidence": {
+    "valor_actual": 0.0,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "regime_lookback": {
+    "valor_actual": 40,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "volatility_history": {
+    "valor_actual": [],
+    "tipo": "list",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  }
+}

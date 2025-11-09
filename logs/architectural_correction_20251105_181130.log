@@ -1,0 +1,79 @@
+﻿[2025-11-05 18:11:30.558][INFO] === PHASE 1: BACKUP CREATION ===
+[2025-11-05 18:11:30.606][SUCCESS] Backed up 15 files to C:\TradingSystem\backups\architectural_correction_20251105_181130
+[2025-11-05 18:11:30.606][INFO] === PHASE 2: BOM REMOVAL AND IMPORT CORRECTION ===
+[2025-11-05 18:11:30.622][INFO] Processing: breakout_volume_confirmation.py
+[2025-11-05 18:11:30.639][INFO]   Removing BOM from file
+[2025-11-05 18:11:30.669][INFO]   Removing incorrect import: import Signal
+[2025-11-05 18:11:30.669][INFO]   Removing incorrect import: from models import Signal
+[2025-11-05 18:11:30.669][INFO]   Removing incorrect import: from src.core.models import Signal
+[2025-11-05 18:11:30.685][INFO]   Removing incorrect import: from strategies.base import StrategyBase, Signal
+[2025-11-05 18:11:30.763][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 4)
+[2025-11-05 18:11:30.765][INFO] Processing: correlation_divergence.py
+[2025-11-05 18:11:30.765][INFO]   Removing BOM from file
+[2025-11-05 18:11:30.861][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:30.861][INFO] Processing: fvg_institutional.py
+[2025-11-05 18:11:30.861][INFO]   Removing BOM from file
+[2025-11-05 18:11:30.892][INFO]   Inserted correct import after line 6
+[2025-11-05 18:11:30.956][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:30.971][INFO] Processing: htf_ltf_liquidity.py
+[2025-11-05 18:11:30.971][INFO]   Removing BOM from file
+[2025-11-05 18:11:30.987][INFO]   Inserted correct import after line 6
+[2025-11-05 18:11:31.051][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:31.067][INFO] Processing: iceberg_detection.py
+[2025-11-05 18:11:31.067][INFO]   Removing BOM from file
+[2025-11-05 18:11:31.083][INFO]   Inserted correct import after line 7
+[2025-11-05 18:11:31.146][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:31.162][INFO] Processing: idp_inducement_distribution.py
+[2025-11-05 18:11:31.162][INFO]   Removing BOM from file
+[2025-11-05 18:11:31.178][INFO]   Inserted correct import after line 7
+[2025-11-05 18:11:31.257][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:31.257][INFO] Processing: kalman_pairs_trading.py
+[2025-11-05 18:11:31.263][INFO]   Removing BOM from file
+[2025-11-05 18:11:31.356][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:31.356][INFO] Processing: liquidity_sweep.py
+[2025-11-05 18:11:31.356][INFO]   Removing BOM from file
+[2025-11-05 18:11:31.465][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:31.465][INFO] Processing: mean_reversion_statistical.py
+[2025-11-05 18:11:31.465][INFO]   Removing BOM from file
+[2025-11-05 18:11:31.575][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:31.575][INFO] Processing: momentum_quality.py
+[2025-11-05 18:11:31.591][INFO]   Removing BOM from file
+[2025-11-05 18:11:31.685][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:31.685][INFO] Processing: news_event_positioning.py
+[2025-11-05 18:11:31.765][SUCCESS]   File corrected (BOM removed: False, imports cleaned: 0)
+[2025-11-05 18:11:31.765][INFO] Processing: ofi_refinement.py
+[2025-11-05 18:11:31.781][INFO]   Removing BOM from file
+[2025-11-05 18:11:31.812][INFO]   Inserted correct import after line 10
+[2025-11-05 18:11:31.876][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:31.876][INFO] Processing: order_block_institutional.py
+[2025-11-05 18:11:31.876][INFO]   Removing BOM from file
+[2025-11-05 18:11:31.892][INFO]   Inserted correct import after line 7
+[2025-11-05 18:11:31.971][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:31.971][INFO] Processing: order_flow_toxicity.py
+[2025-11-05 18:11:31.971][INFO]   Removing BOM from file
+[2025-11-05 18:11:32.085][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:32.085][INFO] Processing: volatility_regime_adaptation.py
+[2025-11-05 18:11:32.085][INFO]   Removing BOM from file
+[2025-11-05 18:11:32.232][SUCCESS]   File corrected (BOM removed: True, imports cleaned: 0)
+[2025-11-05 18:11:32.232][INFO] === PHASE 3: IMPORT VALIDATION ===
+[2025-11-05 18:11:33.070][SUCCESS]   Import OK: breakout_volume_confirmation
+[2025-11-05 18:11:33.968][SUCCESS]   Import OK: correlation_divergence
+[2025-11-05 18:11:34.903][SUCCESS]   Import OK: fvg_institutional
+[2025-11-05 18:11:35.794][SUCCESS]   Import OK: htf_ltf_liquidity
+[2025-11-05 18:11:36.706][SUCCESS]   Import OK: iceberg_detection
+[2025-11-05 18:11:37.514][SUCCESS]   Import OK: idp_inducement_distribution
+[2025-11-05 18:11:38.309][SUCCESS]   Import OK: kalman_pairs_trading
+[2025-11-05 18:11:39.157][SUCCESS]   Import OK: liquidity_sweep
+[2025-11-05 18:11:40.014][SUCCESS]   Import OK: mean_reversion_statistical
+[2025-11-05 18:11:40.919][SUCCESS]   Import OK: momentum_quality
+[2025-11-05 18:11:41.827][SUCCESS]   Import OK: news_event_positioning
+[2025-11-05 18:11:42.684][SUCCESS]   Import OK: ofi_refinement
+[2025-11-05 18:11:43.575][SUCCESS]   Import OK: order_block_institutional
+[2025-11-05 18:11:44.481][SUCCESS]   Import OK: order_flow_toxicity
+[2025-11-05 18:11:45.348][SUCCESS]   Import OK: volatility_regime_adaptation
+[2025-11-05 18:11:45.356][INFO] === SUMMARY ===
+[2025-11-05 18:11:45.364][INFO] Files Corrected: 15
+[2025-11-05 18:11:45.364][INFO] Already Correct: 0
+[2025-11-05 18:11:45.364][INFO] Syntax Failures: 0
+[2025-11-05 18:11:45.380][INFO] Successful Imports: 15 / 15
+[2025-11-05 18:11:45.380][SUCCESS] ALL IMPORTS VALIDATED SUCCESSFULLY

@@ -1,0 +1,98 @@
+{
+  "timestamp": "2025-11-05T19:22:42.646629",
+  "summary": {
+    "total_strategies": 6,
+    "passed": 6,
+    "failed": 0,
+    "success_rate": 100.0
+  },
+  "strategies": [
+    {
+      "strategy_name": "OFIRefinement",
+      "initialized": true,
+      "evaluated": true,
+      "signal_generated": false,
+      "signal_valid": false,
+      "errors": [],
+      "warnings": [
+        "No signal generated (may be normal depending on market conditions)"
+      ],
+      "signal_metadata": null,
+      "execution_time_ms": 0.219
+    },
+    {
+      "strategy_name": "FVGInstitutional",
+      "initialized": true,
+      "evaluated": true,
+      "signal_generated": false,
+      "signal_valid": false,
+      "errors": [],
+      "warnings": [
+        "No signal generated (may be normal depending on market conditions)"
+      ],
+      "signal_metadata": null,
+      "execution_time_ms": 0.51
+    },
+    {
+      "strategy_name": "OrderBlockInstitutional",
+      "initialized": true,
+      "evaluated": true,
+      "signal_generated": false,
+      "signal_valid": false,
+      "errors": [],
+      "warnings": [
+        "No signal generated (may be normal depending on market conditions)"
+      ],
+      "signal_metadata": null,
+      "execution_time_ms": 33.099000000000004
+    },
+    {
+      "strategy_name": "HTFLTFLiquidity",
+      "initialized": true,
+      "evaluated": true,
+      "signal_generated": false,
+      "signal_valid": false,
+      "errors": [],
+      "warnings": [
+        "No signal generated (may be normal depending on market conditions)"
+      ],
+      "signal_metadata": null,
+      "execution_time_ms": 0.206
+    },
+    {
+      "strategy_name": "IDPInducement",
+      "initialized": true,
+      "evaluated": true,
+      "signal_generated": false,
+      "signal_valid": false,
+      "errors": [],
+      "warnings": [
+        "No signal generated (may be normal depending on market conditions)"
+      ],
+      "signal_metadata": null,
+      "execution_time_ms": 30.809
+    },
+    {
+      "strategy_name": "IcebergDetection",
+      "initialized": true,
+      "evaluated": true,
+      "signal_generated": false,
+      "signal_valid": false,
+      "errors": [],
+      "warnings": [
+        "No signal generated (may be normal depending on market conditions)"
+      ],
+      "signal_metadata": null,
+      "execution_time_ms": 3.044
+    }
+  ],
+  "apr": {
+    "component_name": "APRExecutor",
+    "initialized": true,
+    "plan_created": true,
+    "plan_valid": true,
+    "errors": [],
+    "warnings": [],
+    "execution_time_ms": 2.769
+  }
+}

@@ -1,0 +1,19 @@
+﻿INTEGRITY SUMMARY
+Timestamp: 2025-11-05T14:05:01
+================================================================================
+
+ARCHIVOS POR TIPO:
+  .py:    46
+  .json:  11
+  .yaml:  0
+  .log:   0
+  .txt:   2
+  Otros:  18
+
+TAMAÑO TOTAL: 0.5 MB
+
+ARCHIVOS TOTALES: 77
+
+ARCHIVOS VACIOS: 1
+
+DIRECTORIOS: 13

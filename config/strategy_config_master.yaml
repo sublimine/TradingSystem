@@ -1,0 +1,109 @@
+# Strategy Configuration Master File
+# Institutional Trading System - 14 Strategies
+
+strategies:
+  ofi_refinement:
+    enabled: true
+    window_ticks: 100
+    z_entry_threshold: 1.8
+    lookback_periods: 500
+    vpin_max_safe: 0.35
+    price_coherence_required: true
+    min_data_points: 200
+    stop_loss_atr_multiplier: 2.5
+    take_profit_atr_multiplier: 4.0
+    
+  fvg_institutional:
+    enabled: true
+    gap_atr_minimum: 0.75
+    volume_anomaly_required: true
+    volume_percentile: 70
+    gap_fill_percentage: 0.5
+    stop_buffer_atr: 0.5
+    target_gap_multiples: 2.0
+    max_gap_age_bars: 100
+    
+  htf_ltf_liquidity:
+    enabled: true
+    htf_timeframes: ['H4', 'D1']
+    swing_lookback: 20
+    projection_tolerance_pips: 2
+    rejection_wick_min_pct: 0.6
+    min_zone_touches: 2
+    stop_buffer_atr: 1.0
+    take_profit_atr: 3.0
+    
+  order_block_institutional:
+    enabled: true
+    displacement_atr_minimum: 1.5
+    volume_spike_threshold: 1.5
+    max_block_age_bars: 50
+    
+  volatility_regime_adaptation:
+    enabled: true
+    lookback_period: 20
+    high_vol_threshold: 1.5
+    low_vol_threshold: 0.7
+    
+  momentum_quality:
+    enabled: true
+    momentum_period: 14
+    price_threshold: 0.5
+    volume_confirmation_required: true
+    
+  mean_reversion_statistical:
+    enabled: true
+    lookback_period: 200
+    entry_z_threshold: 2.5
+    exit_z_threshold: 0.5
+    
+  idp_inducement:
+    enabled: true
+    penetration_pips_min: 5
+    penetration_pips_max: 20
+    distribution_volume_ratio: 1.8
+    
+  iceberg_detection:
+    enabled: true
+    mode: degraded
+    volume_advancement_ratio_threshold: 4.0
+    
+  breakout_volume_confirmation:
+    enabled: true
+    atr_period: 14
+    volume_lookback: 50
+    delta_volume_threshold_sigma: 1.8
+    displacement_atr_multiplier: 1.5
+    
+  correlation_divergence:
+    enabled: true
+    correlation_window: 60
+    divergence_threshold: 0.3
+    
+  kalman_pairs_trading:
+    enabled: true
+    process_variance: 0.01
+    measurement_variance: 0.1
+    spread_entry_threshold: 2.0
+    
+  liquidity_sweep:
+    enabled: true
+    sweep_detection_bars: 20
+    post_sweep_confirmation_bars: 5
+    
+  order_flow_toxicity:
+    enabled: true
+    vpin_buckets: 50
+    toxicity_threshold: 0.7
+
+# Portfolio settings
+portfolio:
+  max_strategies_active: 14
+  max_correlation_allowed: 0.6
+  capital_allocation_method: kelly_fraction
+  
+# Risk management
+risk:
+  max_portfolio_heat: 0.10
+  max_daily_loss_pct: 0.02
+  position_size_method: confidence_weighted

@@ -1,0 +1,51 @@
+2025-11-06 00:34:12,016 - Kyle's Lambda Estimator inicializado: window=100, update_freq=10
+2025-11-06 00:34:12,018 - ePIN/VPIN Estimator inicializado: buckets=50, bucket_size=10000.0, epin_window=100
+2025-11-06 00:34:12,025 - Spread Monitor inicializado: window=100, historical=1000
+2025-11-06 00:34:12,026 - Gatekeeper Integrator inicializado con 3 gatekeepers
+2025-11-06 00:34:12,028 - Gatekeeper Adapter inicializado
+2025-11-06 00:34:12,031 - Sistema de gatekeepers inicializado
+2025-11-06 00:34:12,032 - ================================================================================
+2025-11-06 00:34:12,034 - Filtro de estrategias activo: lista blanca = 14
+2025-11-06 00:34:12,036 - PYTHONPATH_INCLUDES: C:\Users\Administrator\TradingSystem\src
+2025-11-06 00:34:12,038 - ================================================================================
+2025-11-06 00:34:12,053 - OK Conectado a Axi-US50-Demo
+2025-11-06 00:34:12,054 - OK Cuenta: 10009514
+2025-11-06 00:34:12,056 - OK Balance: $9,928.35
+2025-11-06 00:34:12,057 - OK Equity: $9,929.16
+2025-11-06 00:34:12,058 - Cargando estrategias (lista blanca)...
+2025-11-06 00:34:12,073 -   ERROR_IMPORT breakout_volume_confirmation: StrategyBase.__init__() takes 2 positional arguments but 3 w
+2025-11-06 00:34:12,074 -   CARGADA correlation_divergence
+2025-11-06 00:34:12,080 -   CARGADA kalman_pairs_trading
+2025-11-06 00:34:12,083 -   CARGADA liquidity_sweep
+2025-11-06 00:34:12,086 -   CARGADA mean_reversion_statistical
+2025-11-06 00:34:12,087 -   CARGADA momentum_quality
+2025-11-06 00:34:12,090 -   CARGADA order_flow_toxicity
+2025-11-06 00:34:12,092 -   CARGADA volatility_regime_adaptation
+2025-11-06 00:34:12,094 -   CARGADA ofi_refinement
+2025-11-06 00:34:12,110 -   CARGADA fvg_institutional
+2025-11-06 00:34:12,125 - Order Block Institutional initialized: displacement=2.0xATR
+2025-11-06 00:34:12,126 -   CARGADA order_block_institutional
+2025-11-06 00:34:12,127 -   CARGADA htf_ltf_liquidity
+2025-11-06 00:34:12,131 - IDP Inducement initialized: penetration=5-20 pips
+2025-11-06 00:34:12,132 -   CARGADA idp_inducement_distribution
+2025-11-06 00:34:12,137 - Iceberg Detection initialized in DEGRADED MODE
+2025-11-06 00:34:12,138 -   CARGADA iceberg_detection
+2025-11-06 00:34:12,139 - 
+Estrategias cargadas: 13/14
+2025-11-06 00:34:12,140 - Errores de carga: 1
+2025-11-06 00:34:12,142 - 
+================================================================================
+2025-11-06 00:34:12,144 - SISTEMA DE TRADING EN VIVO INICIADO
+2025-11-06 00:34:12,146 - ================================================================================
+2025-11-06 00:34:12,147 - Estrategias activas: 13
+2025-11-06 00:34:12,148 - Simbolos monitoreados: 11
+2025-11-06 00:34:12,148 - Intervalo de escaneo: 60 segundos
+2025-11-06 00:34:12,149 - Cooldown anti-spam: 300 segundos
+2025-11-06 00:34:12,150 - Modo: DEMO
+2025-11-06 00:34:12,150 - ================================================================================
+2025-11-06 00:34:12,151 - ================================================================================
+2025-11-06 00:34:12,151 - SCAN #1 - 2025-11-06 00:34:12
+2025-11-06 00:34:12,152 - ================================================================================
+2025-11-06 00:34:12,165 - 
+Resultados del scan:
+2025-11-06 00:34:12,166 -   Señales generadas: 0

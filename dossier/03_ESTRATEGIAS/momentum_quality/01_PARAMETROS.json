@@ -1,0 +1,57 @@
+{
+  "config": {
+    "valor_actual": {
+      "enabled": true,
+      "symbols": [
+        "EURUSD.pro"
+      ]
+    },
+    "tipo": "dict",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "enabled": {
+    "valor_actual": true,
+    "tipo": "bool",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "lookback_window": {
+    "valor_actual": 20,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "min_quality_score": {
+    "valor_actual": 0.6,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "momentum_period": {
+    "valor_actual": 14,
+    "tipo": "int",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "name": {
+    "valor_actual": "MomentumQuality",
+    "tipo": "str",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "price_threshold": {
+    "valor_actual": 0.35,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "use_regime_filter": {
+    "valor_actual": true,
+    "tipo": "bool",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "volume_threshold": {
+    "valor_actual": 1.5,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  },
+  "vpin_threshold": {
+    "valor_actual": 0.6,
+    "tipo": "float",
+    "descripcion": "Par\u00e1metro extra\u00eddo del __init__"
+  }
+}

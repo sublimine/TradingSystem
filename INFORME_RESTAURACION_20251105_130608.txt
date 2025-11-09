@@ -1,0 +1,118 @@
+﻿================================================================================
+INFORME DE RESTAURACIÓN INTEGRAL
+Timestamp: 2025-11-05 13:06:06
+Punto de corte: 05/11/2025 03:01:00 AM (Hora Zürich)
+================================================================================
+
+FASE 1 - RESTAURACIÓN ESTRUCTURAL
+--------------------------------------------------------------------------------
+
+Backup de referencia:
+  Directorio: pre_recalibration_20251105_025233
+  Timestamp: 2025-11-05 02:52:33
+  Estado: VÁLIDO (anterior a punto de corte)
+
+Restauración de estrategias:
+  breakout_volume_confirmation.py - Ya correcto (sin cambios)
+  correlation_divergence.py - Ya correcto (sin cambios)
+  kalman_pairs_trading.py - Ya correcto (sin cambios)
+  liquidity_sweep.py - Ya correcto (sin cambios)
+  mean_reversion_statistical.py - Ya correcto (sin cambios)
+  momentum_quality.py - Ya correcto (sin cambios)
+  news_event_positioning.py - Ya correcto (sin cambios)
+  order_flow_toxicity.py - Ya correcto (sin cambios)
+  volatility_regime_adaptation.py - Ya correcto (sin cambios)
+
+Resumen estrategias:
+  Ya correctas: 9
+  Restauradas: 0
+  Total: 9
+
+strategy_base.py - OK (sin cambios)
+
+Motor principal - RESTAURADO
+
+Archivos creados post-corte:
+  src\features\__pycache__\derived_features.cpython-313.pyc - Movido a cuarentena
+  src\features\__pycache__\microstructure.cpython-313.pyc - Movido a cuarentena
+  src\features\__pycache__\order_flow.cpython-313.pyc - Movido a cuarentena
+  src\features\__pycache__\statistical_models.cpython-313.pyc - Movido a cuarentena
+  src\features\__pycache__\technical_indicators.cpython-313.pyc - Movido a cuarentena
+  src\signal_generator\__pycache__\signal_types.cpython-313.pyc - Movido a cuarentena
+  src\strategies\__pycache__\breakout_volume_confirmation.cpython-313.pyc - Movido a cuarentena
+  src\strategies\__pycache__\correlation_divergence.cpython-313.pyc - Movido a cuarentena
+  src\strategies\__pycache__\kalman_pairs_trading.cpython-313.pyc - Movido a cuarentena
+  src\strategies\__pycache__\liquidity_sweep.cpython-313.pyc - Movido a cuarentena
+  src\strategies\__pycache__\mean_reversion_statistical.cpython-313.pyc - Movido a cuarentena
+  src\strategies\__pycache__\minimal_test.cpython-313.pyc - Movido a cuarentena
+  src\strategies\__pycache__\momentum_quality.cpython-313.pyc - Movido a cuarentena
+  src\strategies\__pycache__\news_event_positioning.cpython-313.pyc - Movido a cuarentena
+  src\strategies\__pycache__\order_flow_toxicity.cpython-313.pyc - Movido a cuarentena
+  src\strategies\__pycache__\strategy_base.cpython-313.pyc - Movido a cuarentena
+  src\strategies\__pycache__\volatility_regime_adaptation.cpython-313.pyc - Movido a cuarentena
+  src\utils\__pycache__\download_historical_data.cpython-313.pyc - Movido a cuarentena
+  src\utils\__pycache__\test_data_availability.cpython-313.pyc - Movido a cuarentena
+  src\__pycache__\mt5_connector.cpython-313.pyc - Movido a cuarentena
+  src\__pycache__\risk_management.cpython-313.pyc - Movido a cuarentena
+  src\__pycache__\structured_logging.cpython-313.pyc - Movido a cuarentena
+
+Directorios eliminados:
+
+Archivos de test eliminados:
+  test_load_all.py
+  test_mt5.py
+
+================================================================================
+FASE 1: COMPLETADA
+================================================================================
+
+FASE 2 - AUDITORÍA FORENSE
+--------------------------------------------------------------------------------
+
+Estado de las 9 estrategias:
+  [OK] breakout_volume_confirmation
+  [OK] correlation_divergence
+  [OK] kalman_pairs_trading
+  [OK] liquidity_sweep
+  [OK] mean_reversion_statistical
+  [OK] momentum_quality
+  [OK] news_event_positioning
+  [OK] order_flow_toxicity
+  [OK] volatility_regime_adaptation
+
+Resumen:
+  Estrategias operativas: 9/9
+  Estrategias corruptas: 0
+  Estrategias ausentes: 0
+
+================================================================================
+FASE 2: COMPLETADA
+================================================================================
+
+================================================================================
+INFORME FINAL - RESTAURACIÓN INTEGRAL
+================================================================================
+
+Estado de restauración: COMPLETA
+
+Archivos revertidos:
+  Estrategias restauradas: 0
+  Estrategias ya correctas: 9
+
+Estrategias restauradas y condición:
+  breakout_volume_confirmation - OK
+  correlation_divergence - OK
+  kalman_pairs_trading - OK
+  liquidity_sweep - OK
+  mean_reversion_statistical - OK
+  momentum_quality - OK
+  news_event_positioning - OK
+  order_flow_toxicity - OK
+  volatility_regime_adaptation - OK
+
+Integridad del sistema:
+  ✓ CONFIRMADA - Todas las estrategias operativas
+
+================================================================================
+FIN DEL INFORME
+================================================================================

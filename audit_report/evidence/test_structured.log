@@ -1,0 +1,2 @@
+{"timestamp": "2025-11-04T22:51:56.262058Z", "level": "INFO", "logger": "trading_system", "message": "Signal: BUY EURUSD.pro @ 1.085", "strategy": "liquidity_sweep", "symbol": "EURUSD.pro", "action": "BUY", "price": 1.085, "size": 0.1}
+{"timestamp": "2025-11-04T22:51:56.262520Z", "level": "INFO", "logger": "trading_system", "message": "Trade executed: BUY 0.1 EURUSD.pro @ 1.085", "symbol": "EURUSD.pro", "action": "BUY", "price": 1.085, "size": 0.1, "trade_id": 12345}

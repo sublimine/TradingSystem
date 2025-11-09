@@ -1,0 +1,116 @@
+﻿[2025-11-05 18:07:00.275][INFO] Session initialized: 0a8a10de
+[2025-11-05 18:07:00.290][INFO] === PHASE 1: VALIDATING PREREQUISITES ===
+[2025-11-05 18:07:00.307][INFO] Python detected: Python 3.13.0
+[2025-11-05 18:07:00.339][INFO] Found 15 strategy files to process
+[2025-11-05 18:07:00.359][INFO]   - breakout_volume_confirmation.py (11457 bytes)
+[2025-11-05 18:07:00.359][INFO]   - correlation_divergence.py (9069 bytes)
+[2025-11-05 18:07:00.359][INFO]   - fvg_institutional.py (794 bytes)
+[2025-11-05 18:07:00.371][INFO]   - htf_ltf_liquidity.py (799 bytes)
+[2025-11-05 18:07:00.371][INFO]   - iceberg_detection.py (850 bytes)
+[2025-11-05 18:07:00.387][INFO]   - idp_inducement_distribution.py (908 bytes)
+[2025-11-05 18:07:00.391][INFO]   - kalman_pairs_trading.py (10677 bytes)
+[2025-11-05 18:07:00.391][INFO]   - liquidity_sweep.py (11739 bytes)
+[2025-11-05 18:07:00.403][INFO]   - mean_reversion_statistical.py (12299 bytes)
+[2025-11-05 18:07:00.403][INFO]   - momentum_quality.py (9548 bytes)
+[2025-11-05 18:07:00.403][INFO]   - news_event_positioning.py (6854 bytes)
+[2025-11-05 18:07:00.403][INFO]   - ofi_refinement.py (1231 bytes)
+[2025-11-05 18:07:00.403][INFO]   - order_block_institutional.py (928 bytes)
+[2025-11-05 18:07:00.418][INFO]   - order_flow_toxicity.py (5933 bytes)
+[2025-11-05 18:07:00.422][INFO]   - volatility_regime_adaptation.py (10012 bytes)
+[2025-11-05 18:07:00.434][INFO] === PHASE 2: CREATING BACKUP ===
+[2025-11-05 18:07:00.515][INFO]   Backed up: breakout_volume_confirmation.py [SHA256: 859D6413ED46...]
+[2025-11-05 18:07:00.545][INFO]   Backed up: correlation_divergence.py [SHA256: 5BA553D5B97D...]
+[2025-11-05 18:07:00.561][INFO]   Backed up: fvg_institutional.py [SHA256: 72C99493C47E...]
+[2025-11-05 18:07:00.561][INFO]   Backed up: htf_ltf_liquidity.py [SHA256: 9F687EAE28B4...]
+[2025-11-05 18:07:00.561][INFO]   Backed up: iceberg_detection.py [SHA256: A848DA8B4006...]
+[2025-11-05 18:07:00.578][INFO]   Backed up: idp_inducement_distribution.py [SHA256: 0A5FB20F1532...]
+[2025-11-05 18:07:00.593][INFO]   Backed up: kalman_pairs_trading.py [SHA256: E94C0EDF0A5C...]
+[2025-11-05 18:07:00.593][INFO]   Backed up: liquidity_sweep.py [SHA256: 1581CEF42D16...]
+[2025-11-05 18:07:00.593][INFO]   Backed up: mean_reversion_statistical.py [SHA256: C1267B70A912...]
+[2025-11-05 18:07:00.609][INFO]   Backed up: momentum_quality.py [SHA256: 2D044CE525D9...]
+[2025-11-05 18:07:00.625][INFO]   Backed up: news_event_positioning.py [SHA256: 2BA057A61A39...]
+[2025-11-05 18:07:00.640][INFO]   Backed up: ofi_refinement.py [SHA256: E59EE35C4143...]
+[2025-11-05 18:07:00.640][INFO]   Backed up: order_block_institutional.py [SHA256: 4AD75C1274D7...]
+[2025-11-05 18:07:00.656][INFO]   Backed up: order_flow_toxicity.py [SHA256: E0675D26CEE1...]
+[2025-11-05 18:07:00.656][INFO]   Backed up: volatility_regime_adaptation.py [SHA256: 2ACC6180B7F7...]
+[2025-11-05 18:07:00.687][SUCCESS] Backup complete: 15 files saved
+[2025-11-05 18:07:00.687][INFO] Manifest: C:\TradingSystem\backups\import_correction\correction_manifest_20251105_180700.json
+[2025-11-05 18:07:00.687][INFO] === PHASE 3: ANALYZING AND CORRECTING ===
+[2025-11-05 18:07:00.719][INFO] Processing: breakout_volume_confirmation.py
+[2025-11-05 18:07:00.813][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:00.828][WARN]   Status: Manual review required
+[2025-11-05 18:07:00.828][INFO] Processing: correlation_divergence.py
+[2025-11-05 18:07:00.906][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:00.922][WARN]   Status: Manual review required
+[2025-11-05 18:07:00.922][INFO] Processing: fvg_institutional.py
+[2025-11-05 18:07:00.984][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:01.000][SUCCESS]   Status: Already correct
+[2025-11-05 18:07:01.000][INFO] Processing: htf_ltf_liquidity.py
+[2025-11-05 18:07:01.081][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:01.097][SUCCESS]   Status: Already correct
+[2025-11-05 18:07:01.097][INFO] Processing: iceberg_detection.py
+[2025-11-05 18:07:01.176][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:01.176][SUCCESS]   Status: Already correct
+[2025-11-05 18:07:01.176][INFO] Processing: idp_inducement_distribution.py
+[2025-11-05 18:07:01.265][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:01.271][SUCCESS]   Status: Already correct
+[2025-11-05 18:07:01.271][INFO] Processing: kalman_pairs_trading.py
+[2025-11-05 18:07:01.335][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:01.350][WARN]   Status: Manual review required
+[2025-11-05 18:07:01.350][INFO] Processing: liquidity_sweep.py
+[2025-11-05 18:07:01.414][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:01.430][WARN]   Status: Manual review required
+[2025-11-05 18:07:01.430][INFO] Processing: mean_reversion_statistical.py
+[2025-11-05 18:07:01.510][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:01.516][WARN]   Status: Manual review required
+[2025-11-05 18:07:01.516][INFO] Processing: momentum_quality.py
+[2025-11-05 18:07:01.589][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:01.589][WARN]   Status: Manual review required
+[2025-11-05 18:07:01.605][INFO] Processing: news_event_positioning.py
+[2025-11-05 18:07:01.687][WARN]   Status: Manual review required
+[2025-11-05 18:07:01.687][INFO] Processing: ofi_refinement.py
+[2025-11-05 18:07:01.782][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:01.782][SUCCESS]   Status: Already correct
+[2025-11-05 18:07:01.782][INFO] Processing: order_block_institutional.py
+[2025-11-05 18:07:01.861][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:01.861][SUCCESS]   Status: Already correct
+[2025-11-05 18:07:01.861][INFO] Processing: order_flow_toxicity.py
+[2025-11-05 18:07:01.940][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:01.953][WARN]   Status: Manual review required
+[2025-11-05 18:07:01.956][INFO] Processing: volatility_regime_adaptation.py
+[2025-11-05 18:07:02.037][WARN]   Pre-correction syntax issue: SYNTAX_ERROR:Line 1:invalid non-printable character U+FEFF
+[2025-11-05 18:07:02.047][WARN]   Status: Manual review required
+[2025-11-05 18:07:02.053][INFO] === PHASE 4: VALIDATING IMPORTS ===
+[2025-11-05 18:07:02.974][ERROR]   Import FAILED: breakout_volume_confirmation
+[2025-11-05 18:07:02.974][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:03.875][ERROR]   Import FAILED: correlation_divergence
+[2025-11-05 18:07:03.875][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:04.773][ERROR]   Import FAILED: fvg_institutional
+[2025-11-05 18:07:04.773][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:05.705][ERROR]   Import FAILED: htf_ltf_liquidity
+[2025-11-05 18:07:05.705][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:06.625][ERROR]   Import FAILED: iceberg_detection
+[2025-11-05 18:07:06.625][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:07.593][ERROR]   Import FAILED: idp_inducement_distribution
+[2025-11-05 18:07:07.593][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:08.563][ERROR]   Import FAILED: kalman_pairs_trading
+[2025-11-05 18:07:08.579][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:09.391][ERROR]   Import FAILED: liquidity_sweep
+[2025-11-05 18:07:09.391][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:10.297][ERROR]   Import FAILED: mean_reversion_statistical
+[2025-11-05 18:07:10.297][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:11.237][ERROR]   Import FAILED: momentum_quality
+[2025-11-05 18:07:11.237][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:12.174][ERROR]   Import FAILED: news_event_positioning
+[2025-11-05 18:07:12.174][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:13.046][ERROR]   Import FAILED: ofi_refinement
+[2025-11-05 18:07:13.049][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:13.937][ERROR]   Import FAILED: order_block_institutional
+[2025-11-05 18:07:13.953][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:14.703][ERROR]   Import FAILED: order_flow_toxicity
+[2025-11-05 18:07:14.703][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:15.453][ERROR]   Import FAILED: volatility_regime_adaptation
+[2025-11-05 18:07:15.453][ERROR]     FAIL:No module named 'Signal'
+[2025-11-05 18:07:15.468][INFO] === PHASE 5: GENERATING REPORT ===
+[2025-11-05 18:07:15.718][SUCCESS] Report saved: C:\TradingSystem\reports\import_correction_20251105_180700.txt
+[2025-11-05 18:07:15.718][SUCCESS] Correction system completed

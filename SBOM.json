@@ -1,0 +1,394 @@
+﻿{
+    "dependencies_file":  "requirements.lock",
+    "project_name":  "InstitutionalTradingSystem",
+    "python_version":  "Python 3.13.0",
+    "modules":  [
+                    {
+                        "path":  "src/mt5_connector.py",
+                        "sha256":  "6d2fa217a456d1dd8f532c5c1ef7ee5d10b811e7668d0b4f17495665e14b2083",
+                        "size_bytes":  2341,
+                        "modified":  "2025-11-04T23:48:03+01:00"
+                    },
+                    {
+                        "path":  "src/risk_management.py",
+                        "sha256":  "15881e7c51b2ebf6f91b78d2f1cc478fb273158d608e1e8963e626170ee461d5",
+                        "size_bytes":  3532,
+                        "modified":  "2025-11-04T23:20:37+01:00"
+                    },
+                    {
+                        "path":  "src/strategy_orchestrator.py",
+                        "sha256":  "a0d320062f96a56bfdfefb334cd04df16ef6b516f84ce02f585311618bb261f6",
+                        "size_bytes":  8272,
+                        "modified":  "2025-11-05T19:22:41+01:00"
+                    },
+                    {
+                        "path":  "src/structured_logging.py",
+                        "sha256":  "364b6542f69eff0a922545516d65008588f9bf4e510084cb683cd3d8b2d31a5c",
+                        "size_bytes":  4054,
+                        "modified":  "2025-11-04T23:51:56+01:00"
+                    },
+                    {
+                        "path":  "src/__init__.py",
+                        "sha256":  "4adcbc555d5d21ce2c74667e799341a813feef2be5e8af39a558ab90f29b4d82",
+                        "size_bytes":  28,
+                        "modified":  "2025-11-06T20:55:33+01:00"
+                    },
+                    {
+                        "path":  "src/core/budget_manager.py",
+                        "sha256":  "77587af5243bb9578b8a49d953ef45c3ab1ada573e6b3bf0bd6fa024bbcf2a3b",
+                        "size_bytes":  9134,
+                        "modified":  "2025-11-06T21:24:46+01:00"
+                    },
+                    {
+                        "path":  "src/core/conflict_arbiter.py",
+                        "sha256":  "4f29422ed9374736c2537d3f9610ef518e0ce900438ebe57f54fae5f995edff6",
+                        "size_bytes":  43726,
+                        "modified":  "2025-11-06T21:53:49+01:00"
+                    },
+                    {
+                        "path":  "src/core/correlation_tracker.py",
+                        "sha256":  "e681189eeb4631676f03869045f4fa9c6ccd452bba9327932659303540190354",
+                        "size_bytes":  5849,
+                        "modified":  "2025-11-06T17:11:51+01:00"
+                    },
+                    {
+                        "path":  "src/core/decision_ledger.py",
+                        "sha256":  "c1d8023cc9b3624d0e6a7169de7ee4fc572874773b821969e6e25526ffc88042",
+                        "size_bytes":  4064,
+                        "modified":  "2025-11-07T20:03:27+01:00"
+                    },
+                    {
+                        "path":  "src/core/portfolio_manager.py",
+                        "sha256":  "c0360ce569d1da59646cc7baa7d8c59f8ed55c69703489b29a25c61adcdd91e4",
+                        "size_bytes":  9998,
+                        "modified":  "2025-11-06T21:46:16+01:00"
+                    },
+                    {
+                        "path":  "src/core/position_sizer.py",
+                        "sha256":  "6feb75003761ddbb649485f999e1660cbf55c13bb626a6df7d30ce6cd4de3c9f",
+                        "size_bytes":  5465,
+                        "modified":  "2025-11-06T21:46:16+01:00"
+                    },
+                    {
+                        "path":  "src/core/regime_engine.py",
+                        "sha256":  "2678188e286699876333b8d78efca246c6145f7a9364315b1351b4360325650f",
+                        "size_bytes":  25932,
+                        "modified":  "2025-11-06T17:01:37+01:00"
+                    },
+                    {
+                        "path":  "src/core/signal_bus.py",
+                        "sha256":  "68b78fd41ec55934ee977de4c202368c81970fce49865d221dd3c11c3f3bdb59",
+                        "size_bytes":  5014,
+                        "modified":  "2025-11-06T18:39:40+01:00"
+                    },
+                    {
+                        "path":  "src/core/signal_schema.py",
+                        "sha256":  "2150e3a2509e439fb5fce14c8966144d9c8364b35efe66f5a8df0ec600bf2050",
+                        "size_bytes":  3276,
+                        "modified":  "2025-11-06T17:11:51+01:00"
+                    },
+                    {
+                        "path":  "src/core/strategy_adapter.py",
+                        "sha256":  "100146aaa862da89b6b633766392559624bcb1f287e6f2b84298b3e50834ea23",
+                        "size_bytes":  5648,
+                        "modified":  "2025-11-06T22:10:18+01:00"
+                    },
+                    {
+                        "path":  "src/core/__init__.py",
+                        "sha256":  "4adcbc555d5d21ce2c74667e799341a813feef2be5e8af39a558ab90f29b4d82",
+                        "size_bytes":  28,
+                        "modified":  "2025-11-06T20:55:33+01:00"
+                    },
+                    {
+                        "path":  "src/execution/adaptive_participation_rate.py",
+                        "sha256":  "fc5d86eb96104f4e27b3d4ebcdbddcd64611622bf1e86d3198492cadf7f85eeb",
+                        "size_bytes":  32526,
+                        "modified":  "2025-11-05T19:02:35+01:00"
+                    },
+                    {
+                        "path":  "src/features/delta_volume.py",
+                        "sha256":  "00a6b51e1b270f0b579a8dc08a27a3bb9466085f67a807ab34c7085aed347343",
+                        "size_bytes":  10960,
+                        "modified":  "2025-11-05T18:58:02+01:00"
+                    },
+                    {
+                        "path":  "src/features/derived_features.py",
+                        "sha256":  "9f0b8b3226dd9b86f2a973634bb3ad0fdcb385a510f75b84e86fa07d0c85bfce",
+                        "size_bytes":  11750,
+                        "modified":  "2025-11-02T19:04:08+01:00"
+                    },
+                    {
+                        "path":  "src/features/displacement.py",
+                        "sha256":  "b57c605138172c51ca81e1b565307b6bb8b458edc948b13fc762f143dfc4e492",
+                        "size_bytes":  6278,
+                        "modified":  "2025-11-05T19:16:17+01:00"
+                    },
+                    {
+                        "path":  "src/features/gaps.py",
+                        "sha256":  "9446bb7c7ff265e3d92d11661726cf0183b010d117aee823a26082325bbd9942",
+                        "size_bytes":  641,
+                        "modified":  "2025-11-05T17:45:08+01:00"
+                    },
+                    {
+                        "path":  "src/features/microstructure.py",
+                        "sha256":  "298d8ea2f73959e4961df3bbd289a7b5b091f89bebb4366457ec8c4e575e615c",
+                        "size_bytes":  6314,
+                        "modified":  "2025-11-02T00:56:44+01:00"
+                    },
+                    {
+                        "path":  "src/features/mtf.py",
+                        "sha256":  "2cf2e5cc01e7165e8315f0227e06ea505ace54fab201c0f32cb21d7ff13a27e3",
+                        "size_bytes":  549,
+                        "modified":  "2025-11-05T17:45:08+01:00"
+                    },
+                    {
+                        "path":  "src/features/ofi.py",
+                        "sha256":  "0b649f67576bd33fab43146cb1d333842615c778a939a7a38ca9a5c3f8dbd29e",
+                        "size_bytes":  2929,
+                        "modified":  "2025-11-06T15:39:15+01:00"
+                    },
+                    {
+                        "path":  "src/features/orderbook_l2.py",
+                        "sha256":  "6e576b6e386d07e3fe94faca6ca377e6e9320a39d1152fa99d4b8ee987a2fe78",
+                        "size_bytes":  6871,
+                        "modified":  "2025-11-06T16:08:59+01:00"
+                    },
+                    {
+                        "path":  "src/features/order_flow.py",
+                        "sha256":  "79eb73732dc94fcefc96804161b30e540a0fc54de544483d8c0e6fffb4865dc3",
+                        "size_bytes":  13535,
+                        "modified":  "2025-11-05T01:16:13+01:00"
+                    },
+                    {
+                        "path":  "src/features/statistical_models.py",
+                        "sha256":  "4ea9cfbb84d01736acc0e60b75310af1f1afa7d7e8f922584ad54c9410ceb83b",
+                        "size_bytes":  35568,
+                        "modified":  "2025-11-03T16:02:38+01:00"
+                    },
+                    {
+                        "path":  "src/features/technical_indicators.py",
+                        "sha256":  "514361c440feccb22bbbf59ea540625d1f510b266ff45e749fec66996ca71b29",
+                        "size_bytes":  10007,
+                        "modified":  "2025-11-02T19:02:16+01:00"
+                    },
+                    {
+                        "path":  "src/features/tns.py",
+                        "sha256":  "b9380007929d9760b7d2cddbbc82bd898f4753082dec057e401e7250be49a59a",
+                        "size_bytes":  349,
+                        "modified":  "2025-11-05T17:45:08+01:00"
+                    },
+                    {
+                        "path":  "src/gatekeepers/epin_estimator.py",
+                        "sha256":  "a1602a2acd7389f116eb6448022ec940d02ca7ced4759bf5ffc61c169a4a388a",
+                        "size_bytes":  9585,
+                        "modified":  "2025-11-06T00:12:38+01:00"
+                    },
+                    {
+                        "path":  "src/gatekeepers/gatekeeper_adapter.py",
+                        "sha256":  "a83aaf847b7a5cfc163710d6cd8cbcd150acff4da73f7aa3cd14e43193288a84",
+                        "size_bytes":  12350,
+                        "modified":  "2025-11-06T00:24:21+01:00"
+                    },
+                    {
+                        "path":  "src/gatekeepers/gatekeeper_integrator.py",
+                        "sha256":  "2534ece56002a388ee16820899950f389737d5df52f2cb752c2d857ffe52ce03",
+                        "size_bytes":  9030,
+                        "modified":  "2025-11-06T00:18:40+01:00"
+                    },
+                    {
+                        "path":  "src/gatekeepers/kyles_lambda.py",
+                        "sha256":  "513facf4f231157c2f39c7f0eae8be2fa14274b13ea776bef8c0044a7a1e5d35",
+                        "size_bytes":  11977,
+                        "modified":  "2025-11-06T00:12:38+01:00"
+                    },
+                    {
+                        "path":  "src/gatekeepers/spread_monitor.py",
+                        "sha256":  "27df63abd9ec36a5ae9af523099f67dd823565d10548fc364daaf0d83e57316a",
+                        "size_bytes":  11207,
+                        "modified":  "2025-11-06T00:18:39+01:00"
+                    },
+                    {
+                        "path":  "src/gatekeepers/__init__.py",
+                        "sha256":  "854009d6a807839e8b489f4d7ba8e6e9ceb8bf4790d8dda84b254699a414c815",
+                        "size_bytes":  775,
+                        "modified":  "2025-11-06T00:18:40+01:00"
+                    },
+                    {
+                        "path":  "src/governance/audit_viewer.py",
+                        "sha256":  "d9bc281fcca0f0bd9fccc8e4a4382bb591e352b1a849eb633f2bff5025e8831c",
+                        "size_bytes":  16030,
+                        "modified":  "2025-11-07T20:12:38+01:00"
+                    },
+                    {
+                        "path":  "src/governance/data_lineage.py",
+                        "sha256":  "5422999115b105efd462df351f4cbaefcb84b18c68b28e5d0bd25e33132efd9f",
+                        "size_bytes":  8159,
+                        "modified":  "2025-11-07T20:08:06+01:00"
+                    },
+                    {
+                        "path":  "src/governance/event_store.py",
+                        "sha256":  "4fd2161d95f3e4d79e64cd8b700cd065a62004aa6c275fb6cf01330288eb6f19",
+                        "size_bytes":  11961,
+                        "modified":  "2025-11-07T20:08:06+01:00"
+                    },
+                    {
+                        "path":  "src/governance/id_generation.py",
+                        "sha256":  "4aad9235be9e32048354cb8c0ecbe3ef7d5b1ae2f2cbefb9d744e697e967da01",
+                        "size_bytes":  10892,
+                        "modified":  "2025-11-07T20:03:27+01:00"
+                    },
+                    {
+                        "path":  "src/governance/model_registry.py",
+                        "sha256":  "4b6122cee295a58431b29ed8a5e64e0572f7bd4918621b95ac65f9e76813fbaf",
+                        "size_bytes":  19829,
+                        "modified":  "2025-11-07T20:12:37+01:00"
+                    },
+                    {
+                        "path":  "src/governance/version_manager.py",
+                        "sha256":  "48001f17b841081ff8c2a665a26029d067bb38d8bd4cac8c91a0fb296f4dc3e9",
+                        "size_bytes":  12398,
+                        "modified":  "2025-11-07T20:08:06+01:00"
+                    },
+                    {
+                        "path":  "src/governance/__init__.py",
+                        "sha256":  "d7340b4653446adaa3d7319b7f54ae66af6aedb2d8342bb86263dc1b6cf17dc0",
+                        "size_bytes":  1323,
+                        "modified":  "2025-11-07T20:12:38+01:00"
+                    },
+                    {
+                        "path":  "src/risk/factor_limits.py",
+                        "sha256":  "5ab6ea870f7595e0e3581f1c9c85ad6b688d7789841ab54508f46feca2083393",
+                        "size_bytes":  8722,
+                        "modified":  "2025-11-07T20:03:28+01:00"
+                    },
+                    {
+                        "path":  "src/risk/__init__.py",
+                        "sha256":  "9ff43a1b6e58229460fe96455bec65298fe3e4cdb7d418d98622b3d50f393231",
+                        "size_bytes":  145,
+                        "modified":  "2025-11-07T20:03:28+01:00"
+                    },
+                    {
+                        "path":  "src/signal_generator/signal_types.py",
+                        "sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                        "size_bytes":  0,
+                        "modified":  "2025-11-02T19:23:48+01:00"
+                    },
+                    {
+                        "path":  "src/signal_generator/__init__.py",
+                        "sha256":  "8df9ec92ba64b08a4409c273afb30775c5951b5acd2e5f8c3f2e38fcef0bce66",
+                        "size_bytes":  538,
+                        "modified":  "2025-11-03T00:31:52+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/breakout_volume_confirmation.py",
+                        "sha256":  "e6e3a404e7d59f9fe1092d63157ea6282fffb4e2c264e6a1145f5fcb0a3fb1a0",
+                        "size_bytes":  20134,
+                        "modified":  "2025-11-06T00:59:51+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/correlation_divergence.py",
+                        "sha256":  "33325540c36cb933cfc0aea5771cbb21cb301d474dd9a42502904596dfabd2a0",
+                        "size_bytes":  9064,
+                        "modified":  "2025-11-05T18:11:30+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/fvg_institutional.py",
+                        "sha256":  "d9d989047b848643cd964bf49db7f393d49d12b2c701bb09639587fcc508de61",
+                        "size_bytes":  842,
+                        "modified":  "2025-11-06T00:49:29+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/htf_ltf_liquidity.py",
+                        "sha256":  "7b00c46ffe4579bab3a0cbaffc0245b8f2bfc16fa44a03060c86028407d92d2f",
+                        "size_bytes":  847,
+                        "modified":  "2025-11-06T00:49:29+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/iceberg_detection.py",
+                        "sha256":  "45afe4d8f59ad104051cd95702066e55fce24d7512a8112a8ba502c03511753e",
+                        "size_bytes":  12693,
+                        "modified":  "2025-11-06T16:08:59+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/idp_inducement_distribution.py",
+                        "sha256":  "3223e1cad1c6fe0f870c016829a8312b1c81923283c0fa6ea0eb1509ba706073",
+                        "size_bytes":  8989,
+                        "modified":  "2025-11-05T22:24:54+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/kalman_pairs_trading.py",
+                        "sha256":  "fe0fe63e21bbda7a2d34ee66560b6a0cc341e3345057d07bab67ba09589c29b1",
+                        "size_bytes":  10408,
+                        "modified":  "2025-11-05T18:11:31+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/liquidity_sweep.py",
+                        "sha256":  "b995d153c4e5682ca94c7dc2477aa6c16fed937249c642f31816d88779f43e46",
+                        "size_bytes":  11790,
+                        "modified":  "2025-11-06T00:49:29+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/mean_reversion_statistical.py",
+                        "sha256":  "5c610c047d2ac32354edc01899e47ce6809ed0924579aef9f564a720bf9f5eba",
+                        "size_bytes":  12299,
+                        "modified":  "2025-11-06T00:49:29+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/momentum_quality.py",
+                        "sha256":  "a16442d839bc4695fb40422fcd1615959576bca90fbd947c58f1e043eacd0046",
+                        "size_bytes":  9842,
+                        "modified":  "2025-11-06T00:49:29+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/ofi_refinement.py",
+                        "sha256":  "444298718a994335498249425e226b9cce2102d3f60323d591068ee46b5027f6",
+                        "size_bytes":  1262,
+                        "modified":  "2025-11-06T00:49:29+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/order_block_institutional.py",
+                        "sha256":  "46e3ccd6c31b444e12b002cf88af278664ee8d166f9320bdcca77bd7e45bbce3",
+                        "size_bytes":  8730,
+                        "modified":  "2025-11-05T22:25:15+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/order_flow_toxicity.py",
+                        "sha256":  "3cd068f5f6799eb7ff5e10d0b3abe71f8db75ea829d101a788eca9c215df8b04",
+                        "size_bytes":  5770,
+                        "modified":  "2025-11-05T18:11:31+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/strategy_base.py",
+                        "sha256":  "63fb49c531d382f729570ea7f61c67e89fb29bf446a32471777a61ea64159273",
+                        "size_bytes":  4824,
+                        "modified":  "2025-11-04T03:54:12+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/volatility_regime_adaptation.py",
+                        "sha256":  "2f8e17a29312e3b601b7db7ea4c9fbcf993568ddd879bcefc8b0d54f6d611f1f",
+                        "size_bytes":  10273,
+                        "modified":  "2025-11-06T00:49:29+01:00"
+                    },
+                    {
+                        "path":  "src/strategies/__init__.py",
+                        "sha256":  "d3cab08a21dac61e4ba12b6f7dc2d1b226a6c739a0a752a47b46d8ebf17e5343",
+                        "size_bytes":  913,
+                        "modified":  "2025-11-06T00:06:27+01:00"
+                    },
+                    {
+                        "path":  "src/utils/download_historical_data.py",
+                        "sha256":  "f31cb5318a9495a4c05522eb7dfd19c0e676f668386c1043add92da76f302945",
+                        "size_bytes":  8987,
+                        "modified":  "2025-11-01T21:29:48+01:00"
+                    },
+                    {
+                        "path":  "src/utils/test_data_availability.py",
+                        "sha256":  "116e6a3e8ac2a7ef43d3c17cc6efb1fdcdfe79d90170c95499910266fdcee962",
+                        "size_bytes":  780,
+                        "modified":  "2025-11-01T21:10:04+01:00"
+                    }
+                ],
+    "generated_at":  "2025-11-07T20:20:21+01:00",
+    "version":  "0.1.0",
+    "platform":  null
+}

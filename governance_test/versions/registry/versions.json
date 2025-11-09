@@ -1,0 +1,64 @@
+{
+  "created_at": "2025-11-08T18:22:22.339017",
+  "modules": {
+    "backtesting_engine": [
+      {
+        "version": "1.0.0",
+        "file_hash": "0c5755e16fa64a73f0073f18710bd8c68f87ce88956f50409af67c2c1b48d63d",
+        "deployed_at": "2025-11-08T18:22:22.339991",
+        "changes": "Initial version with margin fix applied",
+        "author": "trading_system"
+      },
+      {
+        "version": "1.0.0",
+        "file_hash": "0c5755e16fa64a73f0073f18710bd8c68f87ce88956f50409af67c2c1b48d63d",
+        "deployed_at": "2025-11-08T18:29:06.797696",
+        "changes": "Initial version with margin fix applied",
+        "author": "trading_system"
+      },
+      {
+        "version": "1.0.0",
+        "file_hash": "0c5755e16fa64a73f0073f18710bd8c68f87ce88956f50409af67c2c1b48d63d",
+        "deployed_at": "2025-11-08T18:45:52.071011",
+        "changes": "Initial version with margin fix applied",
+        "author": "trading_system"
+      },
+      {
+        "version": "1.0.0",
+        "file_hash": "0c5755e16fa64a73f0073f18710bd8c68f87ce88956f50409af67c2c1b48d63d",
+        "deployed_at": "2025-11-08T18:51:56.735698",
+        "changes": "Initial version with margin fix applied",
+        "author": "trading_system"
+      },
+      {
+        "version": "1.0.0",
+        "file_hash": "0c5755e16fa64a73f0073f18710bd8c68f87ce88956f50409af67c2c1b48d63d",
+        "deployed_at": "2025-11-08T18:54:42.723871",
+        "changes": "Initial version",
+        "author": "trading_system"
+      }
+    ],
+    "broker_client": [
+      {
+        "version": "1.0.0",
+        "file_hash": "ed058d1dc951bf2c24eaca68e9d6976fff969cb8003e3587c03221cf45085b70",
+        "deployed_at": "2025-11-08T18:54:42.784801",
+        "changes": "Initial version",
+        "author": "trading_system"
+      }
+    ],
+    "tca_engine": [
+      {
+        "version": "1.0.0",
+        "file_hash": "04fc37e671a92703fbda0adb326cc8b739fd8037bbaf4a2f205671a92c382391",
+        "deployed_at": "2025-11-08T18:54:42.824463",
+        "changes": "Initial version",
+        "author": "trading_system"
+      }
+    ]
+  },
+  "configs": {},
+  "feature_sets": {},
+  "models": {},
+  "updated_at": "2025-11-08T18:54:42.824500"
+}

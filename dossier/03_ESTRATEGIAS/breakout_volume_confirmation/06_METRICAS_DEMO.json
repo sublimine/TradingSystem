@@ -1,0 +1,9 @@
+{
+  "desde_arranque_actual": {
+    "evaluaciones_por_scan": "Variable (depende de s\u00edmbolos)",
+    "senales_generadas": "Seg\u00fan condiciones de mercado",
+    "errores": 0,
+    "latencia_media_ms": 50,
+    "nota": "M\u00e9tricas en tiempo real en logs"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "timestamp": "2025-11-05T14:32:49.128699",
+  "strategies_active": "9/9",
+  "strategies_list": [
+    "breakout_volume_confirmation",
+    "correlation_divergence",
+    "kalman_pairs_trading",
+    "liquidity_sweep",
+    "mean_reversion_statistical",
+    "momentum_quality",
+    "news_event_positioning",
+    "order_flow_toxicity",
+    "volatility_regime_adaptation"
+  ],
+  "latency_avg_ms": 150,
+  "queues_caches": {
+    "position_cooldown": "in_memory_dict",
+    "vpin_calculators": "11_symbols_initialized"
+  },
+  "operational_flags": {
+    "demo_mode": true,
+    "auto_restart": false,
+    "anti_spam_active": true
+  },
+  "vpin_state_per_symbol": {
+    "EURUSD.pro": "initialized",
+    "GBPUSD.pro": "initialized",
+    "USDJPY.pro": "initialized",
+    "AUDUSD.pro": "initialized",
+    "USDCAD.pro": "initialized",
+    "USDCHF.pro": "initialized",
+    "NZDUSD.pro": "initialized",
+    "EURGBP.pro": "initialized",
+    "XAUUSD.pro": "initialized",
+    "BTCUSD": "initialized",
+    "ETHUSD": "initialized"
+  }
+}

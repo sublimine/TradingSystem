@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-11-05T14:32:49.128061",
+  "broker": "DEMO",
+  "broker_name": "Axi",
+  "server": "Axi-US50-Demo",
+  "account_type": "DEMO",
+  "symbols": [
+    "EURUSD.pro",
+    "GBPUSD.pro",
+    "USDJPY.pro",
+    "AUDUSD.pro",
+    "USDCAD.pro",
+    "USDCHF.pro",
+    "NZDUSD.pro",
+    "EURGBP.pro",
+    "XAUUSD.pro",
+    "BTCUSD",
+    "ETHUSD"
+  ],
+  "timeframe": "M1",
+  "scan_interval_seconds": 60,
+  "cooldown_seconds": 300,
+  "risk_policies": {
+    "max_risk_per_trade_pct": 1.0,
+    "lotaje": "dynamic",
+    "max_open_per_symbol": 2
+  }
+}

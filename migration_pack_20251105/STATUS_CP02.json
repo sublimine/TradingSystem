@@ -1,0 +1,19 @@
+﻿{
+    "timestamp":  "2025-11-05T14:05:01",
+    "incidencias":  [
+
+                    ],
+    "progress_pct":  {
+                         "V06":  100,
+                         "V02":  100,
+                         "ANNEX_E":  100,
+                         "V05":  100,
+                         "ANNEX_C":  100,
+                         "V01":  100,
+                         "ANNEX_D":  100
+                     },
+    "bloqueos":  [
+
+                 ],
+    "checkpoint":  "CP-02"
+}

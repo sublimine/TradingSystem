@@ -1,0 +1,32 @@
+                                        Tabla «public.trades»
+   Columna    |            Tipo             | Ordenamiento | Nulable  |             Por omisi              
+--------------+-----------------------------+--------------+----------+------------------------------------
+ id           | integer                     |              | not null | nextval('trades_id_seq'::regclass)
+ signal_id    | integer                     |              |          | 
+ mt5_ticket   | bigint                      |              |          | 
+ symbol       | character varying(20)       |              | not null | 
+ trade_type   | character varying(10)       |              | not null | 
+ lot_size     | numeric(10,3)               |              | not null | 
+ entry_price  | numeric(12,6)               |              | not null | 
+ entry_time   | timestamp without time zone |              | not null | 
+ stop_loss    | numeric(12,6)               |              |          | 
+ take_profit  | numeric(12,6)               |              |          | 
+ exit_price   | numeric(12,6)               |              |          | 
+ exit_time    | timestamp without time zone |              |          | 
+ profit_chf   | numeric(12,2)               |              |          | 
+ commission   | numeric(10,2)               |              |          | 
+ swap         | numeric(10,2)               |              |          | 
+ status       | character varying(20)       |              | not null | 
+ close_reason | character varying(50)       |              |          | 
+ metadata     | jsonb                       |              |          | 
+ created_at   | timestamp without time zone |              |          | CURRENT_TIMESTAMP
+ updated_at   | timestamp without time zone |              |          | CURRENT_TIMESTAMP
+Índices:
+    "trades_pkey" PRIMARY KEY, btree (id)
+    "idx_trades_entry_time" btree (entry_time DESC)
+    "idx_trades_status" btree (status)
+    "idx_trades_symbol" btree (symbol)
+    "trades_mt5_ticket_key" UNIQUE CONSTRAINT, btree (mt5_ticket)
+Restricciones de llave foránea:
+    "trades_signal_id_fkey" FOREIGN KEY (signal_id) REFERENCES signals(id)
+

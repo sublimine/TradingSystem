@@ -1,0 +1,187 @@
+﻿[
+    {
+        "FullName":  "C:\\TradingSystem\\src\\mt5_connector.py",
+        "Length":  2341,
+        "LastWriteTime":  "\/Date(1762296483359)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\risk_management.py",
+        "Length":  3532,
+        "LastWriteTime":  "\/Date(1762294837001)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\structured_logging.py",
+        "Length":  4054,
+        "LastWriteTime":  "\/Date(1762296716184)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\features\\derived_features.py",
+        "Length":  11750,
+        "LastWriteTime":  "\/Date(1762106648000)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\features\\microstructure.py",
+        "Length":  6314,
+        "LastWriteTime":  "\/Date(1762041404000)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\features\\order_flow.py",
+        "Length":  13535,
+        "LastWriteTime":  "\/Date(1762301773756)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\features\\statistical_models.py",
+        "Length":  35568,
+        "LastWriteTime":  "\/Date(1762182158000)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\features\\technical_indicators.py",
+        "Length":  10007,
+        "LastWriteTime":  "\/Date(1762106536000)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\features\\__pycache__\\order_flow.cpython-313.pyc",
+        "Length":  15895,
+        "LastWriteTime":  "\/Date(1762346078325)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\features\\__pycache__\\statistical_models.cpython-313.pyc",
+        "Length":  36242,
+        "LastWriteTime":  "\/Date(1762346078325)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\features\\__pycache__\\technical_indicators.cpython-313.pyc",
+        "Length":  13466,
+        "LastWriteTime":  "\/Date(1762346078325)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\signal_generator\\signal_types.py",
+        "Length":  0,
+        "LastWriteTime":  "\/Date(1762107828000)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\signal_generator\\__init__.py",
+        "Length":  538,
+        "LastWriteTime":  "\/Date(1762126312000)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\breakout_volume_confirmation.py",
+        "Length":  11333,
+        "LastWriteTime":  "\/Date(1762298579962)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\correlation_divergence.py",
+        "Length":  9069,
+        "LastWriteTime":  "\/Date(1762298579946)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\kalman_pairs_trading.py",
+        "Length":  10677,
+        "LastWriteTime":  "\/Date(1762298579946)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\liquidity_sweep.py",
+        "Length":  11739,
+        "LastWriteTime":  "\/Date(1762298579946)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\mean_reversion_statistical.py",
+        "Length":  12299,
+        "LastWriteTime":  "\/Date(1762298579946)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\momentum_quality.py",
+        "Length":  9548,
+        "LastWriteTime":  "\/Date(1762298579946)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\news_event_positioning.py",
+        "Length":  6854,
+        "LastWriteTime":  "\/Date(1762213654000)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\order_flow_toxicity.py",
+        "Length":  5933,
+        "LastWriteTime":  "\/Date(1762298579946)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\strategy_base.py",
+        "Length":  4824,
+        "LastWriteTime":  "\/Date(1762224852000)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\volatility_regime_adaptation.py",
+        "Length":  10012,
+        "LastWriteTime":  "\/Date(1762298579946)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__init__.py",
+        "Length":  894,
+        "LastWriteTime":  "\/Date(1762213654000)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__pycache__\\breakout_volume_confirmation.cpython-313.pyc",
+        "Length":  11586,
+        "LastWriteTime":  "\/Date(1762346052184)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__pycache__\\correlation_divergence.cpython-313.pyc",
+        "Length":  9423,
+        "LastWriteTime":  "\/Date(1762346052278)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__pycache__\\kalman_pairs_trading.cpython-313.pyc",
+        "Length":  12136,
+        "LastWriteTime":  "\/Date(1762346052372)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__pycache__\\liquidity_sweep.cpython-313.pyc",
+        "Length":  12365,
+        "LastWriteTime":  "\/Date(1762346052466)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__pycache__\\mean_reversion_statistical.cpython-313.pyc",
+        "Length":  12538,
+        "LastWriteTime":  "\/Date(1762346052559)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__pycache__\\momentum_quality.cpython-313.pyc",
+        "Length":  10197,
+        "LastWriteTime":  "\/Date(1762346052653)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__pycache__\\news_event_positioning.cpython-313.pyc",
+        "Length":  8355,
+        "LastWriteTime":  "\/Date(1762346052731)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__pycache__\\order_flow_toxicity.cpython-313.pyc",
+        "Length":  7527,
+        "LastWriteTime":  "\/Date(1762346052794)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__pycache__\\strategy_base.cpython-313.pyc",
+        "Length":  6378,
+        "LastWriteTime":  "\/Date(1762346078340)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__pycache__\\volatility_regime_adaptation.cpython-313.pyc",
+        "Length":  12234,
+        "LastWriteTime":  "\/Date(1762346052903)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\strategies\\__pycache__\\__init__.cpython-313.pyc",
+        "Length":  918,
+        "LastWriteTime":  "\/Date(1762346078340)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\utils\\download_historical_data.py",
+        "Length":  8987,
+        "LastWriteTime":  "\/Date(1762028988000)\/"
+    },
+    {
+        "FullName":  "C:\\TradingSystem\\src\\utils\\test_data_availability.py",
+        "Length":  780,
+        "LastWriteTime":  "\/Date(1762027804000)\/"
+    }
+]

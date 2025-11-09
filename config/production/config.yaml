@@ -1,0 +1,123 @@
+database:
+  host: localhost
+  port: 5432
+  name: trading_system
+  user: trading_user
+  password: abc
+  
+metatrader:
+  path: C:\Program Files\MetaTrader 5\terminal64.exe
+  timeout: 60000
+  
+system:
+  initial_capital: 10000.0
+  target_capital: 3000.0
+  currency: USD
+  timezone: Europe/Zurich
+  max_positions_per_symbol: 3
+  max_total_positions: 15
+  
+risk_management:
+  base_risk_percent: 1.2
+  max_risk_percent: 5.0
+  drawdown_pause_threshold: 0.20
+  drawdown_stop_threshold: 0.35
+  daily_loss_limit: 0.05
+  correlation_threshold: 0.70
+  
+sizing_levels:
+  level_1: 0.8
+  level_2: 1.2
+  level_3: 2.0
+  level_4: 3.0
+  level_5: 5.0
+  
+execution:
+  signal_check_interval: 2
+  max_order_retries: 3
+  order_retry_delay: 2
+  max_slippage_pips: 3.0
+  
+logging:
+  level: INFO
+  rotation: daily
+  retention_days: 90
+  
+universe:
+  forex_majors:
+    - EURUSD.pro
+    - GBPUSD.pro
+    - AUDUSD.pro
+    - NZDUSD.pro
+    - USDCAD.pro
+    - USDJPY.pro
+    - USDCHF.pro
+    - EURCHF.pro
+    - EURJPY.pro
+  
+  forex_jpy_crosses:
+    - GBPJPY.pro
+    - AUDJPY.pro
+    - CADJPY.pro
+  
+  commodities:
+    - XAUUSD.pro
+  
+  crypto:
+    - BTCUSD
+    - ETHUSD
+
+strategies:
+  liquidity_sweep:
+    enabled: true
+    min_confirmations: 5
+    lookback_hours: [24, 48, 72]
+    volume_threshold_multiplier: 2.5
+    
+  order_flow_toxicity:
+    enabled: true
+    vpin_threshold: 0.65
+    bucket_size: 50000
+    min_buckets: 3
+    
+  kalman_pairs_trading:
+    monitored_pairs:
+      - ['EURUSD.pro', 'GBPUSD.pro']
+      - ['AUDUSD.pro', 'NZDUSD.pro']
+    min_correlation: 0.75
+    z_score_entry_threshold: 2.0
+    z_score_exit_threshold: 0.5
+    kalman_process_variance: 0.001
+    kalman_measurement_variance: 0.01
+    hedge_ratio_recalibration_hours: 24
+    max_spread_extension_sigma: 3.5
+    lookback_correlation: 200
+    lookback_hedge_ratio: 100
+    
+  regime_momentum:
+    enabled: true
+    volatility_lookback: 20
+    hmm_states: 2
+    
+  volatility_reversion:
+    enabled: true
+    percentile_threshold: 95
+    min_duration_hours: 6
+    
+  gold_accumulation:
+    enabled: true
+    cot_threshold: 0.70
+    zone_width_atr: 2.0
+    
+  crypto_funding:
+    enabled: true
+    funding_rate_threshold: 0.05
+    
+  crypto_momentum:
+    enabled: true
+    roc_percentile: 85
+    
+  gap_fade:
+    enabled: true
+    min_gap_atr: 1.5
+    fade_target_percent: 0.60

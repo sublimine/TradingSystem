@@ -1,0 +1,23 @@
+﻿{
+    "timestamp":  "2025-11-05T14:17:34",
+    "system_name":  "Institutional Trading System",
+    "build":  "20251105_FINAL",
+    "key_facts":  [
+                      "9 estrategias institucionales activas",
+                      "Motor con lista blanca y carga robusta",
+                      "Anti-spam: 300s cooldown",
+                      "Riesgo: 1% por operación",
+                      "Símbolos: 11 (major + metales + cripto)",
+                      "Timeframe: M1",
+                      "Build validado: 20251105_FINAL"
+                  ],
+    "checkpoint_reference":  "STATE_20251105_T0",
+    "mode":  "DEMO",
+    "strategies_count":  9,
+    "next_steps":  [
+                       "Revisar dossier completo",
+                       "Validar operación en DEMO",
+                       "Monitorear 30+ días",
+                       "Preparar go-live"
+                   ]
+}

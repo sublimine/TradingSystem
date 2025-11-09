@@ -1,0 +1,168 @@
+[
+  {
+    "file": "liquidity_sweep.py",
+    "conditions": [],
+    "thresholds": [],
+    "bottlenecks": [
+      "Sin condiciones explicitas - logica opaca"
+    ]
+  },
+  {
+    "file": "order_flow_toxicity.py",
+    "conditions": [
+      {
+        "line": 73,
+        "variable": "flow_direction",
+        "operator": "==",
+        "threshold": 0.0,
+        "text": "if flow_direction == 0:"
+      },
+      {
+        "line": 109,
+        "variable": "imbalance",
+        "operator": ">",
+        "threshold": 0.0,
+        "text": "return 1 if imbalance > 0 else -1"
+      },
+      {
+        "line": 116,
+        "variable": "price_change",
+        "operator": ">",
+        "threshold": 0.0,
+        "text": "price_direction = 1 if price_change > 0 else -1"
+      },
+      {
+        "line": 129,
+        "variable": "flow_direction",
+        "operator": ">",
+        "threshold": 0.0,
+        "text": "if flow_direction > 0:"
+      }
+    ],
+    "thresholds": [],
+    "bottlenecks": [],
+    "restrictive_count": 0
+  },
+  {
+    "file": "breakout_volume_confirmation.py",
+    "conditions": [
+      {
+        "line": 104,
+        "variable": "historical_atr",
+        "operator": "<",
+        "threshold": 1.0,
+        "text": "if historical_atr < 1e-10:"
+      }
+    ],
+    "thresholds": [],
+    "bottlenecks": [],
+    "restrictive_count": 0
+  },
+  {
+    "file": "correlation_divergence.py",
+    "conditions": [],
+    "thresholds": [],
+    "bottlenecks": [
+      "Sin condiciones explicitas - logica opaca",
+      "Excesivos return None: 6"
+    ]
+  },
+  {
+    "file": "kalman_pairs_trading.py",
+    "conditions": [
+      {
+        "line": 114,
+        "variable": "estimated_std",
+        "operator": ">",
+        "threshold": 0.0,
+        "text": "z_score = (current_spread - estimated_mean) / estimated_std if estimated_std > 0"
+      }
+    ],
+    "thresholds": [],
+    "bottlenecks": [],
+    "restrictive_count": 0
+  },
+  {
+    "file": "mean_reversion_statistical.py",
+    "conditions": [
+      {
+        "line": 96,
+        "variable": "equilibrium_std",
+        "operator": "<",
+        "threshold": 1.0,
+        "text": "if equilibrium_std < 1e-10:"
+      },
+      {
+        "line": 109,
+        "variable": "volume_avg",
+        "operator": ">",
+        "threshold": 0.0,
+        "text": "volume_spike_ratio = recent_volume_avg / volume_avg if volume_avg > 0 else 1.0"
+      },
+      {
+        "line": 116,
+        "variable": "z_score",
+        "operator": "<",
+        "threshold": 0.0,
+        "text": "'direction': 'LONG' if z_score < 0 else 'SHORT',"
+      }
+    ],
+    "thresholds": [],
+    "bottlenecks": [
+      "Requiere z_score < 0.0 (MUY BAJO)"
+    ],
+    "restrictive_count": 1
+  },
+  {
+    "file": "momentum_quality.py",
+    "conditions": [
+      {
+        "line": 92,
+        "variable": "price_change_pct",
+        "operator": ">",
+        "threshold": 0.0,
+        "text": "direction = 1 if price_change_pct > 0 else -1"
+      },
+      {
+        "line": 111,
+        "variable": "imbalance",
+        "operator": ">",
+        "threshold": 0.0,
+        "text": "imbalance_direction = 1 if imbalance > 0 else -1"
+      }
+    ],
+    "thresholds": [],
+    "bottlenecks": [],
+    "restrictive_count": 0
+  },
+  {
+    "file": "news_event_positioning.py",
+    "conditions": [
+      {
+        "line": 119,
+        "variable": "volume_avg_pre",
+        "operator": ">",
+        "threshold": 0.0,
+        "text": "volume_increase = volume_avg_post / volume_avg_pre if volume_avg_pre > 0 else 1."
+      }
+    ],
+    "thresholds": [],
+    "bottlenecks": [],
+    "restrictive_count": 0
+  },
+  {
+    "file": "volatility_regime_adaptation.py",
+    "conditions": [
+      {
+        "line": 163,
+        "variable": "current_regime",
+        "operator": "==",
+        "threshold": 0.0,
+        "text": "entry_threshold = self.low_vol_entry_threshold if self.current_regime == 0 else "
+      }
+    ],
+    "thresholds": [],
+    "bottlenecks": [],
+    "restrictive_count": 0
+  }
+]

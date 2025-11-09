@@ -1,0 +1,81 @@
+{
+  "strategies": [
+    {
+      "name": "breakout_volume_confirmation",
+      "present": true,
+      "has_evaluate": true,
+      "signal_structure_valid": true,
+      "non_fatal_error_handling": true,
+      "status": "OK"
+    },
+    {
+      "name": "correlation_divergence",
+      "present": true,
+      "has_evaluate": true,
+      "signal_structure_valid": true,
+      "non_fatal_error_handling": true,
+      "status": "OK"
+    },
+    {
+      "name": "kalman_pairs_trading",
+      "present": true,
+      "has_evaluate": true,
+      "signal_structure_valid": true,
+      "non_fatal_error_handling": true,
+      "status": "OK"
+    },
+    {
+      "name": "liquidity_sweep",
+      "present": true,
+      "has_evaluate": true,
+      "signal_structure_valid": true,
+      "non_fatal_error_handling": true,
+      "status": "OK"
+    },
+    {
+      "name": "mean_reversion_statistical",
+      "present": true,
+      "has_evaluate": true,
+      "signal_structure_valid": true,
+      "non_fatal_error_handling": true,
+      "status": "OK"
+    },
+    {
+      "name": "momentum_quality",
+      "present": true,
+      "has_evaluate": true,
+      "signal_structure_valid": true,
+      "non_fatal_error_handling": true,
+      "status": "OK"
+    },
+    {
+      "name": "news_event_positioning",
+      "present": true,
+      "has_evaluate": true,
+      "signal_structure_valid": true,
+      "non_fatal_error_handling": true,
+      "status": "OK"
+    },
+    {
+      "name": "order_flow_toxicity",
+      "present": true,
+      "has_evaluate": true,
+      "signal_structure_valid": true,
+      "non_fatal_error_handling": true,
+      "status": "OK"
+    },
+    {
+      "name": "volatility_regime_adaptation",
+      "present": true,
+      "has_evaluate": true,
+      "signal_structure_valid": true,
+      "non_fatal_error_handling": true,
+      "status": "OK"
+    }
+  ],
+  "summary": {
+    "total": 9,
+    "ok": 9,
+    "timestamp": "2025-11-05T14:32:49.148048"
+  }
+}

@@ -1,0 +1,38 @@
+﻿{
+    "Hashes":  {
+                   "src\\strategies\\htf_ltf_liquidity.py":  "9F687EAE28B4380EC2CE4EAE8C7971C89DA473791DC8E0325FDE7112F7C84BDE",
+                   "src\\strategies\\order_flow_toxicity.py":  "E0675D26CEE1581FB0879E73C87BF7A203CB1017D687B5882FC75B12D5B152BD",
+                   "src\\strategies\\fvg_institutional.py":  "72C99493C47E8AB61CD0958060ADFF454C01A2243BCF916247C2C1055FCA5366",
+                   "src\\strategies\\news_event_positioning.py":  "2BA057A61A3939680573D1BF30A729126C7D415DDF96DB767FF741813A725E9F",
+                   "src\\strategies\\kalman_pairs_trading.py":  "E94C0EDF0A5C72451505218350491ADF23F7433B065AAF18C3F426CCCDC1BABD",
+                   "src\\strategies\\mean_reversion_statistical.py":  "C1267B70A9123B11B8F779434FF176787A5CA77E65CC4AA027A00BADD36E1A29",
+                   "src\\strategies\\volatility_regime_adaptation.py":  "2ACC6180B7F778DFD00BF0D035B94ED313EA95FFD68A4C2A3F7F5853B65A15A9",
+                   "src\\strategies\\correlation_divergence.py":  "5BA553D5B97DF463BBD2687F6D907D4AACE3EB5E4A4DB88E84A00F57C9EA5F42",
+                   "src\\strategies\\breakout_volume_confirmation.py":  "859D6413ED46CB2669B9DE56518EFC43B2053D95EAE06E3BFB3BCA4E45F71666",
+                   "src\\strategies\\order_block_institutional.py":  "4AD75C1274D791FE1E9D7FF36A6DE456D5BBC7A8FB3C65B86868CA51AFCF82A2",
+                   "src\\strategies\\liquidity_sweep.py":  "1581CEF42D160A430EA5675B80D5CE9F3732E1FCD468A9D77CE924B76CB3CFED",
+                   "src\\strategies\\momentum_quality.py":  "2D044CE525D9B9454E106A17CB03B272C86EE19770EB7973DEFEDB444A2A0865",
+                   "src\\strategies\\iceberg_detection.py":  "A848DA8B4006DE825BA8ABA152ABB83BD19A1E541788833D44E8DF7974407B08",
+                   "src\\strategies\\idp_inducement_distribution.py":  "0A5FB20F1532A6FB5663EBE5EFB558D8345E2C1D4E311E717105B7356BAAFC91",
+                   "src\\strategies\\ofi_refinement.py":  "E59EE35C414329034422A7FBE8AC172DAA7246216DCBA151E28244373D38C0F6"
+               },
+    "Path":  "C:\\TradingSystem\\backups\\import_correction\\20251105_180700",
+    "Timestamp":  "20251105_180700",
+    "Files":  [
+                  "src\\strategies\\breakout_volume_confirmation.py",
+                  "src\\strategies\\correlation_divergence.py",
+                  "src\\strategies\\fvg_institutional.py",
+                  "src\\strategies\\htf_ltf_liquidity.py",
+                  "src\\strategies\\iceberg_detection.py",
+                  "src\\strategies\\idp_inducement_distribution.py",
+                  "src\\strategies\\kalman_pairs_trading.py",
+                  "src\\strategies\\liquidity_sweep.py",
+                  "src\\strategies\\mean_reversion_statistical.py",
+                  "src\\strategies\\momentum_quality.py",
+                  "src\\strategies\\news_event_positioning.py",
+                  "src\\strategies\\ofi_refinement.py",
+                  "src\\strategies\\order_block_institutional.py",
+                  "src\\strategies\\order_flow_toxicity.py",
+                  "src\\strategies\\volatility_regime_adaptation.py"
+              ]
+}

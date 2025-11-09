@@ -1,0 +1,23 @@
+                                           Tabla «public.signals»
+      Columna       |            Tipo             | Ordenamiento | Nulable  |              Por omisi              
+--------------------+-----------------------------+--------------+----------+-------------------------------------
+ id                 | integer                     |              | not null | nextval('signals_id_seq'::regclass)
+ symbol             | character varying(20)       |              | not null | 
+ strategy           | character varying(50)       |              | not null | 
+ signal_type        | character varying(10)       |              | not null | 
+ timestamp          | timestamp without time zone |              | not null | 
+ confidence         | numeric(5,4)                |              |          | 
+ entry_price        | numeric(12,6)               |              |          | 
+ stop_loss          | numeric(12,6)               |              |          | 
+ take_profit        | numeric(12,6)               |              |          | 
+ suggested_lot_size | numeric(10,3)               |              |          | 
+ metadata           | jsonb                       |              |          | 
+ status             | character varying(20)       |              |          | 'pending'::character varying
+ created_at         | timestamp without time zone |              |          | CURRENT_TIMESTAMP
+Índices:
+    "signals_pkey" PRIMARY KEY, btree (id)
+    "idx_signals_status" btree (status)
+    "idx_signals_timestamp" btree ("timestamp" DESC)
+Referenciada por:
+    TABLE "trades" CONSTRAINT "trades_signal_id_fkey" FOREIGN KEY (signal_id) REFERENCES signals(id)
+

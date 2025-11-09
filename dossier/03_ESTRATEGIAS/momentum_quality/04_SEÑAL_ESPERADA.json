@@ -1,0 +1,22 @@
+{
+  "schema": {
+    "symbol": "str (ej: EURUSD.pro)",
+    "direction": "str (LONG o SHORT)",
+    "entry_price": "float",
+    "stop_loss": "float",
+    "take_profit": "float",
+    "strategy_name": "str (momentum_quality)",
+    "timestamp": "datetime.datetime",
+    "confidence": "float (opcional, 0-1)"
+  },
+  "ejemplo_real": {
+    "symbol": "EURUSD.pro",
+    "direction": "LONG",
+    "entry_price": 1.1,
+    "stop_loss": 1.099,
+    "take_profit": 1.1015,
+    "strategy_name": "momentum_quality",
+    "timestamp": "2025-11-05T10:30:00",
+    "confidence": 0.75
+  }
+}

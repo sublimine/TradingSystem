@@ -1,0 +1,84 @@
+﻿================================================================================
+INSTITUTIONAL IMPORT CORRECTION REPORT
+================================================================================
+Execution: 2025-11-05 18:07:15
+Session: 0a8a10de
+Project: C:\TradingSystem
+================================================================================
+
+SUMMARY
+--------------------------------------------------------------------------------
+Total Strategies Processed: 15
+Successfully Corrected: 0
+Already Correct: 6
+Require Manual Review: 9
+Syntax Validation Failed: 0
+
+IMPORT VALIDATION
+--------------------------------------------------------------------------------
+Successful Imports: 0
+Failed Imports: 15
+
+BACKUP
+--------------------------------------------------------------------------------
+Location: C:\TradingSystem\backups\import_correction\20251105_180700
+Files Backed Up: 15
+Manifest: C:\TradingSystem\backups\import_correction\correction_manifest_20251105_180700.json
+
+DETAILED RESULTS
+--------------------------------------------------------------------------------
+breakout_volume_confirmation.py:
+  Status: ManualReview
+  Import: FAIL:No module named 'Signal'
+correlation_divergence.py:
+  Status: ManualReview
+  Import: FAIL:No module named 'Signal'
+fvg_institutional.py:
+  Status: AlreadyCorrect
+  Import: FAIL:No module named 'Signal'
+htf_ltf_liquidity.py:
+  Status: AlreadyCorrect
+  Import: FAIL:No module named 'Signal'
+iceberg_detection.py:
+  Status: AlreadyCorrect
+  Import: FAIL:No module named 'Signal'
+idp_inducement_distribution.py:
+  Status: AlreadyCorrect
+  Import: FAIL:No module named 'Signal'
+kalman_pairs_trading.py:
+  Status: ManualReview
+  Import: FAIL:No module named 'Signal'
+liquidity_sweep.py:
+  Status: ManualReview
+  Import: FAIL:No module named 'Signal'
+mean_reversion_statistical.py:
+  Status: ManualReview
+  Import: FAIL:No module named 'Signal'
+momentum_quality.py:
+  Status: ManualReview
+  Import: FAIL:No module named 'Signal'
+news_event_positioning.py:
+  Status: ManualReview
+  Import: FAIL:No module named 'Signal'
+ofi_refinement.py:
+  Status: AlreadyCorrect
+  Import: FAIL:No module named 'Signal'
+order_block_institutional.py:
+  Status: AlreadyCorrect
+  Import: FAIL:No module named 'Signal'
+order_flow_toxicity.py:
+  Status: ManualReview
+  Import: FAIL:No module named 'Signal'
+volatility_regime_adaptation.py:
+  Status: ManualReview
+  Import: FAIL:No module named 'Signal'
+
+LOGGING STATISTICS
+--------------------------------------------------------------------------------
+Total Entries: 114
+Errors: 30
+Warnings: 23
+Success: 7
+
+Log File: C:\TradingSystem\logs\import_correction_20251105_180700.log
+================================================================================

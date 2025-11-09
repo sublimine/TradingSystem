@@ -1,0 +1,53 @@
+﻿
+================================================================
+INTEGRACIÓN DE POSITION SIZING - PASOS COMPLETADOS
+================================================================
+
+COMPONENTES CREADOS:
+✓ src/core/budget_manager.py     - Gestión de presupuestos familiares
+✓ src/core/position_sizer.py     - Cálculo de tamaños Kelly-based
+
+PRÓXIMOS PASOS DE INTEGRACIÓN:
+
+1. Modificar ConflictResolution en conflict_arbiter.py:
+   - Agregar campo: position_size (PositionSize opcional)
+   
+2. Modificar PortfolioManagerLayer.__init__:
+   - Inicializar BudgetManager con capital y allocations
+   - Inicializar PositionSizer
+   
+3. Modificar PortfolioManagerLayer.process_decision_tick:
+   - Después de obtener decisions del arbiter
+   - Para cada EXECUTE: llamar position_sizer.calculate_size()
+   - Agregar PositionSize al resultado
+   
+4. Modificar motor TradingEngine._execute_decisions:
+   - Leer position_size del executable
+   - Calcular tamaño de lote real basado en capital_amount y stop
+   - Llamar budget_manager.reserve_capital() antes de ejecutar
+   
+5. Modificar motor TradingEngine._close_position:
+   - Llamar budget_manager.release_capital() al cerrar
+
+================================================================
+CONFIGURACIÓN NECESARIA:
+
+En motor o config, definir:
+
+TOTAL_CAPITAL = 100000.0  # Capital total del portfolio
+
+FAMILY_ALLOCATIONS = {
+    'momentum': 0.30,      # 30% para estrategias momentum
+    'mean_reversion': 0.25,  # 25% para mean reversion
+    'breakout': 0.20,      # 20% para breakouts
+    'arbitrage': 0.15      # 15% para arbitraje
+}
+
+STRATEGY_FAMILIES = {
+    'momentum_quality': 'momentum',
+    'ofi_intraday': 'momentum',
+    'mean_rev_volume': 'mean_reversion',
+    # ... mapeo de estrategias a familias
+}
+
+================================================================

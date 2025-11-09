@@ -1,0 +1,298 @@
+{
+  "timestamp": "2025-11-05T14:32:49.017384",
+  "timezone": "Europe/Zurich",
+  "tree": [
+    {
+      "path": "src\\mt5_connector.py",
+      "size_bytes": 2341,
+      "modified": "2025-11-04T23:48:03.359316",
+      "type": "code"
+    },
+    {
+      "path": "src\\risk_management.py",
+      "size_bytes": 3532,
+      "modified": "2025-11-04T23:20:37.001416",
+      "type": "code"
+    },
+    {
+      "path": "src\\structured_logging.py",
+      "size_bytes": 4054,
+      "modified": "2025-11-04T23:51:56.184957",
+      "type": "code"
+    },
+    {
+      "path": "src\\features\\derived_features.py",
+      "size_bytes": 11750,
+      "modified": "2025-11-02T19:04:08",
+      "type": "code"
+    },
+    {
+      "path": "src\\features\\microstructure.py",
+      "size_bytes": 6314,
+      "modified": "2025-11-02T00:56:44",
+      "type": "code"
+    },
+    {
+      "path": "src\\features\\order_flow.py",
+      "size_bytes": 13535,
+      "modified": "2025-11-05T01:16:13.756302",
+      "type": "code"
+    },
+    {
+      "path": "src\\features\\statistical_models.py",
+      "size_bytes": 35568,
+      "modified": "2025-11-03T16:02:38",
+      "type": "code"
+    },
+    {
+      "path": "src\\features\\technical_indicators.py",
+      "size_bytes": 10007,
+      "modified": "2025-11-02T19:02:16",
+      "type": "code"
+    },
+    {
+      "path": "src\\signal_generator\\signal_types.py",
+      "size_bytes": 0,
+      "modified": "2025-11-02T19:23:48",
+      "type": "code"
+    },
+    {
+      "path": "src\\signal_generator\\__init__.py",
+      "size_bytes": 538,
+      "modified": "2025-11-03T00:31:52",
+      "type": "code"
+    },
+    {
+      "path": "src\\strategies\\breakout_volume_confirmation.py",
+      "size_bytes": 11333,
+      "modified": "2025-11-05T00:22:59.962104",
+      "type": "code"
+    },
+    {
+      "path": "src\\strategies\\correlation_divergence.py",
+      "size_bytes": 9069,
+      "modified": "2025-11-05T00:22:59.946479",
+      "type": "code"
+    },
+    {
+      "path": "src\\strategies\\kalman_pairs_trading.py",
+      "size_bytes": 10677,
+      "modified": "2025-11-05T00:22:59.946479",
+      "type": "code"
+    },
+    {
+      "path": "src\\strategies\\liquidity_sweep.py",
+      "size_bytes": 11739,
+      "modified": "2025-11-05T00:22:59.946479",
+      "type": "code"
+    },
+    {
+      "path": "src\\strategies\\mean_reversion_statistical.py",
+      "size_bytes": 12299,
+      "modified": "2025-11-05T00:22:59.946479",
+      "type": "code"
+    },
+    {
+      "path": "src\\strategies\\momentum_quality.py",
+      "size_bytes": 9548,
+      "modified": "2025-11-05T00:22:59.946479",
+      "type": "code"
+    },
+    {
+      "path": "src\\strategies\\news_event_positioning.py",
+      "size_bytes": 6854,
+      "modified": "2025-11-04T00:47:34",
+      "type": "code"
+    },
+    {
+      "path": "src\\strategies\\order_flow_toxicity.py",
+      "size_bytes": 5933,
+      "modified": "2025-11-05T00:22:59.946479",
+      "type": "code"
+    },
+    {
+      "path": "src\\strategies\\strategy_base.py",
+      "size_bytes": 4824,
+      "modified": "2025-11-04T03:54:12",
+      "type": "code"
+    },
+    {
+      "path": "src\\strategies\\volatility_regime_adaptation.py",
+      "size_bytes": 10012,
+      "modified": "2025-11-05T00:22:59.946479",
+      "type": "code"
+    },
+    {
+      "path": "src\\strategies\\__init__.py",
+      "size_bytes": 894,
+      "modified": "2025-11-04T00:47:34",
+      "type": "code"
+    },
+    {
+      "path": "src\\utils\\download_historical_data.py",
+      "size_bytes": 8987,
+      "modified": "2025-11-01T21:29:48",
+      "type": "code"
+    },
+    {
+      "path": "src\\utils\\test_data_availability.py",
+      "size_bytes": 780,
+      "modified": "2025-11-01T21:10:04",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\adaptive_backtest.py",
+      "size_bytes": 4493,
+      "modified": "2025-11-04T03:43:10",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\audit_architecture.py",
+      "size_bytes": 2375,
+      "modified": "2025-11-04T23:59:03.164917",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\audit_strategies.py",
+      "size_bytes": 3284,
+      "modified": "2025-11-04T23:59:03.211789",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\clean_database.py",
+      "size_bytes": 2231,
+      "modified": "2025-11-04T04:08:14",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\complete_backtest.py",
+      "size_bytes": 6974,
+      "modified": "2025-11-04T03:57:58",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\consolidated_backtest.py",
+      "size_bytes": 13759,
+      "modified": "2025-11-04T03:38:08",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\etl_incremental.py",
+      "size_bytes": 5363,
+      "modified": "2025-11-04T23:46:41.485211",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\extract_all_features.py",
+      "size_bytes": 809,
+      "modified": "2025-11-04T03:45:18",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\extract_strategy_code.py",
+      "size_bytes": 406,
+      "modified": "2025-11-04T03:41:00",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\get_symbols.py",
+      "size_bytes": 879,
+      "modified": "2025-11-04T20:59:24.886939",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\import_historical_data_m1.py",
+      "size_bytes": 4007,
+      "modified": "2025-11-04T21:08:17.006163",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\import_intraday_m1.py",
+      "size_bytes": 4229,
+      "modified": "2025-11-04T04:17:16",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\inspect_strategies.py",
+      "size_bytes": 2369,
+      "modified": "2025-11-04T03:39:32",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\institutional_backtest.py",
+      "size_bytes": 21754,
+      "modified": "2025-11-04T03:48:58",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\live_trading_engine.py",
+      "size_bytes": 15513,
+      "modified": "2025-11-05T13:42:40.976136",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\master_installer.py",
+      "size_bytes": 4488,
+      "modified": "2025-11-04T05:21:28",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\migrate_to_vps.py",
+      "size_bytes": 1955,
+      "modified": "2025-11-04T12:07:48",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\precise_analysis.py",
+      "size_bytes": 2241,
+      "modified": "2025-11-05T00:01:48.616268",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\real_backtest.py",
+      "size_bytes": 13470,
+      "modified": "2025-11-04T04:22:40",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\surgical_analysis.py",
+      "size_bytes": 6913,
+      "modified": "2025-11-05T00:03:51.036784",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\validate_quick.py",
+      "size_bytes": 1053,
+      "modified": "2025-11-05T01:02:59.749104",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\verify_data.py",
+      "size_bytes": 867,
+      "modified": "2025-11-04T04:08:14",
+      "type": "code"
+    },
+    {
+      "path": "scripts\\verify_features.py",
+      "size_bytes": 1073,
+      "modified": "2025-11-05T00:01:48.678767",
+      "type": "code"
+    }
+  ],
+  "versions": {
+    "python": "3.13.0 (tags/v3.13.0:60403a5, Oct  7 2024, 09:38:07) [MSC v.1941 64 bit (AMD64)]",
+    "mt5": "5.0.5388",
+    "pandas": "2.3.3",
+    "numpy": "2.3.4",
+    "os": "Windows",
+    "os_version": "10.0.20348"
+  },
+  "environment_vars": {
+    "PYTHONPATH": [
+      "C:/TradingSystem/src",
+      "C:/TradingSystem",
+      "C:\\TradingSystem"
+    ],
+    "TIMEZONE": "Europe/Zurich"
+  }
+}

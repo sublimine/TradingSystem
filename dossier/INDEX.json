@@ -1,0 +1,69 @@
+{
+  "timestamp": "2025-11-05T14:17:36.740848",
+  "dossier_version": "1.0",
+  "sections": {
+    "00_RESUMEN_EJECUTIVO": {
+      "files": [
+        "00_RESUMEN_EJECUTIVO.md"
+      ],
+      "description": "Estado actual y salud del sistema"
+    },
+    "01_ARQUITECTURA_SISTEMA": {
+      "files": [
+        "01_ARQUITECTURA_SISTEMA.md"
+      ],
+      "description": "Diagrama y contratos de interfaces"
+    },
+    "02_INVENTARIO_REPOSITORIO": {
+      "files": [
+        "02_INVENTARIO_REPOSITORIO.json",
+        "02_INVENTARIO_REPOSITORIO.html"
+      ],
+      "description": "Cat\u00e1logo completo de archivos"
+    },
+    "03_ESTRATEGIAS": {
+      "files": [
+        "breakout_volume_confirmation/*.md",
+        "correlation_divergence/*.md",
+        "kalman_pairs_trading/*.md",
+        "liquidity_sweep/*.md",
+        "mean_reversion_statistical/*.md",
+        "momentum_quality/*.md",
+        "news_event_positioning/*.md",
+        "order_flow_toxicity/*.md",
+        "volatility_regime_adaptation/*.md"
+      ],
+      "description": "Documentaci\u00f3n exhaustiva de 9 estrategias"
+    },
+    "04_FEATURES": {
+      "files": [
+        "CATALOGO_FEATURES.md"
+      ],
+      "description": "Features calculados y dependencias"
+    },
+    "05_RIESGO_Y_EJECUCION": {
+      "files": [
+        "RIESGO_EJECUCION.md"
+      ],
+      "description": "Sizing, SL/TP, fill policies"
+    },
+    "06_LOGGING_Y_AUDITORIA": {
+      "files": [
+        "LOGGING.md"
+      ],
+      "description": "Esquema de eventos y trazas"
+    },
+    "07_RUNBOOK_OPERATIVO": {
+      "files": [
+        "RUNBOOK.md"
+      ],
+      "description": "Procedimientos operativos"
+    },
+    "08_ANEXOS": {
+      "files": [
+        "GLOSARIO.md"
+      ],
+      "description": "T\u00e9rminos y convenciones"
+    }
+  }
+}

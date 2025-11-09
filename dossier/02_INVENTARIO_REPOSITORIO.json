@@ -1,0 +1,163 @@
+[
+  {
+    "path": "src\\mt5_connector.py",
+    "role": "Support",
+    "criticality": "Low",
+    "hash": "6d2fa217a456d1dd8f532c5c1ef7ee5d10b811e7668d0b4f17495665e14b2083",
+    "size_bytes": 2341
+  },
+  {
+    "path": "src\\risk_management.py",
+    "role": "Support",
+    "criticality": "Low",
+    "hash": "15881e7c51b2ebf6f91b78d2f1cc478fb273158d608e1e8963e626170ee461d5",
+    "size_bytes": 3532
+  },
+  {
+    "path": "src\\structured_logging.py",
+    "role": "Support",
+    "criticality": "Low",
+    "hash": "364b6542f69eff0a922545516d65008588f9bf4e510084cb683cd3d8b2d31a5c",
+    "size_bytes": 4054
+  },
+  {
+    "path": "src\\features\\derived_features.py",
+    "role": "Feature Engineering",
+    "criticality": "High",
+    "hash": "9f0b8b3226dd9b86f2a973634bb3ad0fdcb385a510f75b84e86fa07d0c85bfce",
+    "size_bytes": 11750
+  },
+  {
+    "path": "src\\features\\microstructure.py",
+    "role": "Feature Engineering",
+    "criticality": "High",
+    "hash": "298d8ea2f73959e4961df3bbd289a7b5b091f89bebb4366457ec8c4e575e615c",
+    "size_bytes": 6314
+  },
+  {
+    "path": "src\\features\\order_flow.py",
+    "role": "Feature Engineering",
+    "criticality": "High",
+    "hash": "79eb73732dc94fcefc96804161b30e540a0fc54de544483d8c0e6fffb4865dc3",
+    "size_bytes": 13535
+  },
+  {
+    "path": "src\\features\\statistical_models.py",
+    "role": "Feature Engineering",
+    "criticality": "High",
+    "hash": "4ea9cfbb84d01736acc0e60b75310af1f1afa7d7e8f922584ad54c9410ceb83b",
+    "size_bytes": 35568
+  },
+  {
+    "path": "src\\features\\technical_indicators.py",
+    "role": "Feature Engineering",
+    "criticality": "High",
+    "hash": "514361c440feccb22bbbf59ea540625d1f510b266ff45e749fec66996ca71b29",
+    "size_bytes": 10007
+  },
+  {
+    "path": "src\\signal_generator\\signal_types.py",
+    "role": "Support",
+    "criticality": "Low",
+    "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size_bytes": 0
+  },
+  {
+    "path": "src\\signal_generator\\__init__.py",
+    "role": "Support",
+    "criticality": "Low",
+    "hash": "8df9ec92ba64b08a4409c273afb30775c5951b5acd2e5f8c3f2e38fcef0bce66",
+    "size_bytes": 538
+  },
+  {
+    "path": "src\\strategies\\breakout_volume_confirmation.py",
+    "role": "Strategy",
+    "criticality": "Medium",
+    "hash": "d67cb8b76988586996386389725161481d8735a9d1954826292e352a263bbd9c",
+    "size_bytes": 11333
+  },
+  {
+    "path": "src\\strategies\\correlation_divergence.py",
+    "role": "Strategy",
+    "criticality": "Medium",
+    "hash": "5ba553d5b97df463bbd2687f6d907d4aace3eb5e4a4db88e84a00f57c9ea5f42",
+    "size_bytes": 9069
+  },
+  {
+    "path": "src\\strategies\\kalman_pairs_trading.py",
+    "role": "Strategy",
+    "criticality": "Medium",
+    "hash": "e94c0edf0a5c72451505218350491adf23f7433b065aaf18c3f426cccdc1babd",
+    "size_bytes": 10677
+  },
+  {
+    "path": "src\\strategies\\liquidity_sweep.py",
+    "role": "Strategy",
+    "criticality": "Medium",
+    "hash": "1581cef42d160a430ea5675b80d5ce9f3732e1fcd468a9d77ce924b76cb3cfed",
+    "size_bytes": 11739
+  },
+  {
+    "path": "src\\strategies\\mean_reversion_statistical.py",
+    "role": "Strategy",
+    "criticality": "Medium",
+    "hash": "c1267b70a9123b11b8f779434ff176787a5ca77e65cc4aa027a00badd36e1a29",
+    "size_bytes": 12299
+  },
+  {
+    "path": "src\\strategies\\momentum_quality.py",
+    "role": "Strategy",
+    "criticality": "Medium",
+    "hash": "2d044ce525d9b9454e106a17cb03b272c86ee19770eb7973defedb444a2a0865",
+    "size_bytes": 9548
+  },
+  {
+    "path": "src\\strategies\\news_event_positioning.py",
+    "role": "Strategy",
+    "criticality": "Medium",
+    "hash": "2ba057a61a3939680573d1bf30a729126c7d415ddf96db767ff741813a725e9f",
+    "size_bytes": 6854
+  },
+  {
+    "path": "src\\strategies\\order_flow_toxicity.py",
+    "role": "Strategy",
+    "criticality": "Medium",
+    "hash": "e0675d26cee1581fb0879e73c87bf7a203cb1017d687b5882fc75b12d5b152bd",
+    "size_bytes": 5933
+  },
+  {
+    "path": "src\\strategies\\strategy_base.py",
+    "role": "Strategy",
+    "criticality": "Medium",
+    "hash": "63fb49c531d382f729570ea7f61c67e89fb29bf446a32471777a61ea64159273",
+    "size_bytes": 4824
+  },
+  {
+    "path": "src\\strategies\\volatility_regime_adaptation.py",
+    "role": "Strategy",
+    "criticality": "Medium",
+    "hash": "2acc6180b7f778dfd00bf0d035b94ed313ea95ffd68a4c2a3f7f5853b65a15a9",
+    "size_bytes": 10012
+  },
+  {
+    "path": "src\\strategies\\__init__.py",
+    "role": "Strategy",
+    "criticality": "Medium",
+    "hash": "016910ec643523b8c4da23e8cc8c7c1d6f24c3becb95d58cf8582e5b81ca0b42",
+    "size_bytes": 894
+  },
+  {
+    "path": "src\\utils\\download_historical_data.py",
+    "role": "Support",
+    "criticality": "Low",
+    "hash": "f31cb5318a9495a4c05522eb7dfd19c0e676f668386c1043add92da76f302945",
+    "size_bytes": 8987
+  },
+  {
+    "path": "src\\utils\\test_data_availability.py",
+    "role": "Support",
+    "criticality": "Low",
+    "hash": "116e6a3e8ac2a7ef43d3c17cc6efb1fdcdfe79d90170c95499910266fdcee962",
+    "size_bytes": 780
+  }
+]
