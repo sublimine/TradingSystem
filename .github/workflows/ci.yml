@@ -12,7 +12,8 @@ jobs:
     runs-on: windows-latest
     env:
       PIP_ONLY_BINARY: ":all:"
-      CI_PYTEST_FILTER: "not integration and not live and not mt5"
+      PYTHONPATH: "${{ github.workspace }};${{ github.workspace }}\\src"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,28 +37,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install --upgrade setuptools wheel
 
-      - name: Install dependencies (constraints Py3.11)
+      - name: Install dependencies
         shell: pwsh
         run: |
-          if (Test-Path "requirements.txt") {
+          if (Test-Path "constraints/py311.txt") {
             pip install --only-binary=:all: -r requirements.txt -c constraints/py311.txt
-          } elseif (Test-Path "requirements.lock") {
-            pip install --only-binary=:all: -r requirements.lock -c constraints/py311.txt
           } else {
-            Write-Host "No requirements file found; skipping install."
+            pip install --only-binary=:all: -r requirements.txt
           }
+          pip install pytest
+
+      - name: Sanity path
+        shell: pwsh
+        run: |
+          Write-Host "PYTHONPATH=$env:PYTHONPATH"
+          python - << 'PY'
+import sys
+print("sys.path[:5] =>", sys.path[:5])
+PY
 
       - name: Run tests (unitarios)
         shell: pwsh
         run: |
-          if (Test-Path "tests") {
-            pip install pytest
-            $filter = "${{ env.CI_PYTEST_FILTER }}"
-            if ($filter) {
-              python -m pytest -k "$filter"
-            } else {
-              python -m pytest
-            }
-          } else {
-            Write-Host "No tests/ folder; skipping."
-          }
+          pytest -q --maxfail=1 --disable-warnings `
+            --ignore=tests/test_mt5_connector.py `
+            -k "not integration and not live and not mt5"
