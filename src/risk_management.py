@@ -63,15 +63,17 @@ def calculate_position_size(capital: float, risk_pct: float, entry_price: float,
         # Contrato típico: 100 onzas
         pip_size = 0.01
         distance_pips = price_distance / pip_size
-        # Valor de 1 pip = contract_size * pip_size
+        # Valor de 1 pip para 1 lote = contract_size * pip_size
         # Para 1 lote de oro (100 oz): 100 * $0.01 = $1 por pip
-        pip_value = (contract_size / 100) * pip_size  # Normalizado
+        pip_value = contract_size * pip_size
 
     elif 'XAG' in symbol_upper or 'SILVER' in symbol_upper:
         # Plata: 3 decimales, pip = 0.001
+        # Contrato típico: 5000 onzas
         pip_size = 0.001
         distance_pips = price_distance / pip_size
-        pip_value = (contract_size / 5000) * pip_size
+        # Para 1 lote de plata (5000 oz): 5000 * $0.001 = $5 por pip
+        pip_value = contract_size * pip_size
 
     elif 'BTC' in symbol_upper or 'ETH' in symbol_upper:
         # Cripto: Variable, usamos distancia directa
