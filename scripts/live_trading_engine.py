@@ -51,6 +51,9 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 # Gatekeeper system
 from gatekeepers.gatekeeper_adapter import GatekeeperAdapter
 
+# Risk management
+from risk_management import calculate_position_size
+
 # VPIN Calculator (debe estar definido o importado)
 class VPINCalculator:
     def __init__(self):
@@ -388,20 +391,46 @@ class LiveTradingEngine:
         try:
             symbol = signal.symbol
             direction = mt5.ORDER_TYPE_BUY if signal.direction == 'LONG' else mt5.ORDER_TYPE_SELL
-            
+
             symbol_info = mt5.symbol_info(symbol)
             if symbol_info is None:
                 logger.error(f"ERROR: Simbolo {symbol} no disponible")
                 return False
-            
-            volume = symbol_info.volume_min
-            
+
             tick = mt5.symbol_info_tick(symbol)
             if tick is None:
                 logger.error(f"ERROR: No tick para {symbol}")
                 return False
-            
+
             price = tick.ask if direction == mt5.ORDER_TYPE_BUY else tick.bid
+
+            # Calcular tamaño de posición basado en 0.5% de riesgo
+            account_info = mt5.account_info()
+            if account_info is None:
+                logger.error(f"ERROR: No se pudo obtener info de cuenta")
+                return False
+
+            equity = account_info.equity
+            risk_pct = 0.5  # 0.5% por operación
+
+            # Usar stop loss de la señal, o mínimo del símbolo si no hay
+            stop_loss = signal.stop_loss if signal.stop_loss and signal.stop_loss > 0 else price * 0.99
+
+            # Calcular volumen dinámicamente
+            contract_size = symbol_info.trade_contract_size
+            volume = calculate_position_size(
+                capital=equity,
+                risk_pct=risk_pct,
+                entry_price=price,
+                stop_loss=stop_loss,
+                contract_size=contract_size
+            )
+
+            # Validar límites del broker
+            volume = max(symbol_info.volume_min, volume)
+            volume = min(symbol_info.volume_max, volume)
+
+            logger.info(f"📊 RIESGO: Equity=${equity:.2f} | Riesgo=0.5% (${equity*0.005:.2f}) | Lotes calculados={volume:.2f}")
             
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
