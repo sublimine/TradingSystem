@@ -423,7 +423,8 @@ class LiveTradingEngine:
                 risk_pct=risk_pct,
                 entry_price=price,
                 stop_loss=stop_loss,
-                contract_size=contract_size
+                contract_size=contract_size,
+                symbol=symbol  # Pasar símbolo para detección correcta
             )
 
             # Validar límites del broker
