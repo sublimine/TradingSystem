@@ -4,7 +4,22 @@ Claude Code Agent - Ejecución Local Profesional
 Conecta Claude Sonnet 4.5 directamente a tu VPS para ejecución automática.
 
 Uso:
-    python claude_agent.py
+    Modo interactivo:  python claude_agent.py
+    Modo batch:        python claude_agent.py --batch tasks.txt
+
+    Formato tasks.txt (separa tareas con "---"):
+
+    Tarea 1: Validar gestión de riesgo
+    Ejecuta validaciones completas...
+    [prompt extenso aquí]
+
+    ---
+
+    Tarea 2: Ejecutar backtest
+    Realiza backtest de 30 días...
+    [otro prompt extenso]
+
+    ---
 
 Configuración:
     Requiere ANTHROPIC_API_KEY en variable de entorno o .env
@@ -18,6 +33,7 @@ from pathlib import Path
 from anthropic import Anthropic
 import json
 from datetime import datetime
+import argparse
 
 # Configuración
 BASE_DIR = Path(__file__).parent.resolve()
@@ -277,14 +293,183 @@ def parse_and_execute_commands(response: str, conversation_history: list, client
     # Recursivo: si Claude genera más comandos, ejecutarlos también
     return parse_and_execute_commands(next_response, conversation_history, client)
 
+def load_tasks_from_file(file_path: str) -> list:
+    """
+    Carga tareas desde archivo, separadas por '---'
+
+    Args:
+        file_path: Ruta al archivo de tareas
+
+    Returns:
+        Lista de strings, cada uno es una tarea/prompt
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # Separar por ---
+        tasks = [task.strip() for task in content.split('---') if task.strip()]
+
+        return tasks
+
+    except FileNotFoundError:
+        print_error(f"Archivo no encontrado: {file_path}")
+        sys.exit(1)
+    except Exception as e:
+        print_error(f"Error leyendo archivo: {str(e)}")
+        sys.exit(1)
+
+def run_batch_mode(tasks_file: str, api_key: str):
+    """
+    Ejecuta modo batch: procesa todas las tareas del archivo secuencialmente
+
+    Args:
+        tasks_file: Ruta al archivo de tareas
+        api_key: API key de Anthropic
+    """
+    print_header("MODO BATCH - Ejecución Automática de Múltiples Tareas")
+
+    # Cargar tareas
+    tasks = load_tasks_from_file(tasks_file)
+    total_tasks = len(tasks)
+
+    print_success(f"{total_tasks} tarea(s) cargadas desde {tasks_file}")
+    print_info(f"Directorio de trabajo: {BASE_DIR}")
+    print_info(f"Sistema: {SYSTEM_TYPE}\n")
+
+    # Crear log file
+    log_file = BASE_DIR / f"agent_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+
+    def log(message: str):
+        """Escribe en log file y pantalla"""
+        with open(log_file, 'a', encoding='utf-8') as f:
+            f.write(f"{message}\n")
+        print(message)
+
+    log(f"{'=' * 80}")
+    log(f"SESIÓN BATCH INICIADA: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log(f"Total de tareas: {total_tasks}")
+    log(f"Log file: {log_file}")
+    log(f"{'=' * 80}\n")
+
+    # Inicializar cliente
+    client = Anthropic(api_key=api_key)
+
+    # Estadísticas
+    completed = 0
+    failed = 0
+    results_summary = []
+
+    # Procesar cada tarea
+    for idx, task in enumerate(tasks, 1):
+        conversation_history = []  # Nueva conversación por tarea
+
+        print_header(f"TAREA {idx}/{total_tasks}")
+        log(f"\n{'=' * 80}")
+        log(f"TAREA {idx}/{total_tasks}")
+        log(f"{'=' * 80}")
+
+        # Mostrar preview del prompt (primeras 200 chars)
+        preview = task[:200] + "..." if len(task) > 200 else task
+        log(f"\n{preview}\n")
+        log(f"{'─' * 80}\n")
+
+        try:
+            # Enviar tarea a Claude
+            print_info(f"Enviando tarea {idx} a Claude...")
+            log(f"[{datetime.now().strftime('%H:%M:%S')}] Enviando a Claude...")
+
+            response = chat_with_claude(client, task, conversation_history)
+
+            log(f"\n[CLAUDE RESPONDE]:\n{response}\n")
+
+            # Ejecutar comandos
+            print_info("Ejecutando comandos automáticamente...")
+            final_response = parse_and_execute_commands(response, conversation_history, client)
+
+            if final_response != response:
+                log(f"\n[CLAUDE ACTUALIZA]:\n{final_response}\n")
+
+            print_success(f"Tarea {idx}/{total_tasks} completada")
+            log(f"\n✅ TAREA {idx} COMPLETADA\n")
+
+            completed += 1
+            results_summary.append({
+                "task_num": idx,
+                "status": "SUCCESS",
+                "preview": preview
+            })
+
+        except Exception as e:
+            print_error(f"Error en tarea {idx}: {str(e)}")
+            log(f"\n❌ ERROR EN TAREA {idx}: {str(e)}\n")
+
+            failed += 1
+            results_summary.append({
+                "task_num": idx,
+                "status": "FAILED",
+                "preview": preview,
+                "error": str(e)
+            })
+
+        log(f"{'=' * 80}\n")
+
+    # Resumen final
+    print_header("RESUMEN FINAL")
+    log(f"\n{'=' * 80}")
+    log(f"RESUMEN FINAL")
+    log(f"{'=' * 80}\n")
+
+    log(f"Total tareas:      {total_tasks}")
+    log(f"✅ Completadas:    {completed}")
+    log(f"❌ Fallidas:       {failed}")
+    log(f"\nDetalle:\n")
+
+    for result in results_summary:
+        status_icon = "✅" if result["status"] == "SUCCESS" else "❌"
+        log(f"{status_icon} Tarea {result['task_num']}: {result['status']}")
+        log(f"   {result['preview'][:100]}")
+        if result["status"] == "FAILED":
+            log(f"   Error: {result.get('error', 'Unknown')}")
+        log("")
+
+    log(f"\n{'=' * 80}")
+    log(f"SESIÓN FINALIZADA: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log(f"Log completo guardado en: {log_file}")
+    log(f"{'=' * 80}\n")
+
+    print_success(f"\nLog completo guardado en: {log_file}")
+
+    if failed > 0:
+        print_warning(f"\n⚠️  {failed} tarea(s) fallaron. Revisa el log para detalles.")
+    else:
+        print_success("\n🎉 TODAS LAS TAREAS COMPLETADAS EXITOSAMENTE")
+
 def main():
     """Función principal del agente"""
-    print_header("CLAUDE CODE AGENT - Ejecución Local Profesional")
+
+    # Parsear argumentos
+    parser = argparse.ArgumentParser(
+        description="Claude Code Agent - Ejecución local con Claude Sonnet 4.5",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Ejemplos:
+  # Modo interactivo
+  python claude_agent.py
+
+  # Modo batch
+  python claude_agent.py --batch tasks.txt
+        """
+    )
+    parser.add_argument('--batch', metavar='FILE', help='Ejecutar en modo batch desde archivo de tareas')
+
+    args = parser.parse_args()
 
     # Verificar API key
     api_key = os.environ.get("ANTHROPIC_API_KEY")
 
     if not api_key:
+        print_header("CLAUDE CODE AGENT - Ejecución Local Profesional")
         print_error("No se encontró ANTHROPIC_API_KEY en variables de entorno")
         print_info("Configúrala con:")
         if SYSTEM_TYPE == "Windows":
@@ -293,6 +478,13 @@ def main():
             print("  export ANTHROPIC_API_KEY='tu-api-key-aqui'")
         sys.exit(1)
 
+    # Modo batch o interactivo
+    if args.batch:
+        run_batch_mode(args.batch, api_key)
+        return
+
+    # Modo interactivo
+    print_header("CLAUDE CODE AGENT - Ejecución Local Profesional")
     print_success("API Key encontrada")
     print_info(f"Directorio de trabajo: {BASE_DIR}")
     print_info(f"Sistema: {SYSTEM_TYPE}")
