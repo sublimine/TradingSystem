@@ -1,6 +1,7 @@
 ﻿import os
 import sys
 from pathlib import Path
+import yaml
 
 # Determinar BASE_DIR dinámicamente (directorio raíz del proyecto)
 BASE_DIR = Path(__file__).parent.parent.resolve()
@@ -91,6 +92,31 @@ SCAN_INTERVAL_SECONDS = 60
 LOOKBACK_BARS = 500
 
 
+def load_strategy_config():
+    """
+    Load institutional strategy configuration from YAML.
+
+    Returns config dict with parameters for all 14 strategies.
+    Falls back to minimal config if file not found.
+    """
+    config_path = BASE_DIR / 'config' / 'strategies_institutional.yaml'
+
+    try:
+        if config_path.exists():
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+                logger.info(f"Loaded institutional config from {config_path}")
+                return config
+        else:
+            logger.warning(f"Config file not found: {config_path}")
+            logger.warning("Using minimal default config")
+            return {}
+    except Exception as e:
+        logger.error(f"Error loading config: {e}")
+        logger.warning("Using minimal default config")
+        return {}
+
+
 class LiveTradingEngine:
     
     def __init__(self):
@@ -131,27 +157,34 @@ class LiveTradingEngine:
     
     def load_strategies(self):
         logger.info("Cargando estrategias (lista blanca)...")
-        
+
+        # Load institutional configuration
+        strategy_configs = load_strategy_config()
+
         loaded_count = 0
         error_count = 0
-        
+
         for module_name in STRATEGY_WHITELIST:
             try:
                 module = importlib.import_module(f'strategies.{module_name}')
                 classes = [(n, o) for n, o in inspect.getmembers(module, inspect.isclass)
                           if o.__module__ == f'strategies.{module_name}']
-                
+
                 if classes:
                     class_name, strategy_class = classes[0]
-                    
+
                     # Verificar firma de evaluate
                     if not hasattr(strategy_class, 'evaluate'):
-                        logger.error(f"  ERROR {module_name}: Clase sin mÃ©todo evaluate")
+                        logger.error(f"  ERROR {module_name}: Clase sin método evaluate")
                         error_count += 1
                         continue
-                    
-                    config = {'enabled': True, 'symbols': SYMBOLS}
-                    instance = strategy_class(config)
+
+                    # Get strategy-specific config from YAML, fallback to minimal
+                    strategy_config = strategy_configs.get(module_name, {})
+                    strategy_config['enabled'] = strategy_config.get('enabled', True)
+                    strategy_config['symbols'] = SYMBOLS
+
+                    instance = strategy_class(strategy_config)
                     
                     self.strategies.append({
                         'name': module_name,

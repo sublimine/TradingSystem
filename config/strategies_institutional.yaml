@@ -1,0 +1,401 @@
+# INSTITUTIONAL STRATEGY CONFIGURATION
+# Based on academic research and institutional standards
+# DO NOT modify without understanding implications
+
+# CORRECTED PARAMETERS - 2025-11-11
+# Research basis documented in ANALISIS_INSTITUCIONAL_COMPLETO.md
+
+# ============================================================================
+# MEAN REVERSION STATISTICAL
+# ============================================================================
+mean_reversion_statistical:
+  enabled: true
+
+  # Entry thresholds (Avellaneda & Lee 2010: 2.5σ+ institutional)
+  lookback_period: 200
+  entry_sigma_threshold: 2.8              # vs 1.5 retail (CRITICAL FIX)
+  exit_sigma_threshold: 0.8
+
+  # Volume confirmation (Wyckoff: 3.0x+ for climax)
+  volume_spike_multiplier: 3.2            # vs 1.8 retail (CRITICAL FIX)
+
+  # Reversal velocity (Aldridge 2013: 15-25 pips/min institutional)
+  reversal_velocity_min: 18.0             # vs 5.0 retail (CRITICAL FIX)
+
+  # Microstructure
+  vpin_exhaustion_threshold: 0.40
+  imbalance_reversal_threshold: 0.30
+  min_liquidity_score: 0.60
+
+  # Trend filter (NEW - prevents trading in strong trends)
+  adx_max_for_entry: 22                   # ADX >22 = too trending
+  adx_extreme_reject: 30                  # ADX >30 = never enter
+
+  # Equilibrium calculation
+  use_vwap_mean: true                     # Use VWAP not SMA
+
+  # Confirmation requirements
+  confirmations_required_pct: 0.80        # vs 0.40 retail (80% confluence)
+
+  # Multi-timeframe
+  require_h4_alignment: true
+  require_d1_no_breakout: true
+  min_mtf_confluence: 0.65
+
+# ============================================================================
+# LIQUIDITY SWEEP (ICT 2024 Standards)
+# ============================================================================
+liquidity_sweep:
+  enabled: true
+
+  # Penetration parameters (ICT: 2-8 pips optimal)
+  penetration_min: 3
+  penetration_max: 8                      # vs 15 retail (CRITICAL FIX)
+  proximity_threshold: 10
+
+  # Volume confirmation (ICT: 2.5x+ for stop hunt)
+  volume_threshold_multiplier: 2.8        # vs 1.3 retail (CRITICAL FIX)
+
+  # Reversal velocity (ICT: 10-15 pips/min explosive)
+  reversal_velocity_min: 12.0             # vs 3.5 retail (CRITICAL FIX)
+
+  # Swing detection
+  lookback_periods: [60, 120, 240, 480]   # 1h, 2h, 4h, 8h
+  swing_lookback_bars: 50                 # vs 5 retail
+
+  # Microstructure
+  imbalance_threshold: 0.3
+  vpin_threshold: 0.45
+
+  # Confirmation
+  min_confirmation_score: 3
+
+  # Multi-timeframe (ICT: require HTF context)
+  require_h4_swing: true
+  require_d1_reference: true
+  require_h4_trend_alignment: true
+  min_mtf_confluence: 0.60
+
+# ============================================================================
+# ORDER FLOW TOXICITY - FILTER ONLY
+# ============================================================================
+# CRITICAL: This is a FILTER, not a signal generator
+# Easley, López de Prado & O'Hara (2012): "VPIN >0.7 = toxic flow"
+order_flow_toxicity:
+  enabled: true
+  use_as_filter_only: true                # Does NOT generate signals
+
+  # VPIN thresholds (INVERTED logic - corrected)
+  vpin_safe_max: 0.30                     # <0.30 = safe to trade
+  vpin_caution_max: 0.45                  # 0.30-0.45 = reduce size
+  vpin_toxic_min: 0.55                    # >0.55 = DO NOT TRADE
+  vpin_extreme_toxic: 0.70                # >0.70 = NEVER TRADE
+
+  # Historical tracking
+  min_consecutive_buckets: 5              # vs 2 retail
+  bucket_size: 50000
+
+  # Context verification
+  context_verification_enabled: true
+  context_verification_bars: 20           # vs 5 retail
+
+# ============================================================================
+# MOMENTUM QUALITY
+# ============================================================================
+momentum_quality:
+  enabled: true
+
+  # Momentum detection
+  momentum_period: 14
+  price_threshold: 0.30                   # vs 0.25 retail (ADJUSTED)
+  volume_threshold: 1.40                  # vs 1.25 retail (ADJUSTED)
+
+  # VPIN logic (CORRECTED)
+  vpin_clean_max: 0.30                    # Low VPIN = good
+  vpin_caution_max: 0.50
+  vpin_toxic_min: 0.55                    # High VPIN = bad
+
+  # Quality scoring
+  min_quality_score: 0.65                 # vs 0.60 retail (ADJUSTED)
+
+  # Context analysis
+  lookback_window: 20
+  use_regime_filter: true
+
+  # Multi-timeframe
+  require_h4_momentum_alignment: true
+  require_d1_no_reversal: true
+  min_mtf_confluence: 0.60
+
+# ============================================================================
+# ORDER BLOCK INSTITUTIONAL
+# ============================================================================
+order_block_institutional:
+  enabled: true
+
+  # Displacement detection
+  volume_sigma_threshold: 2.8             # vs 2.5 (ADJUSTED)
+  displacement_atr_multiplier: 2.2        # vs 2.0 (ADJUSTED)
+
+  # Block management
+  no_retest_enforcement: true             # Only first touch
+  buffer_atr: 0.5
+  max_active_blocks: 5
+  block_expiry_hours: 24
+
+  # Risk management
+  stop_loss_buffer_atr: 0.75
+  take_profit_r_multiple: [2.0, 4.0]      # vs [1.5, 3.0] (IMPROVED)
+
+  # Confirmation
+  require_ofi_confirmation: true
+  require_footprint_confirmation: true
+
+  # Multi-timeframe
+  require_h4_order_block: true
+  prefer_d1_blocks: true
+  min_mtf_confluence: 0.65
+
+# ============================================================================
+# KALMAN PAIRS TRADING
+# ============================================================================
+kalman_pairs_trading:
+  enabled: true
+
+  # Monitored pairs (CRITICAL: was empty by default)
+  monitored_pairs:
+    - ['EURUSD.pro', 'GBPUSD.pro']        # Correlation ~0.85
+    - ['AUDUSD.pro', 'NZDUSD.pro']        # Correlation ~0.92
+    - ['EURJPY.pro', 'GBPJPY.pro']        # Correlation ~0.88
+    - ['USDCAD.pro', 'USDCHF.pro']        # Correlation ~0.75
+
+  # Entry/exit thresholds
+  z_score_entry_threshold: 1.8            # vs 2.0 (MORE SIGNALS)
+  z_score_exit_threshold: 0.3             # vs 0.5 (EARLIER EXIT)
+
+  # Correlation requirements
+  min_correlation: 0.75
+  lookback_period: 120                    # vs 150 (MORE ADAPTIVE)
+
+  # Kalman filter parameters
+  kalman_process_variance: 0.001
+  kalman_measurement_variance: 0.01
+
+  # Risk management
+  hedge_ratio_recalibration_hours: 24
+  max_spread_extension_sigma: 3.5
+
+# ============================================================================
+# CORRELATION DIVERGENCE
+# ============================================================================
+correlation_divergence:
+  enabled: true
+
+  # Monitored pairs (CRITICAL: was empty by default)
+  monitored_pairs:
+    - ['EURUSD.pro', 'USDCHF.pro']        # Inverse correlation
+    - ['XAUUSD.pro', 'USDJPY.pro']        # Divergence opportunities
+    - ['BTCUSD', 'ETHUSD']                # Crypto correlation
+    - ['EURUSD.pro', 'GBPUSD.pro']        # EUR/GBP divergence
+
+  # Correlation analysis
+  correlation_lookback: 60                # vs 75 (MORE SENSITIVE)
+  historical_correlation_min: 0.65        # vs 0.70 (MORE SIGNALS)
+  divergence_correlation_threshold: 0.50  # vs 0.60 (MORE SIGNALS)
+
+  # Divergence detection
+  relative_strength_lookback: 20
+  min_divergence_magnitude: 0.8           # vs 1.0 (MORE SIGNALS)
+
+  # Quality requirements
+  convergence_confidence_threshold: 0.70
+
+# ============================================================================
+# VOLATILITY REGIME ADAPTATION
+# ============================================================================
+volatility_regime_adaptation:
+  enabled: true
+
+  # Regime detection
+  lookback_period: 20
+  regime_lookback: 30                     # vs 40 (FASTER)
+
+  # Entry thresholds by regime
+  low_vol_entry_threshold: 0.8            # vs 1.0 (MORE SIGNALS)
+  high_vol_entry_threshold: 1.8           # vs 2.0 (MORE SIGNALS)
+
+  # Risk adjustment
+  low_vol_stop_multiplier: 1.5
+  high_vol_stop_multiplier: 2.5
+  low_vol_sizing_boost: 1.2
+  high_vol_sizing_reduction: 0.7
+
+  # Confidence requirements
+  min_regime_confidence: 0.50             # vs 0.60 (MORE SIGNALS)
+
+  # HMM configuration
+  use_pretrained_hmm: true
+  pretrain_on_historical: true
+  hmm_states: 2
+
+# ============================================================================
+# BREAKOUT VOLUME CONFIRMATION
+# ============================================================================
+breakout_volume_confirmation:
+  enabled: true
+
+  # Thresholds (ADJUSTED for more signals)
+  delta_z_threshold: 1.6                  # vs 1.8 (MORE SIGNALS)
+  displacement_atr_min: 1.3               # vs 1.5 (MORE SIGNALS)
+  volume_sigma_threshold: 2.2             # vs 2.5 (MORE SIGNALS)
+
+  # Confirmation
+  require_h4_breakout_level: true
+  min_mtf_confluence: 0.60
+
+# ============================================================================
+# FVG INSTITUTIONAL
+# ============================================================================
+fvg_institutional:
+  enabled: true
+
+  # Gap detection
+  gap_atr_minimum: 0.5                    # vs 0.75 (MORE FVGs)
+  volume_anomaly_percentile: 65           # vs 70 (MORE SIGNALS)
+
+  # Risk management
+  stop_loss_gap_fraction: 0.382
+  take_profit_gap_fraction: 0.786
+
+  # Multi-timeframe
+  require_h4_fvg: false                   # M1 FVGs OK initially
+  min_mtf_confluence: 0.55
+
+# ============================================================================
+# HTF-LTF LIQUIDITY
+# ============================================================================
+htf_ltf_liquidity:
+  enabled: true
+
+  # Timeframe configuration
+  htf_timeframes: ['H1', 'H4', 'D1']
+  calculate_htf_internally: true          # Don't depend on features
+
+  # Projection parameters
+  projection_tolerance_pips: 3            # vs 2 (MORE TOLERANT)
+  swing_lookback_bars: 20
+  rejection_wick_minimum: 0.60
+  zone_tolerance_pips: 2
+
+  # Triggers
+  triggers: ['rejection_candle', 'volume_climax', 'imbalance_flip']
+  min_triggers_required: 1
+
+  # Risk management
+  stop_loss_buffer_atr: 0.75
+
+  # HTF update
+  htf_update_interval_minutes: 60
+
+# ============================================================================
+# ICEBERG DETECTION
+# ============================================================================
+iceberg_detection:
+  enabled: true
+
+  # Mode configuration
+  mode: 'degraded'                        # L2 not available
+  accept_low_confidence_degraded: true    # vs false (MORE SIGNALS)
+
+  # Detection parameters
+  volume_advancement_ratio_threshold: 3.5 # vs 4.0 (MORE SENSITIVE)
+  stall_duration_bars: 5
+  replenishment_detection: true
+
+  # Risk management
+  stop_loss_behind_level_atr: 1.0
+  take_profit_r_multiple: 2.5
+
+  # Block management
+  max_active_blocks: 5
+  block_expiry_hours: 24
+
+# ============================================================================
+# IDP INDUCEMENT DISTRIBUTION
+# ============================================================================
+idp_inducement_distribution:
+  enabled: true
+
+  # Penetration parameters
+  penetration_pips_min: 3                 # vs 5 (MORE SIGNALS)
+  penetration_pips_max: 25                # vs 20 (MORE TOLERANT)
+
+  # Volume confirmation
+  volume_multiplier: 2.0                  # vs 2.5 (MORE SIGNALS)
+
+  # Distribution phase
+  distribution_range_bars_min: 3
+  distribution_range_bars_max: 8
+
+  # Displacement velocity
+  displacement_velocity_pips_per_minute: 7
+
+  # Risk management
+  stop_loss_beyond_inducement: true
+  take_profit_r_multiple: 3.0
+
+  # Multi-timeframe
+  require_h4_idp_context: true
+
+# ============================================================================
+# OFI REFINEMENT
+# ============================================================================
+ofi_refinement:
+  enabled: true
+
+  # OFI calculation
+  window_ticks: 100
+  z_entry_threshold: 1.5                  # vs 1.8 (MORE SIGNALS)
+  lookback_periods: 500
+
+  # VPIN filter
+  vpin_max_safe: 0.45                     # vs 0.35 (MORE PERMISSIVE)
+  price_coherence_required: true
+
+  # Data requirements
+  min_data_points: 200
+
+  # Risk management
+  stop_loss_atr_multiplier: 2.5
+  take_profit_atr_multiplier: 4.0
+
+  # Multi-timeframe
+  min_mtf_confluence: 0.55
+
+# ============================================================================
+# GLOBAL SETTINGS
+# ============================================================================
+global:
+  # Multi-timeframe
+  default_mtf_timeframes: ['M5', 'M15', 'M30', 'H1', 'H4', 'D1']
+  min_mtf_confluence_default: 0.60
+
+  # VPIN global filter
+  use_vpin_global_filter: true
+  vpin_global_max: 0.55                   # Block ALL trades if VPIN > 0.55
+
+  # Regime adaptation
+  require_regime_compatibility: true
+
+  # Session filters
+  trading_sessions:
+    london: {start: '08:00', end: '16:00'}
+    new_york: {start: '13:00', end: '22:00'}
+    tokyo: {start: '00:00', end: '09:00'}
+
+  preferred_sessions: ['london', 'new_york']
+
+  # Risk management
+  max_correlation_exposure: 5.0           # Max % capital in correlated positions
+  daily_loss_limit: 5.0                   # Pause trading if daily loss > 5%
+  max_drawdown_pause: 20.0                # Pause if drawdown > 20%
