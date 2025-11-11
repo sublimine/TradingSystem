@@ -11,31 +11,32 @@
 mean_reversion_statistical:
   enabled: true
 
-  # Entry thresholds (Avellaneda & Lee 2010: 2.5σ+ institutional)
+  # Entry thresholds - ELITE INSTITUTIONAL (Avellaneda & Lee 2010)
   lookback_period: 200
-  entry_sigma_threshold: 2.8              # vs 1.5 retail (CRITICAL FIX)
+  lookback_adaptive: true                 # NEW: Adaptive based on volatility
+  entry_sigma_threshold: 3.3              # ELITE: Was 2.8 (genuine extremes only)
   exit_sigma_threshold: 0.8
 
-  # Volume confirmation (Wyckoff: 3.0x+ for climax)
-  volume_spike_multiplier: 3.2            # vs 1.8 retail (CRITICAL FIX)
+  # Volume confirmation - ELITE (Wyckoff Method)
+  volume_spike_multiplier: 3.8            # ELITE: Was 3.2 (climax volume)
 
-  # Reversal velocity (Aldridge 2013: 15-25 pips/min institutional)
-  reversal_velocity_min: 18.0             # vs 5.0 retail (CRITICAL FIX)
+  # Reversal velocity - ELITE (Aldridge 2013: institutional snap-backs)
+  reversal_velocity_min: 25.0             # ELITE: Was 18.0 (explosive reversals)
 
-  # Microstructure
-  vpin_exhaustion_threshold: 0.40
-  imbalance_reversal_threshold: 0.30
+  # Microstructure - ELITE thresholds
+  vpin_exhaustion_threshold: 0.62         # ELITE: Was 0.40 (true exhaustion)
+  imbalance_reversal_threshold: 0.47      # ELITE: Was 0.30 (institutional absorption)
   min_liquidity_score: 0.60
 
-  # Trend filter (NEW - prevents trading in strong trends)
-  adx_max_for_entry: 22                   # ADX >22 = too trending
-  adx_extreme_reject: 30                  # ADX >30 = never enter
+  # Trend filter
+  adx_max_for_entry: 27                   # ELITE: Was 22 (75th percentile)
+  adx_extreme_reject: 30
 
   # Equilibrium calculation
-  use_vwap_mean: true                     # Use VWAP not SMA
+  use_vwap_mean: true
 
-  # Confirmation requirements
-  confirmations_required_pct: 0.80        # vs 0.40 retail (80% confluence)
+  # Confirmation requirements - ELITE CONFLUENCE
+  confirmations_required_pct: 0.80        # ELITE: 80% confluence (4/5 factors)
 
   # Multi-timeframe
   require_h4_alignment: true
@@ -48,29 +49,29 @@ mean_reversion_statistical:
 liquidity_sweep:
   enabled: true
 
-  # Penetration parameters (ICT: 2-8 pips optimal)
-  penetration_min: 3
-  penetration_max: 8                      # vs 15 retail (CRITICAL FIX)
-  proximity_threshold: 10
+  # Penetration parameters - ELITE INSTITUTIONAL
+  penetration_min: 6                      # ELITE: Was 3 (too small, broker noise)
+  penetration_max: 22                     # ELITE: Was 8 (catches institutional sweeps)
+  proximity_threshold: 5                  # ELITE: Was 10 (precision monitoring)
 
-  # Volume confirmation (ICT: 2.5x+ for stop hunt)
-  volume_threshold_multiplier: 2.8        # vs 1.3 retail (CRITICAL FIX)
+  # Volume confirmation - ELITE
+  volume_threshold_multiplier: 3.5        # ELITE: Was 2.8 (stop hunt signature)
 
-  # Reversal velocity (ICT: 10-15 pips/min explosive)
-  reversal_velocity_min: 12.0             # vs 3.5 retail (CRITICAL FIX)
+  # Reversal velocity - ELITE (explosive institutional absorption)
+  reversal_velocity_min: 25.0             # ELITE: Was 12.0 (22-30 pips/min range)
 
   # Swing detection
-  lookback_periods: [60, 120, 240, 480]   # 1h, 2h, 4h, 8h
-  swing_lookback_bars: 50                 # vs 5 retail
+  lookback_periods: [60, 120, 240, 480]
+  swing_lookback_bars: 50
 
-  # Microstructure
-  imbalance_threshold: 0.3
-  vpin_threshold: 0.45
+  # Microstructure - ELITE
+  imbalance_threshold: 0.45               # ELITE: Was 0.30 (strong absorption)
+  vpin_threshold: 0.30                    # ELITE: LOGIC FIXED - clean flow during setup
 
-  # Confirmation
-  min_confirmation_score: 3
+  # Confirmation - ELITE CONFLUENCE
+  min_confirmation_score: 4               # ELITE: Was 3 (80% not 60%)
 
-  # Multi-timeframe (ICT: require HTF context)
+  # Multi-timeframe
   require_h4_swing: true
   require_d1_reference: true
   require_h4_trend_alignment: true
@@ -105,18 +106,18 @@ order_flow_toxicity:
 momentum_quality:
   enabled: true
 
-  # Momentum detection
-  momentum_period: 14
-  price_threshold: 0.30                   # vs 0.25 retail (ADJUSTED)
-  volume_threshold: 1.40                  # vs 1.25 retail (ADJUSTED)
+  # Momentum detection - ELITE INSTITUTIONAL
+  momentum_period: 21                     # ELITE: Was 14 (retail standard, now institutional)
+  price_threshold: 0.70                   # ELITE: Was 0.30 (genuine momentum not noise)
+  volume_threshold: 2.00                  # ELITE: Was 1.40 (institutional volume)
 
-  # VPIN logic (CORRECTED)
-  vpin_clean_max: 0.30                    # Low VPIN = good
+  # VPIN logic
+  vpin_clean_max: 0.30
   vpin_caution_max: 0.50
-  vpin_toxic_min: 0.55                    # High VPIN = bad
+  vpin_toxic_min: 0.68                    # ELITE: Was 0.55 (true toxicity)
 
-  # Quality scoring
-  min_quality_score: 0.65                 # vs 0.60 retail (ADJUSTED)
+  # Quality scoring - ELITE (matches "Quality" brand)
+  min_quality_score: 0.80                 # ELITE: Was 0.65 (premium quality)
 
   # Context analysis
   lookback_window: 20
@@ -133,19 +134,19 @@ momentum_quality:
 order_block_institutional:
   enabled: true
 
-  # Displacement detection
-  volume_sigma_threshold: 2.8             # vs 2.5 (ADJUSTED)
-  displacement_atr_multiplier: 2.2        # vs 2.0 (ADJUSTED)
+  # Displacement detection - ELITE INSTITUTIONAL
+  volume_sigma_threshold: 3.4             # ELITE: Was 2.8 (institutional blocks only)
+  displacement_atr_multiplier: 3.0        # ELITE: Was 2.2 (genuine displacement)
 
   # Block management
-  no_retest_enforcement: true             # Only first touch
+  no_retest_enforcement: true
   buffer_atr: 0.5
   max_active_blocks: 5
-  block_expiry_hours: 24
+  block_expiry_hours: 24                  # TODO: Change to volume-weighted expiry
 
-  # Risk management
-  stop_loss_buffer_atr: 0.75
-  take_profit_r_multiple: [2.0, 4.0]      # vs [1.5, 3.0] (IMPROVED)
+  # Risk management - ELITE
+  stop_loss_buffer_atr: 1.15              # ELITE: Was 0.75 (premium protection)
+  take_profit_r_multiple: [2.8, 5.2]      # ELITE: Was [2.0, 4.0] (structure-based)
 
   # Confirmation
   require_ofi_confirmation: true
@@ -162,22 +163,23 @@ order_block_institutional:
 kalman_pairs_trading:
   enabled: true
 
-  # Monitored pairs (CRITICAL: was empty by default)
+  # Monitored pairs - ELITE INSTITUTIONAL (ACTIVATED - was empty!)
   monitored_pairs:
-    - ['EURUSD.pro', 'GBPUSD.pro']        # Correlation ~0.85
-    - ['AUDUSD.pro', 'NZDUSD.pro']        # Correlation ~0.92
-    - ['EURJPY.pro', 'GBPJPY.pro']        # Correlation ~0.88
-    - ['USDCAD.pro', 'USDCHF.pro']        # Correlation ~0.75
+    - ['EURUSD', 'GBPUSD']                # Correlation 0.87
+    - ['AUDUSD', 'NZDUSD']                # Correlation 0.92
+    - ['EURJPY', 'GBPJPY']                # Correlation 0.89
+    - ['XAUUSD', 'XAGUSD']                # Gold-Silver 0.85
+    - ['USDCAD', 'WTIUSD']                # Oil-CAD inverse -0.78
 
-  # Entry/exit thresholds
-  z_score_entry_threshold: 1.8            # vs 2.0 (MORE SIGNALS)
-  z_score_exit_threshold: 0.3             # vs 0.5 (EARLIER EXIT)
+  # Entry/exit thresholds - ELITE INSTITUTIONAL
+  z_score_entry_threshold: 2.4            # ELITE: Was 1.8 (extreme divergences only)
+  z_score_exit_threshold: 1.0             # ELITE: Was 0.3 (better profit capture)
 
-  # Correlation requirements
-  min_correlation: 0.75
-  lookback_period: 120                    # vs 150 (MORE ADAPTIVE)
+  # Correlation requirements - ELITE
+  min_correlation: 0.84                   # ELITE: Was 0.75 (strong relationships)
+  lookback_period: 250                    # ELITE: Was 120 (robust statistics)
 
-  # Kalman filter parameters
+  # Kalman filter parameters (TODO: Calibrate properly)
   kalman_process_variance: 0.001
   kalman_measurement_variance: 0.01
 
@@ -191,21 +193,22 @@ kalman_pairs_trading:
 correlation_divergence:
   enabled: true
 
-  # Monitored pairs (CRITICAL: was empty by default)
+  # Monitored pairs - ELITE INSTITUTIONAL (ACTIVATED - was empty!)
   monitored_pairs:
-    - ['EURUSD.pro', 'USDCHF.pro']        # Inverse correlation
-    - ['XAUUSD.pro', 'USDJPY.pro']        # Divergence opportunities
-    - ['BTCUSD', 'ETHUSD']                # Crypto correlation
-    - ['EURUSD.pro', 'GBPUSD.pro']        # EUR/GBP divergence
+    - ['EURUSD', 'GBPUSD']                # EUR/GBP correlation
+    - ['AUDUSD', 'NZDUSD']                # AUD/NZD correlation
+    - ['EURJPY', 'GBPJPY']                # EUR/GBP vs JPY
+    - ['XAUUSD', 'XAGUSD']                # Gold-Silver
+    - ['USDCAD', 'USDJPY']                # Different patterns
 
-  # Correlation analysis
-  correlation_lookback: 60                # vs 75 (MORE SENSITIVE)
-  historical_correlation_min: 0.65        # vs 0.70 (MORE SIGNALS)
-  divergence_correlation_threshold: 0.50  # vs 0.60 (MORE SIGNALS)
+  # Correlation analysis - ELITE INSTITUTIONAL
+  correlation_lookback: 150               # ELITE: Was 60 (robust estimate)
+  historical_correlation_min: 0.84        # ELITE: Was 0.65 (strong relationships)
+  divergence_correlation_threshold: 0.52  # ELITE: Was 0.50 (stronger divergence)
 
-  # Divergence detection
+  # Divergence detection - ELITE
   relative_strength_lookback: 20
-  min_divergence_magnitude: 0.8           # vs 1.0 (MORE SIGNALS)
+  min_divergence_magnitude: 1.8           # ELITE: Was 0.8 (meaningful opportunities)
 
   # Quality requirements
   convergence_confidence_threshold: 0.70
@@ -218,11 +221,11 @@ volatility_regime_adaptation:
 
   # Regime detection
   lookback_period: 20
-  regime_lookback: 30                     # vs 40 (FASTER)
+  regime_lookback: 40
 
-  # Entry thresholds by regime
-  low_vol_entry_threshold: 0.8            # vs 1.0 (MORE SIGNALS)
-  high_vol_entry_threshold: 1.8           # vs 2.0 (MORE SIGNALS)
+  # Entry thresholds - ELITE INSTITUTIONAL
+  low_vol_entry_threshold: 1.5            # ELITE: Was 0.8 (less aggressive)
+  high_vol_entry_threshold: 2.6           # ELITE: Was 1.8 (conservative in vol)
 
   # Risk adjustment
   low_vol_stop_multiplier: 1.5
@@ -230,8 +233,12 @@ volatility_regime_adaptation:
   low_vol_sizing_boost: 1.2
   high_vol_sizing_reduction: 0.7
 
-  # Confidence requirements
-  min_regime_confidence: 0.50             # vs 0.60 (MORE SIGNALS)
+  # Confidence requirements - ELITE
+  min_regime_confidence: 0.80             # ELITE: Was 0.50 (high certainty required)
+
+  # CRITICAL: Signal generation method
+  use_rsi_macd: false                     # RETAIL INDICATORS DISABLED
+  use_institutional_signals: true         # USE OFI, STRUCTURE, VOLUME
 
   # HMM configuration
   use_pretrained_hmm: true
@@ -244,10 +251,10 @@ volatility_regime_adaptation:
 breakout_volume_confirmation:
   enabled: true
 
-  # Thresholds (ADJUSTED for more signals)
-  delta_z_threshold: 1.6                  # vs 1.8 (MORE SIGNALS)
-  displacement_atr_min: 1.3               # vs 1.5 (MORE SIGNALS)
-  volume_sigma_threshold: 2.2             # vs 2.5 (MORE SIGNALS)
+  # Thresholds - ELITE INSTITUTIONAL
+  delta_z_threshold: 2.5                  # ELITE: Was 1.6 (institutional absorption)
+  displacement_atr_min: 2.4               # ELITE: Was 1.3 (genuine breakout)
+  volume_sigma_threshold: 2.8             # ELITE: Was 2.2 (institutional volume)
 
   # Confirmation
   require_h4_breakout_level: true
@@ -259,16 +266,16 @@ breakout_volume_confirmation:
 fvg_institutional:
   enabled: true
 
-  # Gap detection
-  gap_atr_minimum: 0.5                    # vs 0.75 (MORE FVGs)
-  volume_anomaly_percentile: 65           # vs 70 (MORE SIGNALS)
+  # Gap detection - ELITE INSTITUTIONAL
+  gap_atr_minimum: 1.05                   # ELITE: Was 0.5 (significant inefficiencies)
+  volume_anomaly_percentile: 82           # ELITE: Was 65 (institutional activity)
 
   # Risk management
   stop_loss_gap_fraction: 0.382
   take_profit_gap_fraction: 0.786
 
   # Multi-timeframe
-  require_h4_fvg: false                   # M1 FVGs OK initially
+  require_h4_fvg: false
   min_mtf_confluence: 0.55
 
 # ============================================================================
@@ -279,13 +286,14 @@ htf_ltf_liquidity:
 
   # Timeframe configuration
   htf_timeframes: ['H1', 'H4', 'D1']
-  calculate_htf_internally: true          # Don't depend on features
+  calculate_htf_internally: true
 
-  # Projection parameters
-  projection_tolerance_pips: 3            # vs 2 (MORE TOLERANT)
-  swing_lookback_bars: 20
+  # Projection parameters - ELITE INSTITUTIONAL
+  projection_tolerance_pips: 2
+  swing_lookback_bars: 32                 # ELITE: Was 20 (institutional swings)
   rejection_wick_minimum: 0.60
   zone_tolerance_pips: 2
+  min_zone_touches: 4                     # ELITE: NEW (validated institutional zones)
 
   # Triggers
   triggers: ['rejection_candle', 'volume_climax', 'imbalance_flip']
@@ -295,7 +303,7 @@ htf_ltf_liquidity:
   stop_loss_buffer_atr: 0.75
 
   # HTF update
-  htf_update_interval_minutes: 60
+  htf_update_interval_minutes: 60         # TODO: Change to event-driven
 
 # ============================================================================
 # ICEBERG DETECTION
@@ -305,16 +313,16 @@ iceberg_detection:
 
   # Mode configuration
   mode: 'degraded'                        # L2 not available
-  accept_low_confidence_degraded: true    # vs false (MORE SIGNALS)
+  accept_low_confidence_degraded: true
 
-  # Detection parameters
-  volume_advancement_ratio_threshold: 3.5 # vs 4.0 (MORE SENSITIVE)
-  stall_duration_bars: 5
+  # Detection parameters - ELITE INSTITUTIONAL
+  volume_advancement_ratio_threshold: 5.2 # ELITE: Was 3.5 (large institutional icebergs)
+  stall_duration_bars: 10                 # ELITE: Was 5 (sustained absorption)
   replenishment_detection: true
 
-  # Risk management
-  stop_loss_behind_level_atr: 1.0
-  take_profit_r_multiple: 2.5
+  # Risk management - ELITE
+  stop_loss_behind_level_atr: 1.5         # ELITE: Was 1.0 (wider stop if iceberg fails)
+  take_profit_r_multiple: 3.6             # ELITE: Was 2.5 (strong directional moves)
 
   # Block management
   max_active_blocks: 5
@@ -326,23 +334,23 @@ iceberg_detection:
 idp_inducement_distribution:
   enabled: true
 
-  # Penetration parameters
-  penetration_pips_min: 3                 # vs 5 (MORE SIGNALS)
-  penetration_pips_max: 25                # vs 20 (MORE TOLERANT)
+  # Penetration parameters - ELITE
+  penetration_pips_min: 5
+  penetration_pips_max: 32                # ELITE: Was 25 (larger institutional sweeps)
 
-  # Volume confirmation
-  volume_multiplier: 2.0                  # vs 2.5 (MORE SIGNALS)
+  # Volume confirmation - ELITE
+  volume_multiplier: 3.5                  # ELITE: Was 2.0 (premium inducement signature)
 
   # Distribution phase
   distribution_range_bars_min: 3
   distribution_range_bars_max: 8
 
-  # Displacement velocity
-  displacement_velocity_pips_per_minute: 7
+  # Displacement velocity - ELITE INSTITUTIONAL
+  displacement_velocity_pips_per_minute: 18  # ELITE: Was 7 (explosive institutional move)
 
-  # Risk management
+  # Risk management - ELITE
   stop_loss_beyond_inducement: true
-  take_profit_r_multiple: 3.0
+  take_profit_r_multiple: 4.0             # ELITE: Was 3.0 (full IDP extension)
 
   # Multi-timeframe
   require_h4_idp_context: true
@@ -353,13 +361,15 @@ idp_inducement_distribution:
 ofi_refinement:
   enabled: true
 
-  # OFI calculation
+  # OFI calculation - ELITE INSTITUTIONAL
   window_ticks: 100
-  z_entry_threshold: 1.5                  # vs 1.8 (MORE SIGNALS)
+  window_adaptive: true                   # NEW: Adaptive based on volatility
+  z_entry_threshold: 2.5                  # ELITE: Was 1.5 (extreme imbalances only)
   lookback_periods: 500
+  lookback_adaptive: true                 # NEW: Adaptive based on regime
 
   # VPIN filter
-  vpin_max_safe: 0.45                     # vs 0.35 (MORE PERMISSIVE)
+  vpin_max_safe: 0.35
   price_coherence_required: true
 
   # Data requirements
