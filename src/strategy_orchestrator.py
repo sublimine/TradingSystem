@@ -36,6 +36,13 @@ from src.strategies.fractal_market_structure import FractalMarketStructure
 from src.strategies.correlation_cascade_detection import CorrelationCascadeDetection
 from src.strategies.footprint_orderflow_clusters import FootprintOrderflowClusters
 
+# ELITE 2025 strategies (crisis/arbitrage/TDA)
+from src.strategies.crisis_mode_volatility_spike import CrisisModeVolatilitySpike
+from src.strategies.statistical_arbitrage_johansen import StatisticalArbitrageJohansen
+from src.strategies.calendar_arbitrage_flows import CalendarArbitrageFlows
+from src.strategies.topological_data_analysis_regime import TopologicalDataAnalysisRegime
+from src.strategies.spoofing_detection_l2 import SpoofingDetectionL2
+
 from src.execution.adaptive_participation_rate import APRExecutor
 
 logger = logging.getLogger(__name__)
@@ -100,6 +107,12 @@ class StrategyOrchestrator:
             'fractal_market_structure': FractalMarketStructure,
             'correlation_cascade_detection': CorrelationCascadeDetection,
             'footprint_orderflow_clusters': FootprintOrderflowClusters,
+            # ELITE 2025 strategies (crisis/arbitrage/TDA)
+            'crisis_mode_volatility_spike': CrisisModeVolatilitySpike,
+            'statistical_arbitrage_johansen': StatisticalArbitrageJohansen,
+            'calendar_arbitrage_flows': CalendarArbitrageFlows,
+            'topological_data_analysis_regime': TopologicalDataAnalysisRegime,
+            'spoofing_detection_l2': SpoofingDetectionL2,
         }
 
         for strategy_name, strategy_class in strategy_classes.items():

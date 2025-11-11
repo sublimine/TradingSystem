@@ -24,6 +24,13 @@ from .fractal_market_structure import FractalMarketStructure
 from .correlation_cascade_detection import CorrelationCascadeDetection
 from .footprint_orderflow_clusters import FootprintOrderflowClusters
 
+# ELITE 2025 strategies (crisis/arbitrage/TDA)
+from .crisis_mode_volatility_spike import CrisisModeVolatilitySpike
+from .statistical_arbitrage_johansen import StatisticalArbitrageJohansen
+from .calendar_arbitrage_flows import CalendarArbitrageFlows
+from .topological_data_analysis_regime import TopologicalDataAnalysisRegime
+from .spoofing_detection_l2 import SpoofingDetectionL2
+
 __all__ = [
     'StrategyBase',
     'Signal',
@@ -48,5 +55,11 @@ __all__ = [
     'FractalMarketStructure',
     'CorrelationCascadeDetection',
     'FootprintOrderflowClusters',
+    # ELITE 2025 strategies
+    'CrisisModeVolatilitySpike',
+    'StatisticalArbitrageJohansen',
+    'CalendarArbitrageFlows',
+    'TopologicalDataAnalysisRegime',
+    'SpoofingDetectionL2',
 ]
 
