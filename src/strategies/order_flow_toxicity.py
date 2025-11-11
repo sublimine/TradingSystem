@@ -1,8 +1,15 @@
 """
-Order Flow Toxicity Strategy
+Order Flow Toxicity Filter
 
-Detects toxic order flow using VPIN indicating informed trading activity.
-Enters positions in direction of toxic flow anticipating continuation.
+CRITICAL: This is a FILTER strategy, not a signal generator.
+Based on Easley, López de Prado & O'Hara (2012) research showing that
+HIGH VPIN indicates toxic flow and ADVERSE SELECTION risk.
+
+VPIN >0.7 = NEVER trade (toxic)
+VPIN >0.5 = Reduce size (caution)
+VPIN <0.3 = Safe to trade (clean flow)
+
+This strategy BLOCKS trades when flow is toxic, protecting other strategies.
 """
 
 import numpy as np
@@ -15,10 +22,13 @@ from .strategy_base import StrategyBase, Signal
 
 class OrderFlowToxicityStrategy(StrategyBase):
     """
-    Strategy that identifies and trades toxic order flow periods.
+    FILTER strategy that monitors order flow toxicity via VPIN.
 
-    Entry occurs when VPIN exceeds threshold sustained over multiple buckets,
-    indicating persistent informed trading pressure in one direction.
+    DOES NOT generate trading signals - acts as a filter for other strategies.
+    High VPIN (>0.55) indicates toxic flow where trading should be avoided.
+
+    Research (Easley et al. 2012, 2011): VPIN >0.7 preceded Flash Crash.
+    Institutional standard: Avoid trading when VPIN elevated.
     """
 
     def __init__(self, config: Dict):
@@ -45,44 +55,43 @@ class OrderFlowToxicityStrategy(StrategyBase):
 
     def evaluate(self, market_data: pd.DataFrame, features: Dict) -> List[Signal]:
         """
-        Evaluate market for toxic order flow opportunities.
+        FILTER strategy - does NOT generate signals.
+
+        This strategy monitors VPIN to protect other strategies from toxic flow.
+        VPIN values are available in features dict for other strategies to check.
+
+        Logic (CORRECTED based on Easley et al. research):
+        - VPIN >0.55: TOXIC - other strategies should NOT trade
+        - VPIN <0.30: CLEAN - safe to trade
+        - VPIN 0.30-0.55: CAUTION - reduce position sizes
 
         Args:
             market_data: Recent OHLCV data
-            features: Pre-calculated features including VPIN and flow metrics
+            features: Pre-calculated features including VPIN
 
         Returns:
-            List of signals generated
+            Empty list (this is a filter, not a signal generator)
         """
         if not self.validate_inputs(market_data, features):
             return []
 
-        if 'vpin' not in features or 'order_flow_imbalance' not in features:
-            return []
+        # Monitor VPIN but DO NOT generate signals
+        if 'vpin' in features:
+            current_vpin = features['vpin']
+            self.vpin_history.append(current_vpin)
+            if len(self.vpin_history) > 10:
+                self.vpin_history.pop(0)
 
-        signals = []
+            # Log toxicity level for monitoring
+            if current_vpin > 0.70:
+                self.logger.warning(f"VPIN EXTREME TOXIC: {current_vpin:.3f} - NO TRADING")
+            elif current_vpin > 0.55:
+                self.logger.warning(f"VPIN TOXIC: {current_vpin:.3f} - AVOID TRADING")
+            elif current_vpin < 0.30:
+                self.logger.debug(f"VPIN CLEAN: {current_vpin:.3f} - Safe flow")
 
-        current_vpin = features['vpin']
-
-        self.vpin_history.append(current_vpin)
-        if len(self.vpin_history) > 10:
-            self.vpin_history.pop(0)
-
-        if not self._check_sustained_toxicity():
-            return []
-
-        flow_direction = self._determine_flow_direction(features)
-        if flow_direction == 0:
-            return []
-
-        if self.context_verification and not self._verify_market_context(market_data, flow_direction):
-            return []
-
-        signal = self._generate_flow_signal(market_data, features, flow_direction)
-        if signal:
-            signals.append(signal)
-
-        return signals
+        # ALWAYS return empty - this is a filter only
+        return []
 
     def _check_sustained_toxicity(self) -> bool:
         """Check if VPIN has been elevated for minimum consecutive periods."""

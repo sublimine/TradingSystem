@@ -42,9 +42,9 @@ class LiquiditySweepStrategy(StrategyBase):
         self.lookback_periods = config.get('lookback_periods', [60, 120, 240])  # 1h, 2h, 4h
         self.proximity_threshold = config.get('proximity_threshold', 10)
         self.penetration_min = config.get('penetration_min', 3)
-        self.penetration_max = config.get('penetration_max', 15)
-        self.volume_threshold = config.get('volume_threshold_multiplier', 1.3)  # MÃƒÆ’Ã‚Â¡s sensible
-        self.reversal_velocity_min = config.get('reversal_velocity_min', 3.5)
+        self.penetration_max = config.get('penetration_max', 8)
+        self.volume_threshold = config.get('volume_threshold_multiplier', 2.8)
+        self.reversal_velocity_min = config.get('reversal_velocity_min', 12.0)
         self.imbalance_threshold = config.get('imbalance_threshold', 0.3)
         self.vpin_threshold = config.get('vpin_threshold', 0.45)  # MAX seguro, no mÃƒÆ’Ã‚Â­nimo
         self.min_confirmation_score = config.get('min_confirmation_score', 3)
