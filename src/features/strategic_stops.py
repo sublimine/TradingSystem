@@ -1,13 +1,17 @@
 """
-Strategic Stop Loss Placement - ELITE Institutional Implementation
+Strategic Stop Loss Placement - ELITE Institutional Implementation V2.0
 
 Stops placed at STRUCTURAL levels, NOT arbitrary ATR multipliers.
 
+**NEW:** Multi-timeframe WICK LIQUIDITY SWEEP detection - wicks that swept liquidity
+rarely get revisited. This is where institutions hunted stops.
+
 Stop placement hierarchy (best to worst):
-1. Order Block boundary + buffer
-2. Fair Value Gap (FVG) edge + buffer
-3. Swing high/low + buffer
-4. ATR-based fallback (only if no structure available)
+1. **WICK LIQUIDITY SWEEP** - Wicks that swept previous highs/lows (BEST)
+2. Order Block boundary + buffer
+3. Fair Value Gap (FVG) edge + buffer
+4. Swing high/low + buffer
+5. ATR-based fallback (only if no structure available)
 
 Trailing stops:
 - Move to breakeven after 1R captured
@@ -17,10 +21,14 @@ Trailing stops:
 Research Basis:
 - Wyckoff Method: Support/Resistance as institutional footprints
 - Smart Money Concepts: Order blocks mark institutional zones
+- Liquidity Engineering: Price sweeps stops then reverses (stop hunts)
 - Risk management: Place stops where institutions would defend
 
+**CRITICAL INSIGHT:** "Wicks donde se sacó liquidez, el precio acostumbra a NO volver
+donde ya barrió." - Price rarely returns to liquidity sweep levels.
+
 Author: Elite Trading System
-Version: 1.0
+Version: 2.0 - Wick Liquidity Sweep Integration
 """
 
 import numpy as np
@@ -37,34 +45,41 @@ def calculate_strategic_stop(
     market_data: pd.DataFrame,
     features: Dict,
     atr_fallback: float,
-    buffer_multiplier: float = 1.2
+    buffer_multiplier: float = 1.2,
+    mtf_data: Optional[Dict[str, pd.DataFrame]] = None
 ) -> Tuple[float, str]:
     """
-    Calculate strategic stop loss using structure.
+    Calculate strategic stop loss using structure and liquidity sweeps.
 
     Args:
         direction: 'LONG' or 'SHORT'
         entry_price: Entry price level
-        market_data: Recent OHLCV data
+        market_data: Recent OHLCV data (current timeframe)
         features: Dict containing structure data (order_blocks, fvgs, etc.)
         atr_fallback: ATR value for fallback calculation
         buffer_multiplier: Buffer beyond structure (typically 1.2 = 20%)
+        mtf_data: Optional dict of multi-timeframe data {'M5': df, 'M15': df, 'H1': df}
 
     Returns:
         Tuple of (stop_loss_price, stop_type)
-        stop_type: 'ORDER_BLOCK' | 'FVG' | 'SWING' | 'ATR_FALLBACK'
+        stop_type: 'WICK_SWEEP' | 'ORDER_BLOCK' | 'FVG' | 'SWING' | 'ATR_FALLBACK'
     """
-    # Priority 1: Order Block
+    # Priority 1: WICK LIQUIDITY SWEEP (BEST - where institutions hunted stops)
+    wick_stop = _find_wick_liquidity_sweep(direction, entry_price, market_data, mtf_data, atr_fallback, buffer_multiplier)
+    if wick_stop is not None:
+        return wick_stop, 'WICK_SWEEP'
+
+    # Priority 2: Order Block
     ob_stop = _find_order_block_stop(direction, entry_price, features, atr_fallback, buffer_multiplier)
     if ob_stop is not None:
         return ob_stop, 'ORDER_BLOCK'
 
-    # Priority 2: Fair Value Gap
+    # Priority 3: Fair Value Gap
     fvg_stop = _find_fvg_stop(direction, entry_price, features, atr_fallback, buffer_multiplier)
     if fvg_stop is not None:
         return fvg_stop, 'FVG'
 
-    # Priority 3: Swing High/Low
+    # Priority 4: Swing High/Low
     swing_stop = _find_swing_stop(direction, entry_price, market_data, atr_fallback, buffer_multiplier)
     if swing_stop is not None:
         return swing_stop, 'SWING'
@@ -72,6 +87,123 @@ def calculate_strategic_stop(
     # Fallback: ATR-based
     atr_stop = _calculate_atr_fallback(direction, entry_price, atr_fallback)
     return atr_stop, 'ATR_FALLBACK'
+
+
+def _find_wick_liquidity_sweep(direction: str, entry_price: float,
+                               market_data: pd.DataFrame,
+                               mtf_data: Optional[Dict[str, pd.DataFrame]],
+                               atr: float, buffer: float) -> Optional[float]:
+    """
+    Find liquidity sweep wicks for optimal stop placement.
+
+    **CRITICAL CONCEPT:**
+    Wicks that swept previous highs/lows are where institutions hunted retail stops.
+    Price RARELY returns to these levels once liquidityes swept.
+
+    Detection:
+    1. Find wicks that extended beyond previous swing highs/lows
+    2. Confirm wick closed back inside range (sweep + reversal)
+    3. Check multiple timeframes (M5, M15, H1) for strongest sweeps
+    4. Place stop BEYOND the wick (institutions won't let it get hit)
+
+    Args:
+        direction: 'LONG' or 'SHORT'
+        entry_price: Current entry price
+        market_data: Current timeframe OHLCV data
+        mtf_data: Multi-timeframe data (optional but recommended)
+        atr: ATR for buffer calculation
+        buffer: Buffer multiplier
+
+    Returns:
+        Stop loss price if wick sweep found, None otherwise
+    """
+    # Combine current timeframe + MTF data for analysis
+    timeframes_to_check = [market_data]  # Always check current TF
+
+    if mtf_data:
+        # Check higher timeframes (more significant sweeps)
+        for tf_name in ['M5', 'M15', 'H1', 'H4']:
+            if tf_name in mtf_data and mtf_data[tf_name] is not None:
+                timeframes_to_check.append(mtf_data[tf_name])
+
+    best_wick_level = None
+    best_wick_significance = 0.0
+
+    for tf_data in timeframes_to_check:
+        if len(tf_data) < 20:
+            continue
+
+        # Look back 50 bars for liquidity sweeps
+        lookback = min(50, len(tf_data))
+        recent_bars = tf_data.tail(lookback).copy()
+
+        # Detect liquidity sweeps
+        for i in range(10, len(recent_bars)):
+            current_bar = recent_bars.iloc[i]
+            previous_bars = recent_bars.iloc[max(0, i-10):i]
+
+            if direction == 'LONG':
+                # For LONG: Find DOWNWARD liquidity sweeps (wick below previous lows)
+                prev_low = previous_bars['low'].min()
+
+                # Check if wick swept below previous low
+                wick_swept_low = current_bar['low'] < prev_low
+                closed_above = current_bar['close'] > prev_low  # Reversal confirmation
+
+                if wick_swept_low and closed_above:
+                    wick_low = current_bar['low']
+
+                    # Check if this wick is below our entry (valid for stop placement)
+                    if wick_low < entry_price:
+                        # Calculate significance (how far below prev low)
+                        sweep_distance = prev_low - wick_low
+                        wick_size = current_bar['high'] - current_bar['low']
+
+                        # Strong sweep = significant distance + large wick
+                        significance = sweep_distance / (atr + 1e-10) * (wick_size / atr)
+
+                        if significance > best_wick_significance:
+                            best_wick_significance = significance
+                            best_wick_level = wick_low
+
+            else:  # SHORT
+                # For SHORT: Find UPWARD liquidity sweeps (wick above previous highs)
+                prev_high = previous_bars['high'].max()
+
+                # Check if wick swept above previous high
+                wick_swept_high = current_bar['high'] > prev_high
+                closed_below = current_bar['close'] < prev_high  # Reversal confirmation
+
+                if wick_swept_high and closed_below:
+                    wick_high = current_bar['high']
+
+                    # Check if this wick is above our entry (valid for stop placement)
+                    if wick_high > entry_price:
+                        sweep_distance = wick_high - prev_high
+                        wick_size = current_bar['high'] - current_bar['low']
+
+                        significance = sweep_distance / (atr + 1e-10) * (wick_size / atr)
+
+                        if significance > best_wick_significance:
+                            best_wick_significance = significance
+                            best_wick_level = wick_high
+
+    # If we found a significant wick sweep (significance > 1.5)
+    if best_wick_level is not None and best_wick_significance > 1.5:
+        if direction == 'LONG':
+            # Place stop BELOW the wick that swept liquidity
+            stop = best_wick_level - (atr * buffer * 0.3)
+            logger.info(f"✓✓ WICK SWEEP stop: {stop:.5f} (wick low: {best_wick_level:.5f}, "
+                       f"significance: {best_wick_significance:.1f})")
+            return stop
+        else:
+            # Place stop ABOVE the wick that swept liquidity
+            stop = best_wick_level + (atr * buffer * 0.3)
+            logger.info(f"✓✓ WICK SWEEP stop: {stop:.5f} (wick high: {best_wick_level:.5f}, "
+                       f"significance: {best_wick_significance:.1f})")
+            return stop
+
+    return None
 
 
 def _find_order_block_stop(direction: str, entry_price: float, features: Dict,
