@@ -183,7 +183,10 @@ class MeanReversionStatistical(StrategyBase):
         ])
 
         validation['confidence_score'] = factors_met / 5.0
-        validation['is_valid'] = factors_met >= 2
+
+        # ELITE: Use configured confluence percentage (80% = 4/5 factors)
+        required_factors = int(5 * self.confirmations_required_pct)
+        validation['is_valid'] = factors_met >= required_factors
 
         return validation
 
