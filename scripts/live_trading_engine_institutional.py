@@ -1,5 +1,5 @@
 """
-Institutional Live Trading Engine - Complete Integration
+Institutional Live Trading Engine - Complete Integration WITH ML LEARNING
 
 Integrates all institutional components:
 - Multi-Timeframe Data Manager
@@ -7,9 +7,19 @@ Integrates all institutional components:
 - Market Structure Position Manager
 - Regime Detector
 - Brain Layer (signal arbitration and portfolio orchestration)
+- ML Adaptive Engine (CONTINUOUS LEARNING FROM EVERY TRADE)
 
 This is NOT a simple signal executor. This is an institutional algorithm
-with portfolio-level thinking, regime adaptation, and advanced risk management.
+with portfolio-level thinking, regime adaptation, advanced risk management,
+and MACHINE LEARNING that improves from every trade.
+
+The ML Engine:
+- Learns from every closed position
+- Records all signals (approved + rejected)
+- Predicts trade outcomes BEFORE execution
+- Optimizes strategy parameters automatically
+- Adapts to changing market conditions
+- NO HUMAN INTERVENTION REQUIRED
 """
 
 import os
@@ -69,6 +79,7 @@ from core import (
     MarketStructurePositionManager,
     RegimeDetector,
     InstitutionalBrain,
+    MLAdaptiveEngine,  # ML LEARNING SYSTEM
 )
 
 # Strategy whitelist - 14 institutional strategies
@@ -192,6 +203,7 @@ class InstitutionalTradingEngine:
         self.position_manager = None
         self.regime_detector = None
         self.brain = None
+        self.ml_engine = None  # ML ADAPTIVE ENGINE
 
         # Execution tracking
         self.scan_count = 0
@@ -249,17 +261,23 @@ class InstitutionalTradingEngine:
         self.regime_detector = RegimeDetector(self.configs['regime'])
         logger.info("✓ Regime Detector initialized")
 
-        # 5. Brain Layer
+        # 5. ML Adaptive Engine (BEFORE Brain)
+        ml_storage_path = BASE_DIR / 'data' / 'ml'
+        self.ml_engine = MLAdaptiveEngine(ml_storage_path)
+        logger.info("✓ ML Adaptive Engine initialized (CONTINUOUS LEARNING ACTIVE)")
+
+        # 6. Brain Layer (WITH ML)
         self.brain = InstitutionalBrain(
             self.configs['brain'],
             self.risk_manager,
             self.position_manager,
             self.regime_detector,
-            self.mtf_manager
+            self.mtf_manager,
+            self.ml_engine  # ← ML ENGINE INTEGRATED
         )
-        logger.info("✓ Brain Layer initialized (advanced orchestration)")
+        logger.info("✓ Brain Layer initialized (advanced orchestration WITH ML)")
 
-        logger.info("\n✓ ALL INSTITUTIONAL COMPONENTS READY\n")
+        logger.info("\n✓ ALL INSTITUTIONAL COMPONENTS READY (ML LEARNING ACTIVE)\n")
 
     def load_strategies(self):
         """Load institutional strategies."""
@@ -557,11 +575,22 @@ class InstitutionalTradingEngine:
                 lot_size
             )
 
+            # Store complete trade info for ML learning when closed
             self.active_mt5_positions[position_id] = {
                 'ticket': result.order,
                 'symbol': symbol,
+                'strategy': execution_order['strategy'],
                 'direction': direction_str,
                 'lot_size': lot_size,
+                'entry_price': price,
+                'entry_time': datetime.now(),
+                'stop_loss': execution_order['stop_loss'],
+                'take_profit': execution_order['take_profit'],
+                'risk_pct': execution_order['risk_pct'],
+                'quality_score': execution_order['quality_score'],
+                'regime': execution_order['regime'],
+                'signal_id_ml': execution_order.get('signal_id_ml'),  # For ML linking
+                'entry_features': self.calculate_features(symbol),  # Current features
             }
 
             logger.info(f"✓ ORDER EXECUTED: {direction_str} {symbol} {lot_size:.2f} lots @ {price:.5f}")
@@ -588,6 +617,126 @@ class InstitutionalTradingEngine:
         # Update positions
         self.brain.update_positions(market_data)
 
+    def check_closed_positions(self):
+        """
+        Check for closed positions and record outcomes in ML.
+
+        This is where the ML ENGINE LEARNS from completed trades.
+        """
+        if not self.active_mt5_positions:
+            return
+
+        # Get currently open positions from MT5
+        mt5_positions = mt5.positions_get()
+        open_tickets = set(pos.ticket for pos in mt5_positions) if mt5_positions else set()
+
+        # Find positions that have closed
+        closed_positions = []
+
+        for position_id, pos_data in list(self.active_mt5_positions.items()):
+            ticket = pos_data['ticket']
+
+            if ticket not in open_tickets:
+                # Position has closed - need to get deal history
+                closed_positions.append((position_id, pos_data))
+
+        # Process closed positions
+        for position_id, pos_data in closed_positions:
+            try:
+                # Get deal history for this position
+                deals = mt5.history_deals_get(ticket=pos_data['ticket'])
+
+                if not deals or len(deals) < 2:
+                    # Can't determine exit - skip
+                    logger.warning(f"Could not get deal history for {position_id}")
+                    del self.active_mt5_positions[position_id]
+                    continue
+
+                # Entry deal is first, exit deal is last
+                exit_deal = deals[-1]
+
+                exit_price = exit_deal.price
+                exit_time = datetime.fromtimestamp(exit_deal.time)
+
+                # Calculate PnL in R-multiples
+                entry_price = pos_data['entry_price']
+                stop_loss = pos_data['stop_loss']
+                direction = pos_data['direction']
+
+                risk_distance = abs(entry_price - stop_loss)
+
+                if risk_distance > 0:
+                    if direction == 'LONG':
+                        pnl_distance = exit_price - entry_price
+                    else:  # SHORT
+                        pnl_distance = entry_price - exit_price
+
+                    pnl_r = pnl_distance / risk_distance
+                else:
+                    pnl_r = 0.0
+
+                # Determine exit reason
+                if abs(exit_price - pos_data['take_profit']) < abs(exit_price - stop_loss):
+                    exit_reason = 'TARGET'
+                elif abs(exit_price - stop_loss) < 0.0001:
+                    exit_reason = 'STOP'
+                else:
+                    exit_reason = 'TRAIL'  # Or manual
+
+                # Calculate duration
+                duration_minutes = int((exit_time - pos_data['entry_time']).total_seconds() / 60)
+
+                # Prepare trade data for ML
+                trade_data = {
+                    'symbol': pos_data['symbol'],
+                    'strategy': pos_data['strategy'],
+                    'direction': pos_data['direction'],
+                    'entry_price': pos_data['entry_price'],
+                    'entry_time': pos_data['entry_time'],
+                    'exit_price': exit_price,
+                    'exit_time': exit_time,
+                    'exit_reason': exit_reason,
+                    'stop_loss': pos_data['stop_loss'],
+                    'take_profit': pos_data['take_profit'],
+                    'lot_size': pos_data['lot_size'],
+                    'risk_pct': pos_data['risk_pct'],
+                    'pnl_r': pnl_r,
+                    'pnl_pct': pnl_r * pos_data['risk_pct'],
+                    'duration_minutes': duration_minutes,
+                    'entry_regime': pos_data['regime'],
+                    'quality_score': pos_data['quality_score'],
+                    'entry_features': pos_data['entry_features'],
+                    # Simplified MAE/MFE (could be enhanced with tick data)
+                    'mae_r': 0.5 if pnl_r < 0 else 0.2,  # Estimate
+                    'mfe_r': max(pnl_r, 1.0) if pnl_r > 0 else 0.1,  # Estimate
+                    'avg_vpin_during': pos_data['entry_features'].get('vpin', 0.4),
+                    'avg_volatility_during': pos_data['entry_features'].get('atr', 0.0),
+                    'regime_changes_during': 0,  # Could track this
+                }
+
+                # Record in ML ENGINE for learning
+                trade_id = f"{pos_data['symbol']}_{pos_data['strategy']}_closed_{int(exit_time.timestamp())}"
+
+                self.brain.record_completed_trade_ml(
+                    trade_id=trade_id,
+                    signal_id=pos_data.get('signal_id_ml'),
+                    trade_data=trade_data
+                )
+
+                logger.info(f"✓ TRADE CLOSED & RECORDED IN ML: {pos_data['strategy']} {pos_data['symbol']} "
+                           f"{pnl_r:.2f}R ({exit_reason})")
+
+                # Remove from active
+                del self.active_mt5_positions[position_id]
+
+                # Also update risk manager
+                self.risk_manager.close_position(position_id, exit_price)
+
+            except Exception as e:
+                logger.error(f"Error processing closed position {position_id}: {e}")
+                # Remove anyway to avoid re-processing
+                del self.active_mt5_positions[position_id]
+
     def scan_markets(self):
         """Execute one market scan cycle - institutional orchestration."""
         self.scan_count += 1
@@ -604,7 +753,11 @@ class InstitutionalTradingEngine:
         logger.info("Updating positions...")
         self.update_positions()
 
-        # 3. Collect signals from all strategies
+        # 3. Check closed positions and record in ML (LEARNING HAPPENS HERE)
+        logger.info("Checking closed positions for ML learning...")
+        self.check_closed_positions()
+
+        # 4. Collect signals from all strategies
         logger.info("Collecting signals from strategies...")
         raw_signals = self.collect_signals()
 
@@ -704,17 +857,34 @@ class InstitutionalTradingEngine:
         logger.info(f"  Confidence: {regime_stats['confidence']:.2f}")
         logger.info(f"  Duration: {regime_stats['duration_bars']} bars")
 
+        # ML Engine statistics (if available)
+        if 'ml_engine' in brain_stats:
+            logger.info("\nML ADAPTIVE ENGINE:")
+            ml_stats = brain_stats['ml_engine']
+
+            if 'memory_database' in ml_stats:
+                db_stats = ml_stats['memory_database']
+                logger.info(f"  Total Trades Recorded: {db_stats.get('total_trades', 0)}")
+                logger.info(f"  Win Rate: {db_stats.get('win_rate', 0)*100:.1f}%")
+                logger.info(f"  Expectancy: {db_stats.get('expectancy_r', 0):.2f}R")
+                logger.info(f"  Total Signals Recorded: {db_stats.get('total_signals', 0)}")
+
+            logger.info(f"  Learning Iterations: {ml_stats.get('learning_iterations', 0)}")
+            logger.info(f"  Hours Since Last Analysis: {ml_stats.get('hours_since_analysis', 0):.1f}h")
+            logger.info("  Status: LEARNING FROM EVERY TRADE ✓")
+
         logger.info("\n" + "=" * 100)
 
     def run(self):
         """Run institutional trading engine."""
         logger.info("\n" + "=" * 100)
-        logger.info("INSTITUTIONAL TRADING ENGINE - LIVE")
+        logger.info("INSTITUTIONAL TRADING ENGINE - LIVE WITH ML LEARNING")
         logger.info("=" * 100)
         logger.info(f"Strategies: {len(self.strategies)}")
         logger.info(f"Symbols: {len(SYMBOLS)}")
         logger.info(f"Scan Interval: {SCAN_INTERVAL_SECONDS}s")
-        logger.info(f"Mode: INSTITUTIONAL (Brain Layer Active)")
+        logger.info(f"Mode: INSTITUTIONAL (Brain Layer + ML Adaptive Engine ACTIVE)")
+        logger.info(f"ML Learning: ENABLED - System learns from every trade and adapts")
         logger.info("=" * 100)
 
         self.running = True
