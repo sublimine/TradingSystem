@@ -40,13 +40,16 @@ class MeanReversionStatistical(StrategyBase):
         super().__init__(config)
 
         self.lookback_period = config.get('lookback_period', 200)
-        self.entry_sigma_threshold = config.get('entry_sigma_threshold', 1.5)
-        self.exit_sigma_threshold = config.get('exit_sigma_threshold', 0.6)
+        self.entry_sigma_threshold = config.get('entry_sigma_threshold', 2.8)
+        self.exit_sigma_threshold = config.get('exit_sigma_threshold', 0.8)
         self.vpin_exhaustion_threshold = config.get('vpin_exhaustion_threshold', 0.40)
         self.imbalance_reversal_threshold = config.get('imbalance_reversal_threshold', 0.30)
-        self.volume_spike_multiplier = config.get('volume_spike_multiplier', 1.8)
+        self.volume_spike_multiplier = config.get('volume_spike_multiplier', 3.2)
         self.min_liquidity_score = config.get('min_liquidity_score', 0.60)
-        self.reversal_velocity_min = config.get('reversal_velocity_min', 5.0)
+        self.reversal_velocity_min = config.get('reversal_velocity_min', 18.0)
+        self.adx_max_for_entry = config.get('adx_max_for_entry', 22)
+        self.use_vwap_mean = config.get('use_vwap_mean', True)
+        self.confirmations_required_pct = config.get('confirmations_required_pct', 0.80)
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def evaluate(self, market_data: pd.DataFrame, features: Dict) -> List[Signal]:
