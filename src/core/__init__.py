@@ -7,6 +7,7 @@ Architecture:
 - position_manager: Market structure-based position management
 - regime_detector: Market regime detection and classification
 - brain: Advanced orchestration layer
+- ml_adaptive_engine: Machine Learning adaptive engine for continuous learning
 """
 
 from .mtf_data_manager import MultiTimeframeDataManager
@@ -28,6 +29,14 @@ from .brain import (
     InstitutionalBrain,
     SignalArbitrator,
     PortfolioOrchestrator
+)
+from .ml_adaptive_engine import (
+    MLAdaptiveEngine,
+    TradeMemoryDatabase,
+    PerformanceAttributionAnalyzer,
+    AdaptiveParameterOptimizer,
+    TradeRecord,
+    SignalRecord
 )
 
 __all__ = [
@@ -52,4 +61,12 @@ __all__ = [
     'InstitutionalBrain',
     'SignalArbitrator',
     'PortfolioOrchestrator',
+
+    # ML Adaptive Engine
+    'MLAdaptiveEngine',
+    'TradeMemoryDatabase',
+    'PerformanceAttributionAnalyzer',
+    'AdaptiveParameterOptimizer',
+    'TradeRecord',
+    'SignalRecord',
 ]

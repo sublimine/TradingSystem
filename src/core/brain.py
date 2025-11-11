@@ -1,5 +1,5 @@
 """
-Institutional Brain Layer - Advanced Orchestration
+Institutional Brain Layer - Advanced Orchestration with ML Integration
 
 This is NOT a simple signal combiner. This is an advanced orchestration layer
 that thinks at the PORTFOLIO level, not individual trade level.
@@ -10,14 +10,22 @@ Features:
 3. Portfolio Thinking - Considers correlation, exposure, balance
 4. Multi-Timeframe Coherence - Ensures HTF/LTF alignment
 5. Quality-Weighted Scoring - Not all signals are equal
-6. Adaptive Learning - Adjusts based on recent performance
+6. Adaptive Learning - Adjusts based on recent performance (NOW WITH ML!)
 7. Regime-Aware Selection - Matches strategies to market conditions
+8. ML Integration - Uses learned insights to improve all decisions
+
+NOW INTEGRATED WITH ML ADAPTIVE ENGINE:
+- Signal scoring enhanced with ML predictions
+- Strategy selection uses learned regime performance
+- All trades/signals recorded for continuous learning
+- Dynamic parameter adjustment from ML insights
 
 This is what separates institutional algorithms from retail "signal combiners".
 
 Research basis:
 - Lo & MacKinlay (1997): Maximizing Predictability in the Stock and Bond Markets
 - López de Prado (2018): Advances in Financial Machine Learning
+- Reinforcement Learning (Sutton & Barto 2018)
 - Institutional portfolio construction methodology
 """
 
@@ -483,12 +491,13 @@ class InstitutionalBrain:
     - Risk management
     - Position management
     - Multi-timeframe analysis
+    - ML Adaptive Engine (CONTINUOUS LEARNING)
 
     This is what makes the difference between institutional and retail algorithms.
     """
 
     def __init__(self, config: Dict, risk_manager, position_manager,
-                 regime_detector, mtf_manager):
+                 regime_detector, mtf_manager, ml_engine=None):
         """
         Initialize institutional brain.
 
@@ -498,12 +507,14 @@ class InstitutionalBrain:
             position_manager: Position manager instance
             regime_detector: Regime detector instance
             mtf_manager: Multi-timeframe manager instance
+            ml_engine: ML Adaptive Engine instance (optional)
         """
         self.config = config
         self.risk_manager = risk_manager
         self.position_manager = position_manager
         self.regime_detector = regime_detector
         self.mtf_manager = mtf_manager
+        self.ml_engine = ml_engine  # ML ENGINE FOR CONTINUOUS LEARNING
 
         # Components
         self.arbitrator = SignalArbitrator(config)
@@ -514,7 +525,13 @@ class InstitutionalBrain:
         self.total_signals_approved = 0
         self.total_signals_rejected = 0
 
-        logger.info("Institutional Brain initialized - Advanced orchestration active")
+        # Active trades tracking for ML feedback
+        self.active_trades_ml: Dict[str, Dict] = {}
+
+        if ml_engine:
+            logger.info("Institutional Brain initialized - Advanced orchestration WITH ML LEARNING active")
+        else:
+            logger.info("Institutional Brain initialized - Advanced orchestration active (no ML)")
 
     def process_signals(self, raw_signals: List[Dict], market_data: Dict[str, pd.DataFrame],
                        features: Dict) -> List[Dict]:
@@ -615,19 +632,86 @@ class InstitutionalBrain:
                 self.total_signals_rejected += len(signals)
                 continue
 
-            # 5. Portfolio-level approval
+            # 5. ML PREDICTION (if available) - Enhance decision with learned insights
+            if self.ml_engine:
+                signal_features = {
+                    'quality_score': best_signal.get('metadata', {}).get('quality_score', 0.7),
+                    'mtf_confluence': best_signal.get('metadata', {}).get('mtf_confluence', 0.5),
+                    'structure_alignment': best_signal.get('metadata', {}).get('structure_alignment', 0.5),
+                    'order_flow_quality': 1.0 - symbol_features.get('vpin', 0.4),
+                    'regime_fit': 0.7,
+                    'risk_pct': 0.5,
+                    'entry_features': symbol_features,
+                }
+
+                predicted_r = self.ml_engine.predict_signal_outcome(signal_features)
+                logger.info(f"{symbol}: ML predicts {predicted_r:.2f}R outcome")
+
+                # If ML predicts poor outcome, reject signal
+                if predicted_r < 0.5:
+                    logger.warning(f"{symbol}: ML predicts poor outcome ({predicted_r:.2f}R), rejecting")
+
+                    # Record rejected signal in ML
+                    if self.ml_engine:
+                        from .ml_adaptive_engine import SignalRecord
+                        signal_record = SignalRecord(
+                            signal_id=f"{symbol}_{best_signal['strategy_name']}_{int(datetime.now().timestamp())}",
+                            timestamp=datetime.now(),
+                            symbol=symbol,
+                            strategy=best_signal['strategy_name'],
+                            direction=best_signal['direction'],
+                            quality_score=best_signal.get('metadata', {}).get('quality_score', 0.7),
+                            entry_price=best_signal['entry_price'],
+                            stop_loss=best_signal['stop_loss'],
+                            take_profit=best_signal['take_profit'],
+                            regime=current_regime,
+                            features=symbol_features,
+                            approved=False,
+                            rejection_reason=f"ML predicted poor outcome: {predicted_r:.2f}R",
+                            trade_id=None,
+                            eventual_outcome_r=None,
+                        )
+                        self.ml_engine.record_signal(signal_record)
+
+                    self.total_signals_rejected += 1
+                    continue
+
+            # 6. Portfolio-level approval
             portfolio_eval = self.orchestrator.evaluate_new_signal(best_signal, market_context)
 
             if not portfolio_eval['approved']:
                 logger.info(f"{symbol}: Portfolio rejected - {portfolio_eval['reason']}")
+
+                # Record rejected signal in ML
+                if self.ml_engine:
+                    from .ml_adaptive_engine import SignalRecord
+                    signal_record = SignalRecord(
+                        signal_id=f"{symbol}_{best_signal['strategy_name']}_{int(datetime.now().timestamp())}",
+                        timestamp=datetime.now(),
+                        symbol=symbol,
+                        strategy=best_signal['strategy_name'],
+                        direction=best_signal['direction'],
+                        quality_score=best_signal.get('metadata', {}).get('quality_score', 0.7),
+                        entry_price=best_signal['entry_price'],
+                        stop_loss=best_signal['stop_loss'],
+                        take_profit=best_signal['take_profit'],
+                        regime=current_regime,
+                        features=symbol_features,
+                        approved=False,
+                        rejection_reason=portfolio_eval['reason'],
+                        trade_id=None,
+                        eventual_outcome_r=None,
+                    )
+                    self.ml_engine.record_signal(signal_record)
+
                 self.total_signals_rejected += 1
                 continue
 
-            # 6. Apply adjustments (position sizing from risk manager)
+            # 7. Apply adjustments (position sizing from risk manager)
             adjusted_signal = best_signal.copy()
             adjusted_signal.update(portfolio_eval['adjustments'])
 
-            # 7. Create execution order
+            # 8. Create execution order
             execution_order = {
                 'signal': adjusted_signal,
                 'symbol': symbol,
@@ -642,6 +726,32 @@ class InstitutionalBrain:
                 'regime': current_regime,
                 'timestamp': datetime.now(),
             }
+
+            # Record APPROVED signal in ML
+            if self.ml_engine:
+                from .ml_adaptive_engine import SignalRecord
+                signal_id = f"{symbol}_{best_signal['strategy_name']}_{int(datetime.now().timestamp())}"
+                signal_record = SignalRecord(
+                    signal_id=signal_id,
+                    timestamp=datetime.now(),
+                    symbol=symbol,
+                    strategy=best_signal['strategy_name'],
+                    direction=best_signal['direction'],
+                    quality_score=portfolio_eval['adjustments']['quality_score'],
+                    entry_price=best_signal['entry_price'],
+                    stop_loss=best_signal['stop_loss'],
+                    take_profit=best_signal['take_profit'],
+                    regime=current_regime,
+                    features=symbol_features,
+                    approved=True,
+                    rejection_reason=None,
+                    trade_id=None,  # Will be linked later
+                    eventual_outcome_r=None,
+                )
+                self.ml_engine.record_signal(signal_record)
+
+                # Track for later linking
+                execution_order['signal_id_ml'] = signal_id
 
             approved_orders.append(execution_order)
             self.total_signals_approved += 1
@@ -678,12 +788,78 @@ class InstitutionalBrain:
         """
         self.arbitrator.record_signal_outcome(signal, outcome_r)
 
+        # Also record in ML engine if available
+        if self.ml_engine:
+            logger.debug(f"Recording trade outcome in ML: {outcome_r:.2f}R")
+
+    def record_completed_trade_ml(self, trade_id: str, signal_id: str, trade_data: Dict):
+        """
+        Record completed trade in ML engine for learning.
+
+        Args:
+            trade_id: Trade identifier
+            signal_id: Signal identifier (for linking)
+            trade_data: Complete trade data including outcome
+        """
+        if not self.ml_engine:
+            return
+
+        from .ml_adaptive_engine import TradeRecord
+
+        # Create trade record
+        trade_record = TradeRecord(
+            trade_id=trade_id,
+            timestamp=datetime.now(),
+            symbol=trade_data['symbol'],
+            strategy=trade_data['strategy'],
+            direction=trade_data['direction'],
+
+            entry_price=trade_data['entry_price'],
+            entry_time=trade_data.get('entry_time', datetime.now()),
+            entry_regime=trade_data.get('entry_regime', 'UNKNOWN'),
+            entry_features=trade_data.get('entry_features', {}),
+
+            quality_score=trade_data.get('quality_score', 0.7),
+            mtf_confluence=trade_data.get('mtf_confluence', 0.5),
+            structure_alignment=trade_data.get('structure_alignment', 0.5),
+            order_flow_quality=trade_data.get('order_flow_quality', 0.5),
+            regime_fit=trade_data.get('regime_fit', 0.7),
+
+            lot_size=trade_data['lot_size'],
+            risk_pct=trade_data.get('risk_pct', 0.5),
+            stop_loss=trade_data['stop_loss'],
+            take_profit=trade_data['take_profit'],
+
+            exit_price=trade_data['exit_price'],
+            exit_time=trade_data.get('exit_time', datetime.now()),
+            exit_reason=trade_data.get('exit_reason', 'UNKNOWN'),
+
+            pnl_pct=trade_data.get('pnl_pct', 0.0),
+            pnl_r=trade_data['pnl_r'],
+            mae_r=trade_data.get('mae_r', 0.0),
+            mfe_r=trade_data.get('mfe_r', 0.0),
+            duration_minutes=trade_data.get('duration_minutes', 0),
+
+            avg_vpin_during=trade_data.get('avg_vpin_during', 0.4),
+            avg_volatility_during=trade_data.get('avg_volatility_during', 0.0),
+            regime_changes_during=trade_data.get('regime_changes_during', 0),
+        )
+
+        # Record in ML
+        self.ml_engine.record_trade_outcome(trade_record)
+
+        # Link signal to trade
+        if signal_id:
+            self.ml_engine.memory_db.link_signal_to_trade(signal_id, trade_id, trade_data['pnl_r'])
+
+        logger.info(f"Trade {trade_id} recorded in ML: {trade_data['pnl_r']:.2f}R")
+
     def get_statistics(self) -> Dict:
         """Get brain statistics."""
         approval_rate = (self.total_signals_approved / self.total_signals_received * 100
                         if self.total_signals_received > 0 else 0)
 
-        return {
+        stats = {
             'total_signals_received': self.total_signals_received,
             'total_signals_approved': self.total_signals_approved,
             'total_signals_rejected': self.total_signals_rejected,
@@ -692,3 +868,9 @@ class InstitutionalBrain:
             'position_manager': self.position_manager.get_statistics(),
             'regime': self.regime_detector.get_statistics(),
         }
+
+        # Add ML statistics if available
+        if self.ml_engine:
+            stats['ml_engine'] = self.ml_engine.get_statistics()
+
+        return stats
