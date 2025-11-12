@@ -1,0 +1,47 @@
+Tarea 1: Validar gestión de riesgo al 0.5%
+
+Necesito que valides completamente el cambio de gestión de riesgo que implementamos.
+
+Pasos específicos:
+1. Verifica que src/risk_management.py tiene la función calculate_position_size correctamente
+2. Confirma que scripts/live_trading_engine.py está importando y usando la función
+3. Ejecuta validación de sintaxis: python -m py_compile scripts/live_trading_engine.py
+4. Ejecuta el engine en modo dry-run por 2 minutos para verificar cálculos
+5. Revisa los logs para confirmar que muestra "RIESGO: Equity=... | Riesgo=0.5%"
+6. Si todo es correcto, dame un resumen de los tamaños de posición calculados
+
+Si encuentras algún error, corrígelo automáticamente e itera hasta que funcione.
+
+---
+
+Tarea 2: Ejecutar suite completa de tests unitarios
+
+Ejecuta todos los tests del sistema y reporta resultados:
+
+1. pytest tests/ -v --tb=short
+2. Si hay tests fallando, analiza los errores
+3. Corrige los tests o el código según corresponda
+4. Vuelve a ejecutar hasta que todos pasen
+5. Dame un resumen final: X tests pasados, Y fallidos (si alguno)
+
+---
+
+Tarea 3: Generar reporte de estado del sistema
+
+Genera un reporte completo del estado actual:
+
+1. Revisa qué estrategias están activas en STRATEGY_WHITELIST
+2. Cuenta líneas de código: find src -name "*.py" -exec wc -l {} +
+3. Verifica integridad de archivos críticos
+4. Revisa últimos commits: git log --oneline -10
+5. Crea un archivo status_report.txt con toda esta información
+
+Formato del reporte:
+- Fecha y hora
+- Estrategias activas (lista)
+- Líneas de código por módulo
+- Últimos cambios (commits)
+- Estado de tests
+- Configuración de riesgo actual
+
+---

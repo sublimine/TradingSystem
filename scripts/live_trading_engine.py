@@ -1,6 +1,7 @@
 ﻿import os
 import sys
 from pathlib import Path
+import yaml
 
 # Determinar BASE_DIR dinámicamente (directorio raíz del proyecto)
 BASE_DIR = Path(__file__).parent.parent.resolve()
@@ -51,6 +52,9 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 # Gatekeeper system
 from gatekeepers.gatekeeper_adapter import GatekeeperAdapter
 
+# Risk management
+from risk_management import calculate_position_size
+
 # VPIN Calculator (debe estar definido o importado)
 class VPINCalculator:
     def __init__(self):
@@ -86,6 +90,31 @@ SYMBOLS = [
 
 SCAN_INTERVAL_SECONDS = 60
 LOOKBACK_BARS = 500
+
+
+def load_strategy_config():
+    """
+    Load institutional strategy configuration from YAML.
+
+    Returns config dict with parameters for all 14 strategies.
+    Falls back to minimal config if file not found.
+    """
+    config_path = BASE_DIR / 'config' / 'strategies_institutional.yaml'
+
+    try:
+        if config_path.exists():
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+                logger.info(f"Loaded institutional config from {config_path}")
+                return config
+        else:
+            logger.warning(f"Config file not found: {config_path}")
+            logger.warning("Using minimal default config")
+            return {}
+    except Exception as e:
+        logger.error(f"Error loading config: {e}")
+        logger.warning("Using minimal default config")
+        return {}
 
 
 class LiveTradingEngine:
@@ -128,27 +157,34 @@ class LiveTradingEngine:
     
     def load_strategies(self):
         logger.info("Cargando estrategias (lista blanca)...")
-        
+
+        # Load institutional configuration
+        strategy_configs = load_strategy_config()
+
         loaded_count = 0
         error_count = 0
-        
+
         for module_name in STRATEGY_WHITELIST:
             try:
                 module = importlib.import_module(f'strategies.{module_name}')
                 classes = [(n, o) for n, o in inspect.getmembers(module, inspect.isclass)
                           if o.__module__ == f'strategies.{module_name}']
-                
+
                 if classes:
                     class_name, strategy_class = classes[0]
-                    
+
                     # Verificar firma de evaluate
                     if not hasattr(strategy_class, 'evaluate'):
-                        logger.error(f"  ERROR {module_name}: Clase sin mÃ©todo evaluate")
+                        logger.error(f"  ERROR {module_name}: Clase sin método evaluate")
                         error_count += 1
                         continue
-                    
-                    config = {'enabled': True, 'symbols': SYMBOLS}
-                    instance = strategy_class(config)
+
+                    # Get strategy-specific config from YAML, fallback to minimal
+                    strategy_config = strategy_configs.get(module_name, {})
+                    strategy_config['enabled'] = strategy_config.get('enabled', True)
+                    strategy_config['symbols'] = SYMBOLS
+
+                    instance = strategy_class(strategy_config)
                     
                     self.strategies.append({
                         'name': module_name,
@@ -210,6 +246,8 @@ class LiveTradingEngine:
             features['atr'] = 0.0001
             features['rsi'] = 50.0
             features['vpin'] = 0.5
+            features['ofi'] = 0.0  # INSTITUTIONAL
+            features['cvd'] = 0.0  # INSTITUTIONAL
             features['swing_high_levels'] = []
             features['swing_low_levels'] = []
             return features
@@ -246,11 +284,22 @@ class LiveTradingEngine:
             features['swing_high_levels'] = swing_highs.tail(20).tolist()
             features['swing_low_levels'] = swing_lows.tail(20).tolist()
             
-            # Volumen delta simplificado
+            # CVD (Cumulative Volume Delta) - INSTITUTIONAL
             volume = data['volume']
             close_change = close.diff()
             signed_volume = volume * np.sign(close_change)
-            features['cumulative_volume_delta'] = float(signed_volume.sum())
+            cvd_rolling = signed_volume.rolling(window=20).sum()
+            features['cvd'] = float(cvd_rolling.iloc[-1]) if not cvd_rolling.empty else 0.0
+            features['cumulative_volume_delta'] = features['cvd']  # Alias for backward compatibility
+
+            # OFI (Order Flow Imbalance) - INSTITUTIONAL
+            midpoint = (high + low) / 2.0
+            tick_direction = np.sign(close - midpoint)
+            signed_vol_ofi = volume * tick_direction
+            ofi = signed_vol_ofi.rolling(window=20).sum()
+            total_volume_rolling = volume.rolling(window=20).sum()
+            ofi_normalized = ofi / (total_volume_rolling + 1e-10)
+            features['ofi'] = float(ofi_normalized.iloc[-1]) if not ofi_normalized.empty else 0.0
             
             # VPIN simplificado (ratio de volumen compra/venta)
             buy_volume = volume[close > close.shift(1)].sum()
@@ -291,6 +340,8 @@ class LiveTradingEngine:
                 'atr': 0.0001,
                 'rsi': 50.0,
                 'vpin': 0.5,
+                'ofi': 0.0,  # INSTITUTIONAL
+                'cvd': 0.0,  # INSTITUTIONAL
                 'swing_high_levels': [],
                 'swing_low_levels': [],
                 'cumulative_volume_delta': 0.0,
@@ -388,20 +439,47 @@ class LiveTradingEngine:
         try:
             symbol = signal.symbol
             direction = mt5.ORDER_TYPE_BUY if signal.direction == 'LONG' else mt5.ORDER_TYPE_SELL
-            
+
             symbol_info = mt5.symbol_info(symbol)
             if symbol_info is None:
                 logger.error(f"ERROR: Simbolo {symbol} no disponible")
                 return False
-            
-            volume = symbol_info.volume_min
-            
+
             tick = mt5.symbol_info_tick(symbol)
             if tick is None:
                 logger.error(f"ERROR: No tick para {symbol}")
                 return False
-            
+
             price = tick.ask if direction == mt5.ORDER_TYPE_BUY else tick.bid
+
+            # Calcular tamaño de posición basado en 0.5% de riesgo
+            account_info = mt5.account_info()
+            if account_info is None:
+                logger.error(f"ERROR: No se pudo obtener info de cuenta")
+                return False
+
+            equity = account_info.equity
+            risk_pct = 0.5  # 0.5% por operación
+
+            # Usar stop loss de la señal, o mínimo del símbolo si no hay
+            stop_loss = signal.stop_loss if signal.stop_loss and signal.stop_loss > 0 else price * 0.99
+
+            # Calcular volumen dinámicamente
+            contract_size = symbol_info.trade_contract_size
+            volume = calculate_position_size(
+                capital=equity,
+                risk_pct=risk_pct,
+                entry_price=price,
+                stop_loss=stop_loss,
+                contract_size=contract_size,
+                symbol=symbol  # Pasar símbolo para detección correcta
+            )
+
+            # Validar límites del broker
+            volume = max(symbol_info.volume_min, volume)
+            volume = min(symbol_info.volume_max, volume)
+
+            logger.info(f"📊 RIESGO: Equity=${equity:.2f} | Riesgo=0.5% (${equity*0.005:.2f}) | Lotes calculados={volume:.2f}")
             
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,

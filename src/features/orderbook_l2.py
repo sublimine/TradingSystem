@@ -37,18 +37,79 @@ class OrderBookSnapshot:
     def best_ask(self) -> float:
         return self.asks[0][0] if self.asks else 0
 
-def parse_l2_snapshot(l2_data: Optional[str]) -> Optional[OrderBookSnapshot]:
-    """Parse L2 data if available."""
+def parse_l2_snapshot(l2_data) -> Optional[OrderBookSnapshot]:
+    """
+    Parse Level 2 orderbook data from MT5.
+
+    Args:
+        l2_data: Tuple of BookInfo entries from mt5.market_book_get()
+                 Each entry has: type (0=bid, 1=ask), price, volume, volume_dbl
+
+    Returns:
+        OrderBookSnapshot with parsed bid/ask levels, or None if unavailable
+
+    Research: Biais, Hillion & Spatt (1995), Hautsch & Huang (2012)
+    """
     try:
-        if l2_data is None:
+        if l2_data is None or len(l2_data) == 0:
             logger.debug("No L2 data available - operating in degraded mode")
             return None
-        
-        logger.warning("L2 parsing not implemented - degraded mode active")
-        return None
-        
+
+        # Separate bids and asks
+        bids = []
+        asks = []
+
+        for entry in l2_data:
+            # entry.type: 0 = ORDER_TYPE_BUY (bid), 1 = ORDER_TYPE_SELL (ask)
+            price = float(entry.price)
+            volume = float(entry.volume_dbl)  # Use precise double value
+
+            if entry.type == 0:  # Bid
+                bids.append((price, volume))
+            else:  # Ask (type == 1)
+                asks.append((price, volume))
+
+        # Sort: bids descending (best bid first), asks ascending (best ask first)
+        bids.sort(reverse=True, key=lambda x: x[0])
+        asks.sort(key=lambda x: x[0])
+
+        if not bids or not asks:
+            logger.warning("L2 data incomplete: missing bids or asks")
+            return None
+
+        # Calculate metrics
+        best_bid = bids[0][0]
+        best_ask = asks[0][0]
+        mid_price = (best_bid + best_ask) / 2.0
+        spread = best_ask - best_bid
+
+        total_bid_volume = sum(vol for _, vol in bids)
+        total_ask_volume = sum(vol for _, vol in asks)
+
+        # Imbalance: positive = more bid pressure, negative = more ask pressure
+        if total_bid_volume + total_ask_volume > 0:
+            imbalance = (total_bid_volume - total_ask_volume) / (total_bid_volume + total_ask_volume)
+        else:
+            imbalance = 0.0
+
+        snapshot = OrderBookSnapshot(
+            timestamp=datetime.now(),
+            bids=bids,
+            asks=asks,
+            mid_price=mid_price,
+            spread=spread,
+            total_bid_volume=total_bid_volume,
+            total_ask_volume=total_ask_volume,
+            imbalance=imbalance
+        )
+
+        logger.debug(f"L2 snapshot parsed: {len(bids)} bids, {len(asks)} asks, "
+                    f"spread={spread:.5f}, imbalance={imbalance:.3f}")
+
+        return snapshot
+
     except Exception as e:
-        logger.error(f"L2 parsing failed: {str(e)}")
+        logger.error(f"L2 parsing failed: {str(e)}", exc_info=True)
         return None
 
 def detect_iceberg_signature(price_data: pd.DataFrame,

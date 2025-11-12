@@ -22,6 +22,7 @@ import pandas as pd
 from typing import Dict, Optional, Tuple
 from datetime import datetime
 import logging
+from collections import deque
 import threading
 
 from gatekeepers.gatekeeper_integrator import GatekeeperIntegrator
@@ -61,7 +62,8 @@ class GatekeeperAdapter:
         self.prev_timestamp = None
         
         # Historia de decisiones (para debugging)
-        self.decision_history = []
+        # FIX BUG #13: Use deque with maxlen to prevent memory leak
+        self.decision_history = deque(maxlen=1000)
         self.max_history_size = 1000
         
         # Lock para thread safety
