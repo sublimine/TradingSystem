@@ -9,7 +9,6 @@ entry thresholds, stop distances, and position sizing accordingly.
 import numpy as np
 import pandas as pd
 from typing import List, Dict, Optional
-from collections import deque
 import logging
 from datetime import datetime
 from .strategy_base import StrategyBase, Signal
@@ -52,8 +51,7 @@ class VolatilityRegimeAdaptation(StrategyBase):
         self.min_regime_confidence = config.get('min_regime_confidence', 0.6)
 
         self.hmm_model = None
-        # FIX BUG #10: Use deque with maxlen to prevent memory leak
-        self.volatility_history = deque(maxlen=1000)
+        self.volatility_history = []
         self.current_regime = None
         self.regime_confidence = 0.0
 
@@ -157,52 +155,33 @@ class VolatilityRegimeAdaptation(StrategyBase):
             return np.array([0.5, 0.5])
 
     def _evaluate_entry_conditions(self, market_data: pd.DataFrame, features: Dict) -> Optional[Dict]:
-        """
-        ELITE INSTITUTIONAL: Evaluate entry conditions using institutional signals.
+        """Evaluate basic entry conditions using technical indicators."""
+        if 'rsi' not in features or 'macd_histogram' not in features:
+            return None
 
-        RSI/MACD REMOVED (retail indicators).
-        NOW USES: Order Flow Imbalance, Structure, Volume Profile.
-        """
-        # Get institutional signals
-        ofi = features.get('ofi_imbalance', 0.0)
-        structure_score = features.get('structure_alignment', 0.5)
-        volume_ratio = features.get('volume_ratio', 1.0)
-
+        rsi = features['rsi']
+        macd_hist = features['macd_histogram']
         current_price = market_data['close'].iloc[-1]
 
-        # Regime-adjusted threshold
-        entry_threshold = (self.low_vol_entry_threshold
-                          if self.current_regime == 0
-                          else self.high_vol_entry_threshold)
+        entry_threshold = self.low_vol_entry_threshold if self.current_regime == 0 else self.high_vol_entry_threshold
 
         signal_dict = None
 
-        # LONG: Strong buying flow + structure support + volume
-        if (ofi > entry_threshold and
-            structure_score > 0.65 and
-            volume_ratio > 1.4):
-
+        if rsi < (30 + entry_threshold * 10) and macd_hist > 0:
             signal_dict = {
                 'direction': 'LONG',
                 'price': current_price,
-                'ofi': ofi,
-                'structure_score': structure_score,
-                'volume_ratio': volume_ratio,
-                'signal_strength': min((abs(ofi) - entry_threshold) / entry_threshold, 1.0)
+                'rsi': rsi,
+                'macd_histogram': macd_hist,
+                'signal_strength': abs(30 - rsi) / 30
             }
-
-        # SHORT: Strong selling flow + structure resistance + volume
-        elif (ofi < -entry_threshold and
-              structure_score < 0.35 and
-              volume_ratio > 1.4):
-
+        elif rsi > (70 - entry_threshold * 10) and macd_hist < 0:
             signal_dict = {
                 'direction': 'SHORT',
                 'price': current_price,
-                'ofi': ofi,
-                'structure_score': structure_score,
-                'volume_ratio': volume_ratio,
-                'signal_strength': min((abs(ofi) - entry_threshold) / entry_threshold, 1.0)
+                'rsi': rsi,
+                'macd_histogram': macd_hist,
+                'signal_strength': abs(rsi - 70) / 30
             }
 
         return signal_dict
@@ -243,12 +222,10 @@ class VolatilityRegimeAdaptation(StrategyBase):
             'current_volatility': float(self.volatility_history[-1]),
             'entry_threshold_used': float(self.low_vol_entry_threshold if self.current_regime == 0 else self.high_vol_entry_threshold),
             'stop_multiplier_used': float(stop_multiplier),
-            'ofi': float(signal_dict['ofi']),                        # ELITE: OFI not RSI
-            'structure_score': float(signal_dict['structure_score']), # ELITE: Structure
-            'volume_ratio': float(signal_dict['volume_ratio']),      # ELITE: Volume
+            'rsi': float(signal_dict['rsi']),
+            'macd_histogram': float(signal_dict['macd_histogram']),
             'signal_strength': float(signal_dict['signal_strength']),
-            'signal_type': 'INSTITUTIONAL_FLOW',                     # ELITE: Not retail
-            'strategy_version': '2.0'                                # Version bump
+            'strategy_version': '1.0'
         }
 
         signal = Signal(

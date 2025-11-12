@@ -1,20 +1,8 @@
 """
-Kalman Pairs Trading - Adaptive Kalman Filter with Order Flow Confirmation
+Kalman Filter Pairs Trading Strategy
 
-Uses Kalman Filter for dynamic spread estimation with institutional order flow validation.
-
-INSTITUTIONAL EDGE:
-- Kalman Filter tracks spread mean dynamically
-- OFI confirms institutional positioning on spread divergence
-- CVD validates directional bias for convergence
-- VPIN ensures clean spread
-- Filters false mean reversion signals
-
-Research Basis:
-- Avellaneda & Lee (2010): "Statistical Arbitrage in the U.S. Equities Market"
-- Vidyamurthy (2004): "Pairs Trading: Quantitative Methods"
-
-Win Rate: 67-73% (Kalman pairs)
+Implements statistical pairs trading using Kalman Filter for dynamic spread estimation.
+Generates signals when spread deviates significantly from estimated equilibrium.
 """
 
 import numpy as np
@@ -27,268 +15,255 @@ from .strategy_base import StrategyBase, Signal
 
 class KalmanPairsTrading(StrategyBase):
     """
-    INSTITUTIONAL: Kalman pairs trading with order flow confirmation.
-
-    Entry Logic:
-    1. Monitor correlated pairs
-    2. Track spread with Kalman Filter (dynamic mean)
-    3. Detect spread divergence (z-score)
-    4. Validate with OFI (institutional flow on weak leg)
-    5. CVD confirms convergence direction
-    6. VPIN clean
-    7. Enter mean reversion trade
+    Pairs trading strategy using Kalman Filter for adaptive spread tracking.
+    
+    Monitors correlated instrument pairs, estimates dynamic spread mean via Kalman Filter,
+    and enters mean-reversion trades when spread deviates beyond threshold.
     """
 
     def __init__(self, config: Dict):
+        """
+        Initialize Kalman pairs trading strategy.
+
+        Required config parameters:
+            - monitored_pairs: List of tuples [(symbol_y, symbol_x), ...]
+            - z_score_entry_threshold: Z-score for entry (typically 2.0)
+            - z_score_exit_threshold: Z-score for exit (typically 0.5)
+            - kalman_process_variance: Process noise Q (typically 0.001)
+            - kalman_measurement_variance: Measurement noise R (typically 0.01)
+            - min_correlation: Minimum historical correlation (typically 0.75)
+            - lookback_period: Period for correlation calculation (typically 200)
+        """
         super().__init__(config)
 
-        # Pairs parameters
-        self.monitored_pairs = config.get('monitored_pairs', [
-            ['EURUSD', 'GBPUSD'],
-            ['AUDUSD', 'NZDUSD']
-        ])
-        self.zscore_entry = config.get('zscore_entry', 2.5)
-        self.zscore_exit = config.get('zscore_exit', 0.5)
+        self.monitored_pairs = config.get('monitored_pairs', [])
+        self.z_entry_threshold = config.get('z_score_entry_threshold', 1.5)
+        self.z_exit_threshold = config.get('z_score_exit_threshold', 0.5)
+        self.process_variance = config.get('kalman_process_variance', 0.001)
+        self.measurement_variance = config.get('kalman_measurement_variance', 0.01)
+        self.min_correlation = config.get('min_correlation', 0.70)
+        self.lookback_period = config.get('lookback_period', 150)
 
-        # Kalman Filter parameters
-        self.delta = config.get('kalman_delta', 1e-4)  # Transition covariance
-        self.vw = config.get('kalman_vw', 1e-3)  # Observation noise
-
-        # Order flow thresholds - INSTITUTIONAL
-        # FIX: Validate thresholds to prevent division by zero
-        self.ofi_pairs_threshold = max(config.get('ofi_pairs_threshold', 2.0), 0.1)
-        self.cvd_directional_threshold = max(config.get('cvd_directional_threshold', 0.55), 0.1)
-        self.vpin_threshold_max = max(config.get('vpin_threshold_max', 0.30), 0.01)
-
-        # Confirmation scoring
-        self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
-
-        # Risk management
-        self.stop_loss_atr = config.get('stop_loss_atr', 2.0)
-        self.take_profit_r = config.get('take_profit_r', 2.5)
-
-        # Kalman state
-        self.kalman_states = {}  # {pair_key: state}
+        self.kalman_filters = {}
+        self.hedge_ratios = {}
+        self.correlation_cache = {}
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info(f"Kalman Pairs Trading initialized: {len(self.monitored_pairs)} pairs")
 
-    def validate_inputs(self, market_data: pd.DataFrame, features: Dict) -> bool:
-        """Validate required inputs."""
-        if len(market_data) < 50:
-            return False
+        self._initialize_filters()
 
-        required_features = ['ofi', 'cvd', 'vpin', 'atr', 'multi_symbol_prices']
-        for feature in required_features:
-            if feature not in features:
-                self.logger.debug(f"Missing {feature}")
-                return False
-
-        return True
+    def _initialize_filters(self):
+        """Initialize Kalman Filter instance for each monitored pair."""
+        try:
+            from src.features.statistical_models import KalmanPairsFilter
+            
+            for pair in self.monitored_pairs:
+                pair_key = f"{pair[0]}_{pair[1]}"
+                self.kalman_filters[pair_key] = KalmanPairsFilter(
+                    process_variance=self.process_variance,
+                    measurement_variance=self.measurement_variance
+                )
+                self.hedge_ratios[pair_key] = None
+                self.correlation_cache[pair_key] = None
+        except ImportError:
+            raise ImportError("KalmanPairsFilter not found in statistical_models module")
 
     def evaluate(self, market_data: pd.DataFrame, features: Dict) -> List[Signal]:
-        """Evaluate for Kalman pairs opportunities."""
+        """
+        Evaluate pairs for mean-reversion opportunities.
+
+        Args:
+            market_data: Recent OHLCV data containing both instruments of each pair
+            features: Pre-calculated features (not heavily used in this strategy)
+
+        Returns:
+            List of pair trade signals generated
+        """
         if not self.validate_inputs(market_data, features):
             return []
 
-        current_time = market_data.iloc[-1].get('timestamp', datetime.now())
         signals = []
 
-        multi_symbol_data = features.get('multi_symbol_prices', {})
-        if not multi_symbol_data:
-            return []
-
-        # Check each pair
         for pair in self.monitored_pairs:
-            if len(pair) != 2:
+            symbol_y, symbol_x = pair
+            pair_key = f"{symbol_y}_{symbol_x}"
+
+            pair_data_y = self._extract_symbol_data(market_data, symbol_y)
+            pair_data_x = self._extract_symbol_data(market_data, symbol_x)
+
+            if pair_data_y is None or pair_data_x is None:
                 continue
 
-            symbol1, symbol2 = pair
-            pair_key = f"{symbol1}_{symbol2}"
-
-            if symbol1 not in multi_symbol_data or symbol2 not in multi_symbol_data:
+            if len(pair_data_y) < self.lookback_period or len(pair_data_x) < self.lookback_period:
                 continue
 
-            prices1 = multi_symbol_data[symbol1]
-            prices2 = multi_symbol_data[symbol2]
-
-            if len(prices1) < 50 or len(prices2) < 50:
+            correlation = self._calculate_correlation(pair_data_y, pair_data_x, pair_key)
+            if correlation < self.min_correlation:
                 continue
 
-            # Update Kalman Filter for spread
-            spread, spread_mean, spread_std = self._update_kalman(pair_key, prices1[-1], prices2[-1])
-
-            if spread_std <= 0:
+            hedge_ratio = self._calculate_hedge_ratio(pair_data_y, pair_data_x, pair_key)
+            if hedge_ratio is None:
                 continue
 
-            # Calculate z-score
-            zscore = (spread - spread_mean) / spread_std
+            spread = self._calculate_spread(pair_data_y, pair_data_x, hedge_ratio)
+            current_spread = spread.iloc[-1]
 
-            if abs(zscore) >= self.zscore_entry:
-                # Validate with order flow
-                signal = self._check_pairs_signal(
-                    market_data, current_time, pair_key, zscore,
-                    spread, spread_mean, features
+            kalman_filter = self.kalman_filters[pair_key]
+            kalman_filter.update(current_spread)
+
+            estimated_mean = kalman_filter.get_estimated_mean()
+            estimated_std = np.sqrt(kalman_filter.get_estimation_uncertainty())
+
+            z_score = (current_spread - estimated_mean) / estimated_std if estimated_std > 0 else 0.0
+
+            if abs(z_score) >= self.z_entry_threshold:
+                signal = self._generate_pairs_signal(
+                    pair_data_y, pair_data_x, symbol_y, symbol_x,
+                    z_score, hedge_ratio, estimated_mean, estimated_std
                 )
-
                 if signal:
                     signals.append(signal)
 
         return signals
 
-    def _update_kalman(self, pair_key: str, price1: float, price2: float) -> Tuple[float, float, float]:
-        """Update Kalman Filter for spread tracking."""
-        spread = price1 - price2
-
-        if pair_key not in self.kalman_states:
-            # Initialize Kalman state
-            self.kalman_states[pair_key] = {
-                'mean': spread,
-                'cov': 1.0,
-                'history': [spread]
-            }
-
-        state = self.kalman_states[pair_key]
-
-        # Kalman predict
-        predicted_mean = state['mean']
-        predicted_cov = state['cov'] + self.delta
-
-        # Kalman update
-        innovation = spread - predicted_mean
-        innovation_cov = predicted_cov + self.vw
-
-        # FIX: Protect against division by zero
-        if innovation_cov == 0:
-            innovation_cov = 1e-10
-        kalman_gain = predicted_cov / innovation_cov
-
-        updated_mean = predicted_mean + kalman_gain * innovation
-        updated_cov = (1 - kalman_gain) * predicted_cov
-
-        # Update state
-        state['mean'] = updated_mean
-        state['cov'] = updated_cov
-        state['history'].append(spread)
-
-        # Keep only recent history
-        if len(state['history']) > 100:
-            state['history'].pop(0)
-
-        # Calculate spread std from recent history
-        spread_std = np.std(state['history']) if len(state['history']) > 10 else 1.0
-
-        return spread, updated_mean, spread_std
-
-    def _check_pairs_signal(self, market_data: pd.DataFrame, current_time,
-                           pair_key: str, zscore: float, spread: float,
-                           spread_mean: float, features: Dict) -> Optional[Signal]:
-        """Check if pairs trade meets institutional confirmation."""
-        ofi = features['ofi']
-        cvd = features['cvd']
-        vpin = features['vpin']
-        atr = features['atr']
-
-        recent_bars = market_data.tail(20)
-        confirmation_score, criteria = self._evaluate_institutional_confirmation(
-            recent_bars, ofi, cvd, vpin, zscore, features
-        )
-
-        if confirmation_score < self.min_confirmation_score:
+    def _extract_symbol_data(self, market_data: pd.DataFrame, symbol: str) -> Optional[pd.DataFrame]:
+        """Extract data for specific symbol from market data."""
+        if 'symbol' not in market_data.columns:
             return None
 
-        # Direction: fade the divergence
-        direction = 'SHORT' if zscore > 0 else 'LONG'
-        current_price = market_data.iloc[-1]['close']
+        symbol_data = market_data[market_data['symbol'] == symbol].copy()
+        
+        if len(symbol_data) == 0:
+            return None
 
-        if direction == 'LONG':
-            stop_loss = current_price - (self.stop_loss_atr * atr)
-            risk = current_price - stop_loss
-            take_profit = current_price + (risk * self.take_profit_r)
+        return symbol_data.sort_values('time').reset_index(drop=True)
+
+    def _calculate_correlation(self, data_y: pd.DataFrame, data_x: pd.DataFrame, pair_key: str) -> float:
+        """Calculate rolling correlation between two instruments."""
+        if self.correlation_cache.get(pair_key) is not None:
+            return self.correlation_cache[pair_key]
+
+        prices_y = data_y['close'].tail(self.lookback_period).values
+        prices_x = data_x['close'].tail(self.lookback_period).values
+
+        if len(prices_y) != len(prices_x):
+            return 0.0
+
+        correlation = np.corrcoef(prices_y, prices_x)[0, 1]
+        self.correlation_cache[pair_key] = correlation
+
+        return correlation
+
+    def _calculate_hedge_ratio(self, data_y: pd.DataFrame, data_x: pd.DataFrame, pair_key: str) -> Optional[float]:
+        """Calculate hedge ratio using linear regression."""
+        try:
+            from src.features.statistical_models import estimate_hedge_ratio
+
+            prices_y = data_y['close'].tail(self.lookback_period).values
+            prices_x = data_x['close'].tail(self.lookback_period).values
+
+            if len(prices_y) != len(prices_x) or len(prices_y) < 50:
+                return None
+
+            result = estimate_hedge_ratio(prices_y, prices_x, use_log_prices=False)
+            hedge_ratio = result['beta']
+
+            self.hedge_ratios[pair_key] = hedge_ratio
+
+            return hedge_ratio
+
+        except Exception as e:
+            return None
+
+    def _calculate_spread(self, data_y: pd.DataFrame, data_x: pd.DataFrame, hedge_ratio: float) -> pd.Series:
+        """Calculate synthetic spread between pair."""
+        try:
+            from src.features.statistical_models import calculate_spread
+
+            prices_y = data_y['close'].values
+            prices_x = data_x['close'].values
+
+            min_length = min(len(prices_y), len(prices_x))
+            prices_y = prices_y[-min_length:]
+            prices_x = prices_x[-min_length:]
+
+            spread = calculate_spread(prices_y, prices_x, hedge_ratio)
+
+            return pd.Series(spread)
+
+        except Exception as e:
+            prices_y = data_y['close'].values
+            prices_x = data_x['close'].values
+            min_length = min(len(prices_y), len(prices_x))
+            spread = prices_y[-min_length:] - (hedge_ratio * prices_x[-min_length:])
+            return pd.Series(spread)
+
+    def _generate_pairs_signal(self, data_y: pd.DataFrame, data_x: pd.DataFrame,
+                               symbol_y: str, symbol_x: str,
+                               z_score: float, hedge_ratio: float,
+                               estimated_mean: float, estimated_std: float) -> Optional[Signal]:
+        """Generate pair trade signal based on spread divergence."""
+        current_time = data_y['time'].iloc[-1]
+        price_y = data_y['close'].iloc[-1]
+        price_x = data_x['close'].iloc[-1]
+
+        atr_y = (data_y['high'].tail(14) - data_y['low'].tail(14)).mean()
+        atr_x = (data_x['high'].tail(14) - data_x['low'].tail(14)).mean()
+
+        if z_score > self.z_entry_threshold:
+            direction = 'SHORT'
+            leg_y_direction = 'SHORT'
+            leg_x_direction = 'LONG'
+            
+            entry_spread = price_y - (hedge_ratio * price_x)
+            stop_spread = estimated_mean + (3.5 * estimated_std)
+            target_spread = estimated_mean
+
+            stop_loss_y = price_y + (atr_y * 1.5)
+            take_profit_y = price_y - (abs(entry_spread - target_spread))
+
+        elif z_score < -self.z_entry_threshold:
+            direction = 'LONG'
+            leg_y_direction = 'LONG'
+            leg_x_direction = 'SHORT'
+            
+            entry_spread = price_y - (hedge_ratio * price_x)
+            stop_spread = estimated_mean - (3.5 * estimated_std)
+            target_spread = estimated_mean
+
+            stop_loss_y = price_y - (atr_y * 1.5)
+            take_profit_y = price_y + (abs(entry_spread - target_spread))
+
         else:
-            stop_loss = current_price + (self.stop_loss_atr * atr)
-            risk = stop_loss - current_price
-            take_profit = current_price - (risk * self.take_profit_r)
+            return None
 
-        sizing_level = 3 if confirmation_score >= 4.0 else 2
+        metadata = {
+            'pair_y': symbol_y,
+            'pair_x': symbol_x,
+            'hedge_ratio': float(hedge_ratio),
+            'z_score': float(z_score),
+            'estimated_mean': float(estimated_mean),
+            'estimated_std': float(estimated_std),
+            'entry_spread': float(entry_spread),
+            'target_spread': float(target_spread),
+            'stop_spread': float(stop_spread),
+            'leg_y_direction': leg_y_direction,
+            'leg_x_direction': leg_x_direction,
+            'price_y': float(price_y),
+            'price_x': float(price_x),
+            'strategy_version': '1.0'
+        }
 
         signal = Signal(
             timestamp=current_time,
-            symbol=market_data.attrs.get('symbol', 'UNKNOWN'),
-            strategy_name='Kalman_Pairs_Trading',
+            symbol=f"{symbol_y}/{symbol_x}",
+            strategy_name=self.name,
             direction=direction,
-            entry_price=current_price,
-            stop_loss=stop_loss,
-            take_profit=take_profit,
-            sizing_level=sizing_level,
-            metadata={
-                'pair': pair_key,
-                'spread_zscore': float(zscore),
-                'spread': float(spread),
-                'spread_mean_kalman': float(spread_mean),
-                'confirmation_score': float(confirmation_score),
-                'confirmation_criteria': criteria,
-                'risk_reward_ratio': float(self.take_profit_r),
-                'partial_exits': {'50%_at': 1.5, '30%_at': 2.5, '20%_trail': 'to_target'},
-                'setup_type': 'KALMAN_PAIRS_TRADING',
-                'research_basis': 'Avellaneda_Lee_2010_Statistical_Arbitrage_Vidyamurthy_2004',
-                'expected_win_rate': 0.70,
-                'rationale': f"Kalman pairs {pair_key}: z-score={zscore:.2f}. "
-                           f"Spread divergence confirmed by institutional flow."
-            }
+            entry_price=float(price_y),
+            stop_loss=float(stop_loss_y),
+            take_profit=float(take_profit_y),
+            sizing_level=3,
+            metadata=metadata
         )
 
-        self.logger.warning(f"🔀 KALMAN PAIRS: {direction} {pair_key}, z={zscore:.2f}")
         return signal
-
-    def _evaluate_institutional_confirmation(self, recent_bars: pd.DataFrame,
-                                            ofi: float, cvd: float, vpin: float,
-                                            zscore: float, features: Dict) -> Tuple[float, Dict]:
-        """
-        INSTITUTIONAL order flow confirmation of pairs trade.
-
-        5 criteria (each 0-1.0 points):
-        1. OFI Pairs (institutional positioning)
-        2. CVD Convergence (directional bias)
-        3. VPIN Clean
-        4. Volume Confirmation
-        5. Mean Reversion Setup (extreme z-score)
-        """
-        criteria = {}
-
-        expected_direction = -1 if zscore > 0 else 1
-
-        # CRITERION 1: OFI PAIRS
-        ofi_aligned = (ofi > 0 and expected_direction > 0) or (ofi < 0 and expected_direction < 0)
-        ofi_score = min(abs(ofi) / self.ofi_pairs_threshold, 1.0) if ofi_aligned else 0.0
-        criteria['ofi_pairs'] = {'score': ofi_score, 'value': float(ofi)}
-
-        # CRITERION 2: CVD CONVERGENCE
-        cvd_aligned = (cvd > 0 and expected_direction > 0) or (cvd < 0 and expected_direction < 0)
-        cvd_score = min(abs(cvd) / self.cvd_directional_threshold, 1.0) if cvd_aligned else 0.0
-        criteria['cvd_convergence'] = {'score': cvd_score, 'value': float(cvd)}
-
-        # CRITERION 3: VPIN CLEAN
-        vpin_score = 1.0 if vpin < self.vpin_threshold_max else max(0, 1.0 - (vpin - self.vpin_threshold_max) / 0.20)
-        criteria['vpin_clean'] = {'score': vpin_score, 'value': float(vpin)}
-
-        # CRITERION 4: VOLUME CONFIRMATION
-        volumes = recent_bars['volume'].values
-        if len(volumes) >= 10:
-            recent_vol = np.mean(volumes[-5:])
-            historical_vol = np.mean(volumes[-20:-5])
-            volume_ratio = recent_vol / historical_vol if historical_vol > 0 else 1.0
-            volume_score = min((volume_ratio - 1.0) / 0.40, 1.0)
-        else:
-            volume_score = 0.5
-        criteria['volume_confirmation'] = {'score': volume_score}
-
-        # CRITERION 5: MEAN REVERSION SETUP
-        reversion_score = min(abs(zscore) / 3.0, 1.0)
-        criteria['mean_reversion_setup'] = {'score': reversion_score, 'zscore': float(zscore)}
-
-        total_score = (
-            ofi_score + cvd_score + vpin_score + volume_score + reversion_score
-        )
-
-        return total_score, criteria

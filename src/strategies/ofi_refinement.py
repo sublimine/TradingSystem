@@ -23,7 +23,6 @@ import logging
 import numpy as np
 import pandas as pd
 from typing import Optional, Dict, Tuple
-from collections import deque
 from datetime import datetime, timedelta
 
 from .strategy_base import StrategyBase, Signal
@@ -60,8 +59,7 @@ class OFIRefinement(StrategyBase):
         self.take_profit_atr_multiplier = config.get('take_profit_atr_multiplier', 4.0)
         
         # State tracking
-        # FIX BUG #12: Use deque with maxlen to prevent memory leak
-        self.ofi_history = deque(maxlen=5000)
+        self.ofi_history = []
         self.last_signal_time = None
         self.signal_cooldown = timedelta(minutes=5)
         

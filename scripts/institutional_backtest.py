@@ -28,7 +28,6 @@ from features.order_flow import (
     VPINCalculator, calculate_signed_volume,
     calculate_cumulative_volume_delta
 )
-from features.ofi import calculate_ofi  # INSTITUTIONAL: Order Flow Imbalance
 from features.statistical_models import (
     calculate_realized_volatility, VolatilityHMM
 )
@@ -112,15 +111,10 @@ class FeatureGenerator:
         features['ema_20'] = calculate_ema(market_data['close'], 20).iloc[-1] if len(market_data) >= 20 else market_data['close'].iloc[-1]
         features['sma_50'] = calculate_sma(market_data['close'], 50).iloc[-1] if len(market_data) >= 50 else market_data['close'].iloc[-1]
         
-        # Order Flow Metrics - INSTITUTIONAL
+        # Order Flow Metrics
         signed_volumes = calculate_signed_volume(market_data['close'], market_data['volume'])
         cvd = calculate_cumulative_volume_delta(signed_volumes, window=20)
-        features['cvd'] = cvd.iloc[-1] if len(cvd) > 0 else 0  # CVD for strategies
-        features['cumulative_volume_delta'] = features['cvd']  # Alias for backward compatibility
-
-        # OFI (Order Flow Imbalance) - INSTITUTIONAL
-        ofi_series = calculate_ofi(market_data, window_size=20)
-        features['ofi'] = ofi_series.iloc[-1] if len(ofi_series) > 0 else 0.0
+        features['cumulative_volume_delta'] = cvd.iloc[-1] if len(cvd) > 0 else 0
         
         # VPIN Calculation (simplified for daily data)
         for _, row in market_data.tail(100).iterrows():

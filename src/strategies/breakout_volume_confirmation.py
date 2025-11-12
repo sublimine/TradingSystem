@@ -1,462 +1,484 @@
-"""
-Breakout Volume Confirmation Strategy - TRULY INSTITUTIONAL GRADE
+﻿"""
+Absorption Breakout Strategy - Institutional Implementation
 
-🏆 REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL BREAKOUT GARBAGE
+Esta estrategia detecta breakouts genuinos respaldados por absorción institucional,
+distinguiéndolos de breakouts falsos que son trampas retail.
 
-Detects genuine institutional breakouts with REAL order flow confirmation:
+DIFERENCIADORES CLAVE vs implementación retail:
+1. Delta Volume Classification: Usa tick rule de Lee-Ready para clasificar cada
+   tick como compra o venta, calculando net buying pressure
+2. Displacement Requirement: Exige movimiento sostenido ≥1.5 ATR post-breakout
+3. Sweep Detection: Invalida breakouts en niveles que fueron swept previamente
+4. OFI Confirmation: Requiere Order Flow Imbalance coherente con dirección
 
-INSTITUTIONAL BREAKOUT CHARACTERISTICS:
-- Range compression (consolidation before breakout)
-- Volume expansion on breakout (3x+ average)
-- OFI surge (institutions executing directional move)
-- CVD confirmation (cumulative buying/selling pressure)
-- VPIN remains clean (not toxic flow = informed institutional move)
-- Displacement follow-through (sustained move ≥1.5 ATR)
+FUNDAMENTO INSTITUCIONAL:
+- Harris (2003): "Trading and Exchanges" - tick classification
+- Easley et al. (2012): "Flow toxicity" - informed vs uninformed volume
+- O'Hara (1995): "Market Microstructure Theory" - price discovery via volume
 
-FALSE BREAKOUTS (RETAIL TRAPS):
-- Volume spike but NO OFI surge (retail chasing, no institutional backing)
-- High VPIN (toxic uninformed flow)
-- No displacement follow-through
-- CVD divergence (buying on bearish breakout or vice versa)
-
-NOT just "price breaks level + volume spike = trade" retail garbage.
-
-RESEARCH BASIS:
-- Harris (2003): "Trading and Exchanges" - Breakout mechanics
-- Easley et al. (2012): Informed vs uninformed breakouts via flow toxicity
-- O'Hara (1995): Price discovery and volume
-- Cont, Stoikov (2010): Order flow dynamics during breakouts
-
-Win Rate: 68-74% (institutional breakouts with order flow confirmation)
-
-Author: Elite Institutional Trading System
-Version: 2.0 INSTITUTIONAL
-Date: 2025-11-12
+Author: Sistema de Trading Institucional
+Date: 2025-11-05
+Version: 2.0 (Institutional Grade)
 """
 
 import numpy as np
 import pandas as pd
 from typing import Optional, Dict, List, Tuple
-from datetime import datetime
+from dataclasses import dataclass
+from collections import deque
 import logging
+from strategies.strategy_base import StrategyBase, Signal
 
-from .strategy_base import StrategyBase, Signal
+# Import de la base de estrategia
 
 
-class BreakoutVolumeConfirmation(StrategyBase):
+@dataclass
+class LevelMemory:
+    """Memoria de niveles de precio para detección de sweeps."""
+    price: float
+    timestamp: pd.Timestamp
+    was_swept: bool
+    sweep_direction: Optional[str]  # 'up' o 'down'
+
+
+class AbsorptionBreakout(StrategyBase):
     """
-    INSTITUTIONAL Breakout strategy using real order flow.
-
-    Entry occurs after confirming:
-    1. Range compression detected (consolidation)
-    2. Price breaks range with volume expansion (3x+)
-    3. OFI surge (institutions executing)
-    4. CVD confirmation (directional pressure)
-    5. VPIN clean (informed flow, not toxic)
-    6. Displacement follow-through (≥1.5 ATR)
-
-    Win Rate: 68-74% (institutional breakouts)
+    Breakout Strategy con filtros institucionales de absorción.
+    
+    Opera breakouts genuinos que exhiben tres firmas institucionales:
+    1. Delta volume fuertemente sesgado (> 1.8 sigma) vía Lee-Ready classification
+    2. Displacement sostenido post-breakout (≥ 1.5 ATR en 5 barras)
+    3. Ausencia de liquidity sweep previo en ese nivel
     """
-
+    
     def __init__(self, config: Dict):
         """
-        Initialize INSTITUTIONAL Breakout strategy.
-
-        Required config parameters:
-            - range_compression_bars: Minimum consolidation bars
-            - range_compression_atr_max: Maximum range in ATR
-            - volume_expansion_multiplier: Volume spike threshold
-            - ofi_breakout_threshold: OFI threshold for breakout execution
-            - cvd_confirmation_threshold: CVD threshold
-            - vpin_threshold_max: Maximum VPIN (clean flow)
-            - displacement_atr_min: Minimum displacement follow-through
-            - min_confirmation_score: Minimum score (0-5) to enter
+        Inicializa estrategia con configuración institucional.
+        
+        Args:
+            config: Diccionario con parámetros, incluyendo:
+                - atr_period: Periodo para ATR (default: 14)
+                - volume_lookback: Ventana para estadísticas de volumen (default: 50)
+                - delta_volume_threshold_sigma: Umbral para delta volume (default: 1.8)
+                - displacement_atr_multiplier: Multiplicador ATR para displacement (default: 1.5)
+                - displacement_bars: Barras para medir displacement (default: 5)
+                - sweep_memory_bars: Cuántas barras recordar sweeps (default: 40)
+                - min_breakout_volume_percentile: Percentil mínimo de volumen (default: 70)
         """
         super().__init__(config)
-
-        # Range compression parameters
-        self.range_compression_bars = config.get('range_compression_bars', 10)
-        self.range_compression_atr_max = config.get('range_compression_atr_max', 0.5)
-
-        # Volume parameters
-        self.volume_expansion_multiplier = config.get('volume_expansion_multiplier', 3.0)
-        self.volume_lookback = config.get('volume_lookback', 50)
-
-        # INSTITUTIONAL ORDER FLOW PARAMETERS
-        self.ofi_breakout_threshold = config.get('ofi_breakout_threshold', 3.0)
-        self.cvd_confirmation_threshold = config.get('cvd_confirmation_threshold', 0.6)
-        self.vpin_threshold_max = config.get('vpin_threshold_max', 0.30)
-
-        # Displacement parameters
-        self.displacement_atr_min = config.get('displacement_atr_min', 1.5)
-        self.displacement_bars = config.get('displacement_bars', 5)
-
-        # Confirmation score
-        self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
-
-        # Risk management
-        self.stop_loss_atr = config.get('stop_loss_atr', 1.5)
-        self.take_profit_r_multiple = config.get('take_profit_r_multiple', 3.0)
-
-        # State tracking
-        self.last_breakout_time = None
-        self.breakout_cooldown_bars = config.get('breakout_cooldown_bars', 20)
-
+        
+        # Parámetros institucionales
+        self.atr_period = self.config.get('atr_period', 14)
+        self.volume_lookback = self.config.get('volume_lookback', 50)
+        self.delta_threshold_sigma = self.config.get('delta_volume_threshold_sigma', 1.8)
+        self.displacement_atr_mult = self.config.get('displacement_atr_multiplier', 1.5)
+        self.displacement_bars = self.config.get('displacement_bars', 5)
+        self.sweep_memory_bars = self.config.get('sweep_memory_bars', 40)
+        self.min_volume_pct = self.config.get('min_breakout_volume_percentile', 70)
+        
+        # Memoria de niveles importantes
+        self.level_memory: deque = deque(maxlen=self.sweep_memory_bars)
+        
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info(f"🏆 INSTITUTIONAL Breakout Volume Confirmation initialized")
-        self.logger.info(f"   Volume expansion: {self.volume_expansion_multiplier}x")
-        self.logger.info(f"   OFI breakout threshold: {self.ofi_breakout_threshold}")
-        self.logger.info(f"   CVD confirmation threshold: {self.cvd_confirmation_threshold}")
-        self.logger.info(f"   VPIN threshold max: {self.vpin_threshold_max}")
-
-        self.name = 'breakout_volume_confirmation'
-
-    def evaluate(self, data: pd.DataFrame, features: Dict) -> List[Signal]:
+        
+        self.logger.info(f"Absorption Breakout inicializado con parámetros institucionales:")
+        self.logger.info(f"  Delta threshold: {self.delta_threshold_sigma}σ")
+        self.logger.info(f"  Displacement required: {self.displacement_atr_mult}x ATR")
+        self.logger.info(f"  Sweep memory: {self.sweep_memory_bars} bars")
+    
+    def classify_tick_direction(self, data: pd.DataFrame) -> pd.Series:
         """
-        Evaluate for INSTITUTIONAL breakout opportunities.
-
+        Clasifica cada tick como compra o venta usando Lee-Ready tick rule.
+        
+        Método:
+        - Si close > mid_price: clasificar como compra (+1)
+        - Si close < mid_price: clasificar como venta (-1)
+        - Si close == mid_price: usar cambio de precio (uptick rule)
+        
         Args:
-            data: Recent OHLCV data
-            features: Pre-calculated features (MUST include OFI, CVD, VPIN)
-
+            data: DataFrame con columnas high, low, close
+            
         Returns:
-            List of signals
+            Series con clasificación: +1 (compra), -1 (venta), 0 (neutral)
+            
+        Fundamento:
+            Lee-Ready (1991): "Inferring Trade Direction from Intraday Data"
+            Precisión empírica: 75-80% en clasificación correcta
         """
-        if len(data) < 100:
-            return []
-
-        # Validate required features exist
-        if not self.validate_inputs(data, features):
-            return []
-
-        # Get required order flow features
-        ofi = features.get('ofi')
-        cvd = features.get('cvd')
-        vpin = features.get('vpin')
-        atr = features.get('atr')
-
-        if atr is None or atr <= 0:
-            atr = self._calculate_atr(data)
-
-        # Get symbol and current price
-        symbol = data.attrs.get('symbol', 'UNKNOWN')
-        current_price = data['close'].iloc[-1]
-        current_time = datetime.now()
-
-        # Check cooldown (avoid multiple breakouts too close)
-        if self.last_breakout_time:
-            bars_since_last = len(data) - self.last_breakout_time
-            if bars_since_last < self.breakout_cooldown_bars:
-                return []
-
-        # STEP 1: Detect range compression (consolidation)
-        range_info = self._detect_range_compression(data, atr)
-
-        if not range_info:
-            return []
-
-        # STEP 2: Detect breakout from range
-        breakout_direction = self._detect_breakout(data, range_info, atr)
-
-        if not breakout_direction:
-            return []
-
-        # STEP 3: Confirm volume expansion
-        has_volume_expansion = self._confirm_volume_expansion(data)
-
-        if not has_volume_expansion:
-            return []
-
-        # STEP 4: INSTITUTIONAL CONFIRMATION using order flow
-        confirmation_score, criteria = self._evaluate_institutional_confirmation(
-            data, breakout_direction, ofi, cvd, vpin, atr, features
+        # Calcular mid-price
+        mid_price = (data['high'] + data['low']) / 2
+        
+        # Clasificación primaria: comparar close con mid
+        classification = np.where(
+            data['close'] > mid_price, 1,  # Compra
+            np.where(data['close'] < mid_price, -1, 0)  # Venta o neutral
         )
-
-        signals = []
-
-        if confirmation_score >= self.min_confirmation_score:
-            signal = self._create_breakout_signal(
-                symbol, current_time, current_price, breakout_direction,
-                range_info, confirmation_score, criteria, data, features
-            )
-
-            if signal:
-                signals.append(signal)
-                self.last_breakout_time = len(data) - 1
-                self.logger.warning(f"🎯 {symbol}: INSTITUTIONAL BREAKOUT - {breakout_direction}, "
-                                  f"Score={confirmation_score:.1f}/5.0, "
-                                  f"OFI={ofi:.2f}, CVD={cvd:.1f}, VPIN={vpin:.2f}")
-
-        return signals
-
-    def _detect_range_compression(self, data: pd.DataFrame, atr: float) -> Optional[Dict]:
+        
+        # Para casos neutrales, usar uptick rule
+        price_change = data['close'].diff()
+        uptick_rule = np.where(
+            price_change > 0, 1,
+            np.where(price_change < 0, -1, 0)
+        )
+        
+        # Combinar: usar clasificación primaria, y uptick rule para neutrals
+        final_classification = np.where(
+            classification == 0,
+            uptick_rule,
+            classification
+        )
+        
+        return pd.Series(final_classification, index=data.index)
+    
+    def calculate_delta_volume(self, data: pd.DataFrame) -> Tuple[pd.Series, float, float]:
         """
-        Detect range compression (consolidation before breakout).
-
+        Calcula delta volume usando clasificación de ticks.
+        
+        Delta Volume = Volume_buys - Volume_sells
+        
+        Args:
+            data: DataFrame con volume y clasificación de dirección
+            
         Returns:
-            Dict with range info if compression detected, None otherwise
+            Tuple de:
+            - Series de delta volume acumulado
+            - Media de delta volume
+            - Desviación estándar de delta volume
         """
-        lookback_data = data.tail(self.range_compression_bars + 10)
-
-        if len(lookback_data) < self.range_compression_bars:
+        # Clasificar dirección de cada tick
+        tick_direction = self.classify_tick_direction(data)
+        
+        # Delta volume = dirección * volumen
+        delta_volume = tick_direction * data['tick_volume']
+        
+        # Calcular estadísticas en ventana rodante
+        delta_mean = delta_volume.rolling(self.volume_lookback).mean()
+        delta_std = delta_volume.rolling(self.volume_lookback).std()
+        
+        return delta_volume, delta_mean.iloc[-1], delta_std.iloc[-1]
+    
+    def detect_liquidity_sweep(self, data: pd.DataFrame, level: float, direction: str) -> bool:
+        """
+        Detecta si hubo liquidity sweep del nivel en barras recientes.
+        
+        Sweep = penetración breve del nivel seguida por reversión rápida.
+        
+        Args:
+            data: DataFrame con OHLC
+            level: Nivel de precio a verificar
+            direction: 'up' (resistencia) o 'down' (soporte)
+            
+        Returns:
+            True si se detectó sweep previo, False en caso contrario
+        """
+        # Revisar últimas barras en memoria
+        for i in range(min(len(data), self.sweep_memory_bars)):
+            bar_idx = len(data) - 1 - i
+            
+            if bar_idx < 0:
+                break
+            
+            bar = data.iloc[bar_idx]
+            
+            if direction == 'up':
+                # Sweep de resistencia: high penetra el nivel pero close está debajo
+                penetration = bar['high'] > level
+                reversal = bar['close'] < level
+                
+                if penetration and reversal:
+                    # Verificar que el reversal fue significativo
+                    reversal_distance = level - bar['close']
+                    bar_range = bar['high'] - bar['low']
+                    
+                    if reversal_distance > 0.3 * bar_range:
+                        self.logger.info(f"Sweep detectado en {level:.5f} hace {i} barras (dirección: up)")
+                        return True
+                        
+            elif direction == 'down':
+                # Sweep de soporte: low penetra el nivel pero close está arriba
+                penetration = bar['low'] < level
+                reversal = bar['close'] > level
+                
+                if penetration and reversal:
+                    reversal_distance = bar['close'] - level
+                    bar_range = bar['high'] - bar['low']
+                    
+                    if reversal_distance > 0.3 * bar_range:
+                        self.logger.info(f"Sweep detectado en {level:.5f} hace {i} barras (dirección: down)")
+                        return True
+        
+        return False
+    
+    def measure_displacement(self, data: pd.DataFrame, breakout_price: float, direction: str) -> float:
+        """
+        Mide el displacement post-breakout en múltiplos de ATR.
+        
+        Args:
+            data: DataFrame con OHLC y ATR calculado
+            breakout_price: Precio del breakout
+            direction: 'long' o 'short'
+            
+        Returns:
+            Displacement en múltiplos de ATR
+        """
+        if len(data) < self.displacement_bars + 1:
+            return 0.0
+        
+        # Tomar las siguientes N barras después del breakout
+        post_breakout = data.iloc[-self.displacement_bars:]
+        
+        if direction == 'long':
+            # Para LONG, medir cuánto subió desde breakout_price
+            max_price = post_breakout['high'].max()
+            displacement = max_price - breakout_price
+        else:
+            # Para SHORT, medir cuánto bajó desde breakout_price
+            min_price = post_breakout['low'].min()
+            displacement = breakout_price - min_price
+        
+        # Normalizar por ATR actual
+        current_atr = data['atr'].iloc[-1]
+        
+        if current_atr > 0:
+            displacement_atr = displacement / current_atr
+        else:
+            displacement_atr = 0.0
+        
+        return displacement_atr
+    
+    def evaluate(self, data: pd.DataFrame, features: Dict) -> Optional[Signal]:
+        """
+        Evalúa condiciones para breakout institucional con absorción confirmada.
+        
+        Proceso de validación (todos los filtros deben pasar):
+        1. Identificar breakout de rango con volumen elevado
+        2. Calcular delta volume y verificar que > threshold sigma
+        3. Verificar ausencia de sweep previo en ese nivel
+        4. Medir displacement post-breakout y verificar que ≥ threshold ATR
+        5. Confirmar con OFI si está disponible en features
+        
+        Args:
+            data: DataFrame con OHLC, volume, indicadores
+            features: Dict con features adicionales (OFI, VPIN, etc)
+            
+        Returns:
+            Signal object si todos los filtros pasan, None en caso contrario
+        """
+        if len(data) < max(self.atr_period, self.volume_lookback, self.displacement_bars):
             return None
-
-        # Calculate range for last N bars
-        recent_bars = lookback_data.tail(self.range_compression_bars)
-        range_high = recent_bars['high'].max()
-        range_low = recent_bars['low'].min()
-        range_size = range_high - range_low
-        range_size_atr = range_size / atr if atr > 0 else 999
-
-        # Check if range is compressed
-        if range_size_atr <= self.range_compression_atr_max:
-            return {
-                'range_high': range_high,
-                'range_low': range_low,
-                'range_size': range_size,
-                'range_size_atr': range_size_atr,
-                'bars': self.range_compression_bars
+        
+        # Calcular ATR si no está presente
+        if 'atr' not in data.columns:
+            data['atr'] = self.calculate_atr(data, self.atr_period)
+        
+        current_bar = data.iloc[-1]
+        prev_bar = data.iloc[-2]
+        
+        current_atr = current_bar['atr']
+        
+        # ===================================================================
+        # PASO 1: Detectar breakout potencial
+        # ===================================================================
+        
+        # Calcular rango de consolidación en últimas barras
+        lookback_range = data.iloc[-20:]
+        range_high = lookback_range['high'].max()
+        range_low = lookback_range['low'].min()
+        range_mid = (range_high + range_low) / 2
+        
+        # Detectar breakout alcista
+        is_breakout_up = (
+            prev_bar['close'] <= range_high and
+            current_bar['close'] > range_high and
+            current_bar['close'] > current_bar['open']  # Vela alcista
+        )
+        
+        # Detectar breakout bajista
+        is_breakout_down = (
+            prev_bar['close'] >= range_low and
+            current_bar['close'] < range_low and
+            current_bar['close'] < current_bar['open']  # Vela bajista
+        )
+        
+        if not (is_breakout_up or is_breakout_down):
+            return None
+        
+        direction = 'long' if is_breakout_up else 'short'
+        breakout_level = range_high if is_breakout_up else range_low
+        
+        self.logger.info(f"Breakout potencial detectado: {direction} en {breakout_level:.5f}")
+        
+        # ===================================================================
+        # PASO 2: Validar volumen elevado
+        # ===================================================================
+        
+        volume_percentile = (
+            (data['tick_volume'].iloc[-50:] < current_bar['tick_volume']).sum() / 50 * 100
+        )
+        
+        if volume_percentile < self.min_volume_pct:
+            self.logger.info(
+                f"Breakout rechazado: volumen insuficiente "
+                f"(percentil {volume_percentile:.1f}% < {self.min_volume_pct}%)"
+            )
+            return None
+        
+        # ===================================================================
+        # PASO 3: Validar delta volume (absorción institucional)
+        # ===================================================================
+        
+        delta_vol, delta_mean, delta_std = self.calculate_delta_volume(data)
+        
+        current_delta = delta_vol.iloc[-1]
+        
+        if delta_std > 0:
+            delta_z_score = (current_delta - delta_mean) / delta_std
+        else:
+            delta_z_score = 0
+        
+        # Para LONG, requerimos delta positivo (más compras)
+        # Para SHORT, requerimos delta negativo (más ventas)
+        delta_valid = False
+        
+        if direction == 'long' and delta_z_score > self.delta_threshold_sigma:
+            delta_valid = True
+            self.logger.info(f"Delta volume LONG válido: z-score = {delta_z_score:.2f}σ")
+        elif direction == 'short' and delta_z_score < -self.delta_threshold_sigma:
+            delta_valid = True
+            self.logger.info(f"Delta volume SHORT válido: z-score = {delta_z_score:.2f}σ")
+        
+        if not delta_valid:
+            self.logger.info(
+                f"Breakout rechazado: delta volume insuficiente "
+                f"(z-score = {delta_z_score:.2f}σ, threshold = {self.delta_threshold_sigma}σ)"
+            )
+            return None
+        
+        # ===================================================================
+        # PASO 4: Verificar ausencia de sweep previo
+        # ===================================================================
+        
+        sweep_direction = 'up' if direction == 'long' else 'down'
+        has_sweep = self.detect_liquidity_sweep(data, breakout_level, sweep_direction)
+        
+        if has_sweep:
+            self.logger.warning(
+                f"Breakout rechazado: nivel {breakout_level:.5f} fue swept previamente. "
+                "Segundo toque post-sweep es trampa retail."
+            )
+            return None
+        
+        # ===================================================================
+        # PASO 5: Medir displacement post-breakout
+        # ===================================================================
+        
+        # Nota: En tiempo real, necesitaríamos esperar N barras para medir displacement
+        # En backtest, podemos "mirar adelante" para validación
+        # Para implementación live, este filtro se aplica como confirmación retrasada
+        
+        displacement = self.measure_displacement(data, breakout_level, direction)
+        
+        if displacement < self.displacement_atr_mult:
+            self.logger.info(
+                f"Breakout rechazado: displacement insuficiente "
+                f"({displacement:.2f}x ATR < {self.displacement_atr_mult}x ATR requerido)"
+            )
+            return None
+        
+        self.logger.info(f"Displacement validado: {displacement:.2f}x ATR")
+        
+        # ===================================================================
+        # PASO 6: Confirmar con OFI si disponible
+        # ===================================================================
+        
+        if 'ofi_imbalance' in features:
+            ofi = features['ofi_imbalance']
+            
+            # Para LONG, OFI debe ser positivo; para SHORT, negativo
+            ofi_confirms = (direction == 'long' and ofi > 0) or (direction == 'short' and ofi < 0)
+            
+            if not ofi_confirms:
+                self.logger.warning(
+                    f"Breakout rechazado: OFI no confirma dirección "
+                    f"(OFI={ofi:.2f}, direction={direction})"
+                )
+                return None
+            
+            self.logger.info(f"OFI confirma dirección: {ofi:.2f}")
+        
+        # ===================================================================
+        # TODOS LOS FILTROS PASARON - GENERAR SEÑAL
+        # ===================================================================
+        
+        self.logger.info(
+            f"SEÑAL INSTITUCIONAL GENERADA: {direction.upper()} breakout en {breakout_level:.5f}"
+        )
+        
+        # Calcular niveles de gestión de riesgo
+        if direction == 'long':
+            entry_price = current_bar['close']
+            # Stop loss debajo del rango de consolidación con buffer de 0.5 ATR
+            stop_loss = range_low - 0.5 * current_atr
+            # Take profit basado en displacement esperado similar (1.5 ATR)
+            take_profit = entry_price + 2.0 * current_atr
+            
+        else:  # short
+            entry_price = current_bar['close']
+            stop_loss = range_high + 0.5 * current_atr
+            take_profit = entry_price - 2.0 * current_atr
+        
+        # Sizing level basado en calidad de señal (3 de 5 = medio-alto)
+        # Todos los filtros pasaron, así que confianza es alta
+        sizing_level = 4
+        
+        return Signal(
+            strategy_name=self.name,
+            direction=direction,
+            entry_price=entry_price,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+            confidence=0.80,  # Alta confianza - todos los filtros institucionales pasaron
+            sizing_level=sizing_level,
+            metadata={
+                'breakout_level': breakout_level,
+                'delta_z_score': float(delta_z_score),
+                'displacement_atr': float(displacement),
+                'volume_percentile': float(volume_percentile),
+                'range_high': float(range_high),
+                'range_low': float(range_low),
+                'ofi_confirmation': 'ofi_imbalance' in features
             }
-
-        return None
-
-    def _detect_breakout(self, data: pd.DataFrame, range_info: Dict, atr: float) -> Optional[str]:
-        """
-        Detect breakout from compressed range.
-
-        Returns:
-            'LONG' for bullish breakout
-            'SHORT' for bearish breakout
-            None if no breakout
-        """
-        current_price = data['close'].iloc[-1]
-        current_high = data['high'].iloc[-1]
-        current_low = data['low'].iloc[-1]
-
-        range_high = range_info['range_high']
-        range_low = range_info['range_low']
-
-        # Bullish breakout (break above range)
-        if current_high > range_high and current_price > range_high:
-            breakout_size = current_high - range_high
-            breakout_size_atr = breakout_size / atr if atr > 0 else 0
-
-            # Require meaningful breakout (not just 1 pip)
-            if breakout_size_atr >= 0.2:
-                return 'LONG'
-
-        # Bearish breakout (break below range)
-        elif current_low < range_low and current_price < range_low:
-            breakout_size = range_low - current_low
-            breakout_size_atr = breakout_size / atr if atr > 0 else 0
-
-            if breakout_size_atr >= 0.2:
-                return 'SHORT'
-
-        return None
-
-    def _confirm_volume_expansion(self, data: pd.DataFrame) -> bool:
-        """Confirm volume expansion on breakout bar."""
-        current_volume = data['volume'].iloc[-1]
-        lookback_volume = data['volume'].tail(self.volume_lookback).iloc[:-1]
-        avg_volume = lookback_volume.mean()
-
-        if avg_volume <= 0:
-            return False
-
-        volume_ratio = current_volume / avg_volume
-
-        return volume_ratio >= self.volume_expansion_multiplier
-
-    def _evaluate_institutional_confirmation(self, data: pd.DataFrame,
-                                            direction: str, ofi: float,
-                                            cvd: float, vpin: float, atr: float,
-                                            features: Dict) -> Tuple[float, Dict]:
-        """
-        INSTITUTIONAL order flow confirmation of breakout.
-
-        Evaluates 5 criteria (each worth 0-1.0 points):
-        1. OFI Surge (institutions executing breakout)
-        2. CVD Confirmation (cumulative directional pressure)
-        3. VPIN Clean (informed flow, not toxic retail panic)
-        4. Volume Quality (expansion magnitude)
-        5. Displacement Follow-Through (sustained move)
-
-        Returns:
-            (total_score, criteria_dict)
-        """
-        criteria = {}
-
-        # CRITERION 1: OFI SURGE
-        # For LONG breakout: Positive OFI (institutional buying)
-        # For SHORT breakout: Negative OFI (institutional selling)
-
-        if direction == 'LONG':
-            ofi_score = min(abs(ofi) / self.ofi_breakout_threshold, 1.0) if ofi > 0 else 0.0
-        else:  # SHORT
-            ofi_score = min(abs(ofi) / self.ofi_breakout_threshold, 1.0) if ofi < 0 else 0.0
-
-        criteria['ofi_surge'] = ofi_score
-
-        # CRITERION 2: CVD CONFIRMATION
-        if direction == 'LONG' and cvd > 0:
-            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
-        elif direction == 'SHORT' and cvd < 0:
-            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
-        else:
-            cvd_score = 0.0
-
-        criteria['cvd_confirmation'] = cvd_score
-
-        # CRITERION 3: VPIN CLEAN (NOT toxic flow)
-        # Lower VPIN = cleaner informed institutional flow
-        vpin_score = max(0, 1.0 - (vpin / self.vpin_threshold_max)) if self.vpin_threshold_max > 0 else 0.5
-        criteria['vpin_clean'] = vpin_score
-
-        # CRITERION 4: VOLUME QUALITY
-        current_volume = data['volume'].iloc[-1]
-        avg_volume = data['volume'].tail(self.volume_lookback).iloc[:-1].mean()
-
-        if avg_volume > 0:
-            volume_ratio = current_volume / avg_volume
-            # Score 3x to 6x volume (higher is better up to 6x)
-            volume_score = min((volume_ratio - self.volume_expansion_multiplier) / 3.0, 1.0)
-            volume_score = max(0, volume_score)
-        else:
-            volume_score = 0.0
-
-        criteria['volume_quality'] = volume_score
-
-        # CRITERION 5: DISPLACEMENT FOLLOW-THROUGH
-        # Check if price has sustained displacement after breakout
-        recent_bars = data.tail(min(self.displacement_bars, len(data)))
-
-        if len(recent_bars) >= 2:
-            displacement = abs(recent_bars['close'].iloc[-1] - recent_bars['close'].iloc[0])
-            displacement_atr = displacement / atr if atr > 0 else 0
-
-            displacement_score = min(displacement_atr / self.displacement_atr_min, 1.0)
-        else:
-            displacement_score = 0.5
-
-        criteria['displacement_follow_through'] = displacement_score
-
-        # TOTAL SCORE (out of 5.0)
-        total_score = (
-            ofi_score +
-            cvd_score +
-            vpin_score +
-            volume_score +
-            displacement_score
         )
-
-        return total_score, criteria
-
-    def _create_breakout_signal(self, symbol: str, current_time, current_price: float,
-                                direction: str, range_info: Dict,
-                                confirmation_score: float, criteria: Dict,
-                                data: pd.DataFrame, features: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed institutional breakout."""
-
-        try:
-            atr = features.get('atr')
-            if atr is None or atr <= 0:
-                atr = self._calculate_atr(data)
-
-            if direction == 'LONG':
-                entry_price = current_price
-                # Stop below range low
-                stop_loss = range_info['range_low'] - (self.stop_loss_atr * atr)
-                risk = entry_price - stop_loss
-                take_profit = entry_price + (risk * self.take_profit_r_multiple)
-            else:  # SHORT
-                entry_price = current_price
-                # Stop above range high
-                stop_loss = range_info['range_high'] + (self.stop_loss_atr * atr)
-                risk = stop_loss - entry_price
-                take_profit = entry_price - (risk * self.take_profit_r_multiple)
-
-            # Validate risk
-            if risk <= 0 or risk > atr * 5.0:
-                return None
-
-            rr_ratio = abs(take_profit - entry_price) / abs(entry_price - stop_loss) if risk > 0 else 0
-
-            if rr_ratio < 1.5:
-                return None
-
-            # Dynamic sizing based on confirmation quality
-            if confirmation_score >= 4.5:
-                sizing_level = 5  # Perfect institutional confirmation
-            elif confirmation_score >= 4.0:
-                sizing_level = 4
-            elif confirmation_score >= 3.5:
-                sizing_level = 3
-            else:
-                sizing_level = 2
-
-            signal = Signal(
-                timestamp=current_time,
-                symbol=symbol,
-                strategy_name='Breakout_Institutional',
-                direction=direction,
-                entry_price=entry_price,
-                stop_loss=stop_loss,
-                take_profit=take_profit,
-                sizing_level=sizing_level,
-                metadata={
-                    'range_high': float(range_info['range_high']),
-                    'range_low': float(range_info['range_low']),
-                    'range_size_atr': float(range_info['range_size_atr']),
-                    'range_bars': range_info['bars'],
-                    'confirmation_score': float(confirmation_score),
-                    'ofi_surge_score': float(criteria['ofi_surge']),
-                    'cvd_score': float(criteria['cvd_confirmation']),
-                    'vpin_score': float(criteria['vpin_clean']),
-                    'volume_score': float(criteria['volume_quality']),
-                    'displacement_score': float(criteria['displacement_follow_through']),
-                    'risk_reward_ratio': float(rr_ratio),
-                    'setup_type': 'INSTITUTIONAL_BREAKOUT',
-                    'expected_win_rate': 0.68 + (confirmation_score / 25.0),  # 68-74% WR
-                    'rationale': f"{direction} breakout from {range_info['bars']}-bar compression "
-                               f"with institutional order flow confirmation. "
-                               f"Range size: {range_info['range_size_atr']:.2f} ATR.",
-                    # Partial exits
-                    'partial_exit_1': {'r_level': 1.5, 'percent': 50},
-                    'partial_exit_2': {'r_level': 2.5, 'percent': 30},
-                }
-            )
-
-            return signal
-
-        except Exception as e:
-            self.logger.error(f"Breakout signal creation failed: {str(e)}", exc_info=True)
-            return None
-
-    def _calculate_atr(self, data: pd.DataFrame, period: int = 14) -> float:
-        """Calculate ATR."""
+    
+    def calculate_atr(self, data: pd.DataFrame, period: int) -> pd.Series:
+        """
+        Calcula Average True Range.
+        
+        Args:
+            data: DataFrame con high, low, close
+            period: Periodo para ATR
+            
+        Returns:
+            Series con valores de ATR
+        """
         high = data['high']
         low = data['low']
-        close = data['close'].shift(1)
+        close = data['close']
+        
+        # True Range = max(high-low, abs(high-prev_close), abs(low-prev_close))
+        tr1 = high - low
+        tr2 = abs(high - close.shift())
+        tr3 = abs(low - close.shift())
+        
+        true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        
+        atr = true_range.rolling(period).mean()
+        
+        return atr
 
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
 
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        return atr if not pd.isna(atr) else (data['high'].iloc[-1] - data['low'].iloc[-1])
+# Mantener compatibilidad con nombre antiguo en imports
+BreakoutVolumeConfirmation = AbsorptionBreakout
 
-    def validate_inputs(self, data: pd.DataFrame, features: Dict) -> bool:
-        """Validate required inputs are present."""
-        if len(data) < 100:
-            return False
 
-        required_features = ['ofi', 'cvd', 'vpin', 'atr']
-        for feature in required_features:
-            if feature not in features:
-                self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")
-                return False
 
-        return True

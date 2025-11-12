@@ -38,11 +38,10 @@ class MomentumQuality(StrategyBase):
         super().__init__(config)
 
         self.momentum_period = config.get('momentum_period', 14)
-        self.price_threshold = config.get('price_threshold', 0.30)
-        self.volume_threshold = config.get('volume_threshold', 1.40)
-        self.vpin_clean_max = config.get('vpin_clean_max', 0.30)
-        self.vpin_toxic_min = config.get('vpin_toxic_min', 0.55)
-        self.min_quality_score = config.get('min_quality_score', 0.65)
+        self.price_threshold = config.get('price_threshold', 0.25)  # Momentum mÃƒÂ¡s temprano
+        self.volume_threshold = config.get('volume_threshold', 1.25)  # MÃƒÂ¡s sensible
+        self.vpin_threshold = config.get('vpin_threshold', 0.40)  # MAX seguro
+        self.min_quality_score = config.get('min_quality_score', 0.60)
         self.lookback_window = config.get('lookback_window', 20)
         self.use_regime_filter = config.get('use_regime_filter', True)
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -108,17 +107,18 @@ class MomentumQuality(StrategyBase):
         flow_confirmation = 0.5
         if 'vpin' in features:
             vpin_current = features['vpin']
-            # CORRECTED: Low VPIN = clean flow = good
-            # High VPIN = toxic flow = bad (Easley et al. 2012)
-            if vpin_current >= self.vpin_toxic_min:
-                # Toxic flow - penalize heavily
-                flow_confirmation = 0.0
-            elif vpin_current < self.vpin_clean_max:
-                # Clean flow - reward
-                flow_confirmation = 1.0
+            if vpin_current >= self.vpin_threshold:
+                if 'order_flow_imbalance' in features:
+                    imbalance = features['order_flow_imbalance']
+                    imbalance_direction = 1 if imbalance > 0 else -1
+                    if imbalance_direction == direction:
+                        flow_confirmation = 1.0
+                    else:
+                        flow_confirmation = 0.2
+                else:
+                    flow_confirmation = 0.8
             else:
-                # Medium flow - neutral
-                flow_confirmation = 0.5
+                flow_confirmation = 0.4
 
         quality_score = (price_strength * 0.4) + (volume_confirmation * 0.3) + (flow_confirmation * 0.3)
 

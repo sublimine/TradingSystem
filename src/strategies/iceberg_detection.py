@@ -10,9 +10,9 @@ import numpy as np
 from typing import Dict, Optional, List
 from datetime import datetime
 import logging
-from .strategy_base import StrategyBase, Signal
+from strategies.strategy_base import StrategyBase, Signal
 
-from ..features.orderbook_l2 import (
+from features.orderbook_l2 import (
     parse_l2_snapshot,
     detect_iceberg_signature,
     OrderBookSnapshot
@@ -253,68 +253,40 @@ class IcebergDetection(StrategyBase):
     
     def _create_iceberg_signal(self, iceberg: Dict, data: pd.DataFrame,
                               atr: float, features: Dict) -> Optional[Signal]:
-        """Create signal for iceberg trade with OFI/CVD/VPIN confirmation."""
+        """Create signal for iceberg trade."""
         try:
             current_price = data.iloc[-1]['close']
             iceberg_level = iceberg.get('price_level', current_price)
-
-            # INSTITUTIONAL: Validate with order flow
-            ofi = features.get('ofi', 0)
-            cvd = features.get('cvd', 0)
-            # FIX BUG #32: Use neutral default 0.5 instead of worst-case 1.0
-            vpin = features.get('vpin', 0.5)
-
-            # Determine expected direction
+            
             if iceberg.get('side') == 'BID' or current_price > iceberg_level:
                 direction = "LONG"
-                expected_direction = 1
                 entry_price = current_price
                 stop_loss = iceberg_level - (self.stop_loss_behind_level_atr * atr)
                 risk = entry_price - stop_loss
                 take_profit = entry_price + (risk * self.take_profit_r_multiple)
-
+                
             else:
                 direction = "SHORT"
-                expected_direction = -1
                 entry_price = current_price
                 stop_loss = iceberg_level + (self.stop_loss_behind_level_atr * atr)
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * self.take_profit_r_multiple)
-
-            # Check OFI alignment (iceberg absorption should show in OFI)
-            ofi_aligned = (ofi > 0 and expected_direction > 0) or (ofi < 0 and expected_direction < 0)
-
-            # If OFI strongly contradicts and we're in degraded mode, skip
-            if iceberg['mode'] == 'DEGRADED' and abs(ofi) > 2.0 and not ofi_aligned:
-                logger.debug(f"Iceberg signal rejected: OFI misaligned in degraded mode")
-                return None
-
-            # If VPIN too high (toxic), reduce confidence
-            if vpin > 0.35:
-                if iceberg['confidence'] == 'HIGH':
-                    iceberg['confidence'] = 'MEDIUM'
-                elif iceberg['confidence'] == 'MEDIUM':
-                    iceberg['confidence'] = 'LOW'
-                else:
-                    logger.debug(f"Iceberg signal rejected: VPIN too high {vpin:.3f} + LOW confidence")
-                    return None
-
+            
             actual_risk = abs(entry_price - stop_loss)
             actual_reward = abs(take_profit - entry_price)
             rr_ratio = actual_reward / actual_risk if actual_risk > 0 else 0
-
+            
             if rr_ratio < 2.0:
                 logger.debug(f"Iceberg signal rejected: R:R {rr_ratio:.2f} < 2.0")
                 return None
-
-            # Adjust sizing based on confidence + order flow
-            if iceberg['confidence'] == 'HIGH' and ofi_aligned and vpin < 0.25:
+            
+            if iceberg['confidence'] == 'HIGH':
                 sizing_level = 3
-            elif iceberg['confidence'] == 'MEDIUM' and ofi_aligned:
+            elif iceberg['confidence'] == 'MEDIUM':
                 sizing_level = 2
             else:
                 sizing_level = 1
-
+            
             signal = Signal(
                 timestamp=datetime.now(),
                 symbol=data.attrs.get('symbol', 'UNKNOWN'),
@@ -330,26 +302,18 @@ class IcebergDetection(StrategyBase):
                     'iceberg_level': float(iceberg_level),
                     'iceberg_side': iceberg.get('side', 'UNKNOWN'),
                     'volume_price_ratio': iceberg.get('volume_price_ratio', 0),
-                    'ofi': float(ofi),
-                    'cvd': float(cvd),
-                    'vpin': float(vpin),
-                    'ofi_aligned': ofi_aligned,
                     'risk_reward_ratio': float(rr_ratio),
-                    'partial_exits': {'50%_at': 1.5, '30%_at': 2.5, '20%_trail': 'to_target'},
                     'l2_available': self.l2_available,
-                    'research_basis': 'Easley_2012_Flow_Toxicity_Harris_2003_Microstructure',
-                    'expected_win_rate': 0.68 if iceberg['mode'] == 'L2' else 0.62,
                     'rationale': f"Iceberg detected at {iceberg_level:.5f} in {iceberg['mode']} mode "
-                               f"with {iceberg['confidence']} confidence. "
-                               f"OFI {'aligned' if ofi_aligned else 'neutral'}, VPIN={vpin:.3f}"
+                               f"with {iceberg['confidence']} confidence."
                 }
             )
-
+            
             logger.info(f"Iceberg Signal: {direction} @ {entry_price:.5f}, "
-                       f"mode={iceberg['mode']}, R:R={rr_ratio:.2f}, OFI={'✓' if ofi_aligned else '~'}")
-
+                       f"mode={iceberg['mode']}, R:R={rr_ratio:.2f}")
+            
             return signal
-
+            
         except Exception as e:
             logger.error(f"Iceberg signal creation failed: {str(e)}", exc_info=True)
             return None
