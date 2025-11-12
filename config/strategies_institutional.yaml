@@ -86,17 +86,28 @@ liquidity_sweep:
 # Easley, López de Prado & O'Hara (2012): "VPIN >0.7 = toxic flow"
 order_flow_toxicity:
   enabled: true
-  use_as_filter_only: true                # Does NOT generate signals
+  use_as_filter_only: false               # ACTIVE STRATEGY: Fades toxic flow with OFI/CVD/VPIN confirmation
 
-  # VPIN thresholds (INVERTED logic - corrected)
-  vpin_safe_max: 0.30                     # <0.30 = safe to trade
-  vpin_caution_max: 0.45                  # 0.30-0.45 = reduce size
-  vpin_toxic_min: 0.55                    # >0.55 = DO NOT TRADE
-  vpin_extreme_toxic: 0.70                # >0.70 = NEVER TRADE
+  # VPIN thresholds (FADE TOXIC FLOW)
+  vpin_threshold: 0.55                    # INSTITUTIONAL: Minimum VPIN for toxic flow (fade opportunity)
+  vpin_extreme_threshold: 0.70            # INSTITUTIONAL: Extreme VPIN (best fade opportunities)
+
+  # INSTITUTIONAL ORDER FLOW PARAMETERS
+  ofi_reversal_threshold: 3.0             # INSTITUTIONAL: OFI threshold for fade confirmation
+  cvd_divergence_threshold: 0.6           # INSTITUTIONAL: CVD divergence threshold
+  min_confirmation_score: 3.5             # INSTITUTIONAL: Minimum score (0-5) to fade
+
+  # Exhaustion detection - INSTITUTIONAL
+  exhaustion_volume_multiplier: 2.5       # INSTITUTIONAL: Volume spike for exhaustion
+  exhaustion_wick_ratio_min: 1.5          # INSTITUTIONAL: Wick-to-body ratio for rejection
 
   # Historical tracking
-  min_consecutive_buckets: 5              # vs 2 retail
+  min_consecutive_buckets: 5              # vs 2 retail (sustained toxicity required)
   bucket_size: 50000
+
+  # Risk management - INSTITUTIONAL
+  stop_loss_atr_multiple: 2.0             # INSTITUTIONAL: Stop beyond exhaustion
+  take_profit_r_multiple: 3.0             # INSTITUTIONAL: 3R target
 
   # Context verification
   context_verification_enabled: true
