@@ -42,6 +42,7 @@ from src.strategies.statistical_arbitrage_johansen import StatisticalArbitrageJo
 from src.strategies.calendar_arbitrage_flows import CalendarArbitrageFlows
 from src.strategies.topological_data_analysis_regime import TopologicalDataAnalysisRegime
 from src.strategies.spoofing_detection_l2 import SpoofingDetectionL2
+from src.strategies.nfp_news_event_handler import NFPNewsEventHandler
 
 from src.execution.adaptive_participation_rate import APRExecutor
 
@@ -60,9 +61,10 @@ class StrategyOrchestrator:
     6. Tracking performance attribution by strategy
     """
 
-    def __init__(self, config_path: str = 'config/strategy_config_master.yaml'):
+    def __init__(self, config_path: str = 'config/strategies_institutional.yaml', brain=None):
         """Initialize the orchestrator with configuration."""
         self.config = self._load_config(config_path)
+        self.brain = brain  # Store brain reference for strategy coordination
         self.strategies = {}
         self.active_positions = {}
         self.performance_tracker = {}
@@ -113,10 +115,12 @@ class StrategyOrchestrator:
             'calendar_arbitrage_flows': CalendarArbitrageFlows,
             'topological_data_analysis_regime': TopologicalDataAnalysisRegime,
             'spoofing_detection_l2': SpoofingDetectionL2,
+            'nfp_news_event_handler': NFPNewsEventHandler,
         }
 
         for strategy_name, strategy_class in strategy_classes.items():
-            strategy_config = self.config['strategies'].get(strategy_name, {})
+            # Strategies are at root level in strategies_institutional.yaml
+            strategy_config = self.config.get(strategy_name, {})
 
             if strategy_config.get('enabled', False):
                 try:

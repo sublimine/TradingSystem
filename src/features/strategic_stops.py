@@ -359,48 +359,266 @@ def calculate_strategic_target(
     stop_loss: float,
     market_data: pd.DataFrame,
     features: Dict,
-    default_rr: float = 3.0
+    default_rr: float = 3.0,
+    mtf_data: Optional[Dict[str, pd.DataFrame]] = None
 ) -> Tuple[float, str]:
     """
-    Calculate strategic take profit using structure or R:R.
+    Calculate strategic take profit using structure and liquidity analysis.
+
+    **UPGRADED:** Now detects untaken liquidity pools, fractals, and channels.
+
+    Priority hierarchy (best to worst):
+    1. UNTAKEN LIQUIDITY (equal highs/lows, liquidity pools) - BEST
+    2. Order Block opposite (just before touching)
+    3. Fair Value Gap opposite
+    4. Fractals/Liquidity channels
+    5. Swing extreme
+    6. ATR fallback (only if no structure)
 
     Args:
         direction: 'LONG' or 'SHORT'
         entry_price: Entry price
         stop_loss: Stop loss price
-        market_data: Recent OHLCV data
+        market_data: Recent OHLCV data (current timeframe)
         features: Dict containing structure data
         default_rr: Default risk:reward ratio if no structure found
+        mtf_data: Optional multi-timeframe data for better liquidity detection
 
     Returns:
         Tuple of (take_profit_price, target_type)
-        target_type: 'ORDER_BLOCK' | 'FVG' | 'SWING' | 'RR_DEFAULT'
+        target_type: 'UNTAKEN_LIQ' | 'ORDER_BLOCK' | 'FVG' | 'FRACTAL' | 'SWING' | 'RR_DEFAULT'
     """
     risk = abs(entry_price - stop_loss)
 
-    # Priority 1: Opposite Order Block
+    # Priority 1: UNTAKEN LIQUIDITY (equal highs/lows, liquidity pools)
+    liq_target = _find_untaken_liquidity_target(direction, entry_price, market_data, mtf_data, risk)
+    if liq_target is not None:
+        return liq_target, 'UNTAKEN_LIQ'
+
+    # Priority 2: Opposite Order Block (just before touching)
     ob_target = _find_order_block_target(direction, entry_price, features, risk)
     if ob_target is not None:
         return ob_target, 'ORDER_BLOCK'
 
-    # Priority 2: Opposite FVG
+    # Priority 3: Opposite FVG
     fvg_target = _find_fvg_target(direction, entry_price, features, risk)
     if fvg_target is not None:
         return fvg_target, 'FVG'
 
-    # Priority 3: Swing extreme
+    # Priority 4: Fractals and liquidity channels
+    fractal_target = _find_fractal_target(direction, entry_price, market_data, risk)
+    if fractal_target is not None:
+        return fractal_target, 'FRACTAL'
+
+    # Priority 5: Swing extreme
     swing_target = _find_swing_target(direction, entry_price, market_data, risk)
     if swing_target is not None:
         return swing_target, 'SWING'
 
-    # Fallback: R:R ratio
+    # Fallback: R:R ratio (ATR-based)
     if direction == 'LONG':
         target = entry_price + (risk * default_rr)
     else:
         target = entry_price - (risk * default_rr)
 
-    logger.info(f"ℹ️  R:R target: {target:.5f} ({default_rr}R)")
+    logger.info(f"ℹ️  R:R target (fallback): {target:.5f} ({default_rr}R)")
     return target, 'RR_DEFAULT'
+
+
+def _find_untaken_liquidity_target(direction: str, entry_price: float,
+                                   market_data: pd.DataFrame,
+                                   mtf_data: Optional[Dict[str, pd.DataFrame]],
+                                   risk: float) -> Optional[float]:
+    """
+    Find untaken liquidity for target placement.
+
+    **KEY CONCEPT:** Liquidez NO tomada = price levels with:
+    - Equal highs/lows (2+ candles at same level)
+    - Liquidity pools (clusters of highs/lows never touched)
+    - Piscinas/equals (multiple equal price points)
+
+    These are magnets for price - institutions target resting stop losses.
+
+    Args:
+        direction: 'LONG' or 'SHORT'
+        entry_price: Current entry price
+        market_data: Current timeframe data
+        mtf_data: Multi-timeframe data (optional but better)
+        risk: Risk amount (for minimum distance check)
+
+    Returns:
+        Target price if untaken liquidity found, None otherwise
+    """
+    # Combine current + MTF data for better detection
+    timeframes_to_check = [market_data]
+
+    if mtf_data:
+        for tf_name in ['M15', 'H1', 'H4']:
+            if tf_name in mtf_data and mtf_data[tf_name] is not None:
+                timeframes_to_check.append(mtf_data[tf_name])
+
+    best_liquidity_level = None
+    best_liquidity_strength = 0.0
+
+    for tf_data in timeframes_to_check:
+        if len(tf_data) < 20:
+            continue
+
+        lookback = min(100, len(tf_data))
+        recent_data = tf_data.tail(lookback)
+
+        if direction == 'LONG':
+            # Find UNTAKEN HIGHS above entry (resistance liquidity)
+            highs = recent_data['high'].values
+
+            # Detect equal highs (within 5 pips tolerance)
+            pip_tolerance = 0.0005  # 5 pips for most pairs
+
+            for i in range(len(highs) - 1):
+                current_high = highs[i]
+
+                # Must be above entry price
+                if current_high <= entry_price:
+                    continue
+
+                # Must be at least 1R above entry (worth targeting)
+                if current_high < entry_price + risk:
+                    continue
+
+                # Count how many equal highs at this level
+                equal_highs = sum(1 for h in highs if abs(h - current_high) < pip_tolerance)
+
+                # Check if liquidity was taken (did price go through this level?)
+                was_taken = any(low < current_high - pip_tolerance for low in recent_data['low'].values[i+1:])
+
+                # If liquidity NOT taken AND multiple equal highs = strong target
+                if not was_taken and equal_highs >= 2:
+                    strength = equal_highs  # More equals = stronger liquidity
+
+                    if strength > best_liquidity_strength:
+                        best_liquidity_strength = strength
+                        best_liquidity_level = current_high
+
+        else:  # SHORT
+            # Find UNTAKEN LOWS below entry (support liquidity)
+            lows = recent_data['low'].values
+
+            pip_tolerance = 0.0005
+
+            for i in range(len(lows) - 1):
+                current_low = lows[i]
+
+                # Must be below entry price
+                if current_low >= entry_price:
+                    continue
+
+                # Must be at least 1R below entry
+                if current_low > entry_price - risk:
+                    continue
+
+                # Count equal lows
+                equal_lows = sum(1 for l in lows if abs(l - current_low) < pip_tolerance)
+
+                # Check if taken
+                was_taken = any(high > current_low + pip_tolerance for high in recent_data['high'].values[i+1:])
+
+                # If NOT taken AND multiple equals = strong target
+                if not was_taken and equal_lows >= 2:
+                    strength = equal_lows
+
+                    if strength > best_liquidity_strength:
+                        best_liquidity_strength = strength
+                        best_liquidity_level = current_low
+
+    # If found strong untaken liquidity (2+ equals)
+    if best_liquidity_level is not None and best_liquidity_strength >= 2:
+        if direction == 'LONG':
+            # Target JUST BEFORE the liquidity (don't overshoot)
+            target = best_liquidity_level - (risk * 0.05)  # 5% buffer before liquidity
+            logger.info(f"✓✓ UNTAKEN LIQUIDITY target: {target:.5f} "
+                       f"(liquidity level: {best_liquidity_level:.5f}, "
+                       f"strength: {best_liquidity_strength:.0f} equals)")
+            return target
+        else:
+            # Target JUST BEFORE the liquidity
+            target = best_liquidity_level + (risk * 0.05)
+            logger.info(f"✓✓ UNTAKEN LIQUIDITY target: {target:.5f} "
+                       f"(liquidity level: {best_liquidity_level:.5f}, "
+                       f"strength: {best_liquidity_strength:.0f} equals)")
+            return target
+
+    return None
+
+
+def _find_fractal_target(direction: str, entry_price: float,
+                        market_data: pd.DataFrame, risk: float) -> Optional[float]:
+    """
+    Find fractal/liquidity channel for target.
+
+    Fractals = local highs/lows that indicate liquidity zones.
+
+    Detection:
+    - Fractal high = high[i] > high[i-1] AND high[i] > high[i+1]
+    - Fractal low = low[i] < low[i-1] AND low[i] < low[i+1]
+
+    Liquidity channels = multiple fractals at similar levels.
+
+    Args:
+        direction: 'LONG' or 'SHORT'
+        entry_price: Current entry price
+        market_data: OHLCV data
+        risk: Risk amount
+
+    Returns:
+        Target price if fractal found, None otherwise
+    """
+    if len(market_data) < 10:
+        return None
+
+    lookback = min(50, len(market_data))
+    recent_data = market_data.tail(lookback)
+
+    if direction == 'LONG':
+        # Find fractal highs above entry
+        highs = recent_data['high'].values
+        fractal_highs = []
+
+        # Detect fractals (simplified: local max)
+        for i in range(1, len(highs) - 1):
+            if highs[i] > highs[i-1] and highs[i] > highs[i+1]:
+                # Is fractal
+                fractal_high = highs[i]
+
+                # Must be above entry + 1R
+                if fractal_high > entry_price + risk:
+                    fractal_highs.append(fractal_high)
+
+        if fractal_highs:
+            # Target nearest fractal high
+            nearest_fractal = min(fractal_highs)
+            target = nearest_fractal - (risk * 0.08)  # 8% buffer before fractal
+            logger.info(f"✓ FRACTAL target: {target:.5f} (fractal high: {nearest_fractal:.5f})")
+            return target
+
+    else:  # SHORT
+        # Find fractal lows below entry
+        lows = recent_data['low'].values
+        fractal_lows = []
+
+        for i in range(1, len(lows) - 1):
+            if lows[i] < lows[i-1] and lows[i] < lows[i+1]:
+                fractal_low = lows[i]
+
+                if fractal_low < entry_price - risk:
+                    fractal_lows.append(fractal_low)
+
+        if fractal_lows:
+            nearest_fractal = max(fractal_lows)
+            target = nearest_fractal + (risk * 0.08)
+            logger.info(f"✓ FRACTAL target: {target:.5f} (fractal low: {nearest_fractal:.5f})")
+            return target
+
+    return None
 
 
 def _find_order_block_target(direction: str, entry_price: float, features: Dict,

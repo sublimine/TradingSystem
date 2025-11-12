@@ -674,6 +674,36 @@ spoofing_detection_l2:
   take_profit_r: 2.0                      # ELITE: 2.0R target (quick exit)
 
 # ============================================================================
+# NFP NEWS EVENT HANDLER (High-Impact Economic Events)
+# ============================================================================
+# Research: Andersen et al. (2003), Evans & Lyons (2005), Pasquariello & Vega (2007)
+# Trades NFP, FOMC, CPI, GDP and other high-impact news events
+# Strategies: Pre-event fade, event spike capture, post-event mean reversion
+# Win Rate: 60-68% (event-dependent)
+nfp_news_event_handler:
+  enabled: true
+
+  # Event types to trade
+  event_types: ['NFP', 'FOMC', 'CPI', 'GDP', 'ECB', 'BoE']
+
+  # Event windows - ELITE
+  pre_event_window_minutes: 30            # ELITE: 30 min before event
+  post_event_window_minutes: 120          # ELITE: 2 hours after event
+
+  # Volatility expansion detection - ELITE
+  volatility_expansion_threshold: 2.5     # ELITE: 2.5x normal volatility
+
+  # Overreaction detection - ELITE
+  overreaction_sigma: 2.5                 # ELITE: 2.5σ overreaction
+
+  # Pre-event positioning - ELITE
+  extreme_positioning_threshold: 0.75     # ELITE: 75%+ positioning = fade
+
+  # Risk management - ELITE
+  stop_loss_atr: 2.5                      # ELITE: 2.5 ATR stop (volatile events)
+  take_profit_r: 2.0                      # ELITE: 2.0R target (quick exit)
+
+# ============================================================================
 # GLOBAL SETTINGS
 # ============================================================================
 global:
