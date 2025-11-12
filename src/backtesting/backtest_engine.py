@@ -27,6 +27,24 @@ from datetime import datetime, timedelta
 import logging
 from pathlib import Path
 import json
+import sys
+from pathlib import Path
+
+# Add src to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Import institutional feature calculators
+try:
+    from features.ofi import calculate_ofi
+    from features.order_flow import VPINCalculator, calculate_signed_volume, calculate_cumulative_volume_delta
+    from features.technical_indicators import calculate_atr
+except ImportError:
+    # Fallback if imports fail
+    calculate_ofi = None
+    VPINCalculator = None
+    calculate_signed_volume = None
+    calculate_cumulative_volume_delta = None
+    calculate_atr = None
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +95,9 @@ class BacktestEngine:
         self.trades = []
         self.open_positions = {}
 
+        # VPIN calculators per symbol
+        self.vpin_calculators = {}
+
     def run_backtest(self,
                      historical_data: Dict[str, pd.DataFrame],
                      start_date: datetime,
@@ -118,14 +139,29 @@ class BacktestEngine:
             # Update open positions (check stops, targets, trailing)
             self._update_open_positions(market_snapshot, current_time)
 
+            # Calculate features for each symbol (INSTITUTIONAL: OFI, CVD, VPIN, ATR)
+            features_by_symbol = {}
+            for symbol, df in historical_data.items():
+                if current_time in df.index:
+                    current_idx = df.index.get_loc(current_time)
+                    features_by_symbol[symbol] = self._calculate_features(symbol, df, current_idx)
+
             # Generate signals from all strategies
             for strategy in self.strategies:
                 # Check if strategy is enabled and matches regime
                 if not self._should_strategy_run(strategy, current_regime):
                     continue
 
-                # Get strategy signal
-                signals = strategy.evaluate(market_snapshot, None)  # Features computed internally
+                # Get primary symbol for strategy (use first symbol in snapshot)
+                primary_symbol = list(market_snapshot.keys())[0] if market_snapshot else None
+                if not primary_symbol:
+                    continue
+
+                # Get features for primary symbol
+                features = features_by_symbol.get(primary_symbol, {})
+
+                # FIXED: Pass features dict with OFI/CVD/VPIN/ATR to strategies
+                signals = strategy.evaluate(market_snapshot, features)
 
                 if signals:
                     for signal in signals:
@@ -316,6 +352,111 @@ class BacktestEngine:
                 snapshot[symbol] = df.loc[timestamp]
 
         return snapshot
+
+    def _calculate_features(self, symbol: str, historical_data: pd.DataFrame,
+                           current_idx: int) -> Dict:
+        """
+        Calculate institutional features (OFI, CVD, VPIN, ATR) for strategy evaluation.
+
+        Args:
+            symbol: Trading symbol
+            historical_data: Full historical DataFrame for symbol
+            current_idx: Current bar index
+
+        Returns:
+            Dict with features: {'ofi', 'cvd', 'vpin', 'atr'}
+        """
+        features = {}
+
+        # Get window of recent data (last 100 bars up to current)
+        lookback = min(100, current_idx + 1)
+        recent_data = historical_data.iloc[max(0, current_idx - lookback + 1):current_idx + 1]
+
+        if len(recent_data) < 20:
+            # Not enough data - return neutral/safe values
+            features['ofi'] = 0.0
+            features['cvd'] = 0.0
+            features['vpin'] = 0.5
+            features['atr'] = 0.0001
+            return features
+
+        try:
+            # ATR (Average True Range)
+            if calculate_atr is not None:
+                atr_series = calculate_atr(
+                    recent_data['high'],
+                    recent_data['low'],
+                    recent_data['close'],
+                    period=14
+                )
+                features['atr'] = float(atr_series.iloc[-1]) if len(atr_series) > 0 else 0.0001
+            else:
+                # Fallback ATR calculation
+                tr1 = recent_data['high'] - recent_data['low']
+                tr2 = abs(recent_data['high'] - recent_data['close'].shift(1))
+                tr3 = abs(recent_data['low'] - recent_data['close'].shift(1))
+                tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+                atr = tr.rolling(window=14).mean()
+                features['atr'] = float(atr.iloc[-1]) if len(atr) > 0 else 0.0001
+
+            # OFI (Order Flow Imbalance) - INSTITUTIONAL
+            if calculate_ofi is not None:
+                ofi_series = calculate_ofi(recent_data, window_size=20)
+                features['ofi'] = float(ofi_series.iloc[-1]) if len(ofi_series) > 0 else 0.0
+            else:
+                # Fallback OFI using tick classification
+                midpoint = (recent_data['high'] + recent_data['low']) / 2.0
+                tick_direction = np.sign(recent_data['close'] - midpoint)
+                signed_volume = recent_data['volume'] * tick_direction
+                ofi = signed_volume.rolling(window=20).sum()
+                total_volume = recent_data['volume'].rolling(window=20).sum()
+                ofi_normalized = ofi / (total_volume + 1e-10)
+                features['ofi'] = float(ofi_normalized.iloc[-1])
+
+            # CVD (Cumulative Volume Delta)
+            if calculate_signed_volume is not None and calculate_cumulative_volume_delta is not None:
+                signed_volumes = calculate_signed_volume(recent_data['close'], recent_data['volume'])
+                cvd_series = calculate_cumulative_volume_delta(signed_volumes, window=20)
+                features['cvd'] = float(cvd_series.iloc[-1]) if len(cvd_series) > 0 else 0.0
+            else:
+                # Fallback CVD
+                close_change = recent_data['close'].diff()
+                signed_volume = recent_data['volume'] * np.sign(close_change)
+                cvd = signed_volume.rolling(window=20).sum()
+                features['cvd'] = float(cvd.iloc[-1]) if len(cvd) > 0 else 0.0
+
+            # VPIN (Volume-Synchronized PIN)
+            if VPINCalculator is not None:
+                # Initialize VPIN calculator for symbol if not exists
+                if symbol not in self.vpin_calculators:
+                    self.vpin_calculators[symbol] = VPINCalculator(bucket_size=50000, num_buckets=50)
+
+                # Feed recent trades to VPIN
+                for idx, row in recent_data.tail(50).iterrows():
+                    trade_direction = 1 if row['close'] > row['open'] else -1
+                    self.vpin_calculators[symbol].add_trade(row['volume'], trade_direction)
+
+                features['vpin'] = self.vpin_calculators[symbol].get_current_vpin()
+            else:
+                # Fallback VPIN (simplified imbalance)
+                buy_volume = recent_data.loc[recent_data['close'] > recent_data['open'], 'volume'].sum()
+                sell_volume = recent_data.loc[recent_data['close'] <= recent_data['open'], 'volume'].sum()
+                total_volume = buy_volume + sell_volume
+                if total_volume > 0:
+                    imbalance = abs(float(buy_volume) - float(sell_volume)) / float(total_volume)
+                    features['vpin'] = float(imbalance)
+                else:
+                    features['vpin'] = 0.5
+
+        except Exception as e:
+            self.logger.warning(f"Error calculating features for {symbol}: {e}")
+            # Return safe neutral values
+            features['ofi'] = 0.0
+            features['cvd'] = 0.0
+            features['vpin'] = 0.5
+            features['atr'] = 0.0001
+
+        return features
 
     def _should_strategy_run(self, strategy, current_regime: Optional[str]) -> bool:
         """Check if strategy should run in current regime."""

@@ -246,6 +246,8 @@ class LiveTradingEngine:
             features['atr'] = 0.0001
             features['rsi'] = 50.0
             features['vpin'] = 0.5
+            features['ofi'] = 0.0  # INSTITUTIONAL
+            features['cvd'] = 0.0  # INSTITUTIONAL
             features['swing_high_levels'] = []
             features['swing_low_levels'] = []
             return features
@@ -282,11 +284,22 @@ class LiveTradingEngine:
             features['swing_high_levels'] = swing_highs.tail(20).tolist()
             features['swing_low_levels'] = swing_lows.tail(20).tolist()
             
-            # Volumen delta simplificado
+            # CVD (Cumulative Volume Delta) - INSTITUTIONAL
             volume = data['volume']
             close_change = close.diff()
             signed_volume = volume * np.sign(close_change)
-            features['cumulative_volume_delta'] = float(signed_volume.sum())
+            cvd_rolling = signed_volume.rolling(window=20).sum()
+            features['cvd'] = float(cvd_rolling.iloc[-1]) if not cvd_rolling.empty else 0.0
+            features['cumulative_volume_delta'] = features['cvd']  # Alias for backward compatibility
+
+            # OFI (Order Flow Imbalance) - INSTITUTIONAL
+            midpoint = (high + low) / 2.0
+            tick_direction = np.sign(close - midpoint)
+            signed_vol_ofi = volume * tick_direction
+            ofi = signed_vol_ofi.rolling(window=20).sum()
+            total_volume_rolling = volume.rolling(window=20).sum()
+            ofi_normalized = ofi / (total_volume_rolling + 1e-10)
+            features['ofi'] = float(ofi_normalized.iloc[-1]) if not ofi_normalized.empty else 0.0
             
             # VPIN simplificado (ratio de volumen compra/venta)
             buy_volume = volume[close > close.shift(1)].sum()
@@ -327,6 +340,8 @@ class LiveTradingEngine:
                 'atr': 0.0001,
                 'rsi': 50.0,
                 'vpin': 0.5,
+                'ofi': 0.0,  # INSTITUTIONAL
+                'cvd': 0.0,  # INSTITUTIONAL
                 'swing_high_levels': [],
                 'swing_low_levels': [],
                 'cumulative_volume_delta': 0.0,
