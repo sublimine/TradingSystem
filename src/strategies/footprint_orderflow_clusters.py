@@ -405,9 +405,9 @@ class FootprintOrderflowClusters(StrategyBase):
 
         # CRITERION 2: CVD CONFIRMATION
         if direction == 'LONG' and cvd > 0:
-            cvd_score = min(abs(cvd) / 10.0, 1.0)
+            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
         elif direction == 'SHORT' and cvd < 0:
-            cvd_score = min(abs(cvd) / 10.0, 1.0)
+            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
         else:
             cvd_score = 0.0
 

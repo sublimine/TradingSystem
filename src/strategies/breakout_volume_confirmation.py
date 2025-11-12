@@ -130,9 +130,9 @@ class BreakoutVolumeConfirmation(StrategyBase):
             return []
 
         # Get required order flow features
-        ofi = features.get('ofi', 0.0)
-        cvd = features.get('cvd', 0.0)
-        vpin = features.get('vpin', 0.5)
+        ofi = features.get('ofi')
+        cvd = features.get('cvd')
+        vpin = features.get('vpin')
         atr = features.get('atr')
 
         if atr is None or atr <= 0:
@@ -300,9 +300,9 @@ class BreakoutVolumeConfirmation(StrategyBase):
 
         # CRITERION 2: CVD CONFIRMATION
         if direction == 'LONG' and cvd > 0:
-            cvd_score = min(abs(cvd) / 10.0, 1.0)
+            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
         elif direction == 'SHORT' and cvd < 0:
-            cvd_score = min(abs(cvd) / 10.0, 1.0)
+            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
         else:
             cvd_score = 0.0
 

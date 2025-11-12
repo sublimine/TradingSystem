@@ -126,9 +126,9 @@ class MeanReversionStatistical(StrategyBase):
             return []
 
         # Get required order flow features
-        ofi = features.get('ofi')
-        cvd = features.get('cvd')
-        vpin = features.get('vpin')
+        ofi = features.get('ofi', 0.0)
+        cvd = features.get('cvd', 0.0)
+        vpin = features.get('vpin', 0.5)
         atr = features.get('atr')
         adx = features.get('adx', 50)  # Default high if not available
 
@@ -244,9 +244,9 @@ class MeanReversionStatistical(StrategyBase):
         # CRITERION 2: CVD DIVERGENCE
         # CVD should align with reversion direction
         if reversion_direction == 'SHORT' and cvd < 0:
-            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
+            cvd_score = min(abs(cvd) / 10.0, 1.0)
         elif reversion_direction == 'LONG' and cvd > 0:
-            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
+            cvd_score = min(abs(cvd) / 10.0, 1.0)
         else:
             cvd_score = 0.0
 

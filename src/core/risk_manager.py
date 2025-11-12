@@ -399,8 +399,12 @@ class InstitutionalRiskManager:
                 'position_size_pct': 0.0,
             }
 
-        # 3. Check exposure limits
-        exposure_check = self._check_exposure_limits(signal)
+        # 3. Calculate dynamic position size based on quality FIRST
+        # FIX: Must calculate size BEFORE checking exposure limits to include proposed position
+        position_size_pct = self._calculate_position_size(quality_score, signal, market_context)
+
+        # 4. Check exposure limits INCLUDING proposed position
+        exposure_check = self._check_exposure_limits(signal, position_size_pct)
         if not exposure_check['approved']:
             return {
                 'approved': False,
@@ -409,7 +413,7 @@ class InstitutionalRiskManager:
                 'position_size_pct': 0.0,
             }
 
-        # 4. Check drawdown limits
+        # 5. Check drawdown limits
         if not self._check_drawdown_limits():
             return {
                 'approved': False,
@@ -417,9 +421,6 @@ class InstitutionalRiskManager:
                 'quality_score': quality_score,
                 'position_size_pct': 0.0,
             }
-
-        # 5. Calculate dynamic position size based on quality
-        position_size_pct = self._calculate_position_size(quality_score, signal, market_context)
 
         # 6. Convert to lot size
         symbol = signal['symbol']
@@ -453,8 +454,13 @@ class InstitutionalRiskManager:
         - Recent performance
         """
         # Base sizing from quality (linear interpolation)
-        base_size = self.min_risk_pct + (quality_score - self.min_quality_score) * \
-                   (self.max_risk_pct - self.min_risk_pct) / (1.0 - self.min_quality_score)
+        # FIX: Protect against division by zero if min_quality_score == 1.0
+        denominator = (1.0 - self.min_quality_score)
+        if denominator == 0:
+            base_size = self.max_risk_pct
+        else:
+            base_size = self.min_risk_pct + (quality_score - self.min_quality_score) * \
+                       (self.max_risk_pct - self.min_risk_pct) / denominator
 
         # Volatility adjustment
         regime = market_context.get('volatility_regime', 'NORMAL')
@@ -466,48 +472,53 @@ class InstitutionalRiskManager:
         # VPIN adjustment (toxic flow)
         vpin = market_context.get('vpin', 0.3)
         if vpin > 0.45:  # Elevated VPIN
-            reduction = (vpin - 0.45) / 0.25  # 0-1 scale from 0.45-0.70
+            # FIX: Cap reduction at 1.0 to prevent negative position sizes
+            reduction = min((vpin - 0.45) / 0.25, 1.0)  # 0-1 scale capped at 1.0
             base_size *= (1.0 - 0.5 * reduction)  # Up to 50% reduction
 
         # Constrain to limits
         return min(max(base_size, self.min_risk_pct), self.max_risk_pct)
 
-    def _check_exposure_limits(self, signal: Dict) -> Dict:
-        """Check if new position would violate exposure limits."""
+    def _check_exposure_limits(self, signal: Dict, proposed_risk_pct: float) -> Dict:
+        """
+        Check if new position would violate exposure limits.
+
+        FIX: Now includes proposed_risk_pct in calculations to prevent exceeding limits.
+        """
         symbol = signal['symbol']
         strategy = signal['strategy_name']
 
         # Calculate current exposures
         total_exposure = sum(pos['risk_pct'] for pos in self.active_positions.values())
 
-        # Check total exposure
-        if total_exposure >= self.max_total_exposure_pct:
+        # Check total exposure INCLUDING proposed position
+        if total_exposure + proposed_risk_pct >= self.max_total_exposure_pct:
             return {
                 'approved': False,
                 'reason': f"Total exposure limit: {total_exposure:.2f}% >= {self.max_total_exposure_pct}%"
             }
 
-        # Check per-symbol exposure
+        # Check per-symbol exposure INCLUDING proposed position
         symbol_exposure = sum(pos['risk_pct'] for pos in self.active_positions.values()
                              if pos['symbol'] == symbol)
-        if symbol_exposure >= self.max_per_symbol_exposure_pct:
+        if symbol_exposure + proposed_risk_pct >= self.max_per_symbol_exposure_pct:
             return {
                 'approved': False,
                 'reason': f"Symbol exposure limit: {symbol} {symbol_exposure:.2f}% >= {self.max_per_symbol_exposure_pct}%"
             }
 
-        # Check per-strategy exposure
+        # Check per-strategy exposure INCLUDING proposed position
         strategy_exposure = sum(pos['risk_pct'] for pos in self.active_positions.values()
                                if pos['strategy'] == strategy)
-        if strategy_exposure >= self.max_per_strategy_exposure_pct:
+        if strategy_exposure + proposed_risk_pct >= self.max_per_strategy_exposure_pct:
             return {
                 'approved': False,
                 'reason': f"Strategy exposure limit: {strategy} {strategy_exposure:.2f}% >= {self.max_per_strategy_exposure_pct}%"
             }
 
-        # Check correlated exposure
+        # Check correlated exposure INCLUDING proposed position
         correlated_exposure = self._calculate_correlated_exposure(symbol)
-        if correlated_exposure >= self.max_correlated_exposure_pct:
+        if correlated_exposure + proposed_risk_pct >= self.max_correlated_exposure_pct:
             return {
                 'approved': False,
                 'reason': f"Correlated exposure limit: {correlated_exposure:.2f}% >= {self.max_correlated_exposure_pct}%"

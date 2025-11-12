@@ -767,13 +767,14 @@ class InstitutionalBrain:
                 # Keep original stops/targets from strategy
 
             # 8. Create execution order
+            # FIX: Use adjusted_signal stops/targets (strategic placement), not original best_signal
             execution_order = {
                 'signal': adjusted_signal,
                 'symbol': symbol,
                 'direction': best_signal['direction'],
                 'entry_price': best_signal['entry_price'],
-                'stop_loss': best_signal['stop_loss'],
-                'take_profit': best_signal['take_profit'],
+                'stop_loss': adjusted_signal['stop_loss'],  # FIX: Use strategic stop
+                'take_profit': adjusted_signal['take_profit'],  # FIX: Use strategic target
                 'lot_size': portfolio_eval['adjustments']['position_size_lots'],
                 'risk_pct': portfolio_eval['adjustments']['position_size_pct'],
                 'quality_score': portfolio_eval['adjustments']['quality_score'],
@@ -786,6 +787,7 @@ class InstitutionalBrain:
             if self.ml_engine:
                 from .ml_adaptive_engine import SignalRecord
                 signal_id = f"{symbol}_{best_signal['strategy_name']}_{int(datetime.now().timestamp())}"
+                # FIX: Record strategic stops/targets for ML learning, not original
                 signal_record = SignalRecord(
                     signal_id=signal_id,
                     timestamp=datetime.now(),
@@ -794,8 +796,8 @@ class InstitutionalBrain:
                     direction=best_signal['direction'],
                     quality_score=portfolio_eval['adjustments']['quality_score'],
                     entry_price=best_signal['entry_price'],
-                    stop_loss=best_signal['stop_loss'],
-                    take_profit=best_signal['take_profit'],
+                    stop_loss=adjusted_signal['stop_loss'],  # FIX: Use strategic stop
+                    take_profit=adjusted_signal['take_profit'],  # FIX: Use strategic target
                     regime=current_regime,
                     features=symbol_features,
                     approved=True,

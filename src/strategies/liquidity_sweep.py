@@ -108,9 +108,9 @@ class LiquiditySweepStrategy(StrategyBase):
             return []
 
         # Get required features
-        ofi = features.get('ofi', 0.0)
-        cvd = features.get('cvd', 0.0)
-        vpin = features.get('vpin', 0.5)
+        ofi = features.get('ofi')
+        cvd = features.get('cvd')
+        vpin = features.get('vpin')
 
         # Get symbol
         symbol = market_data.attrs.get('symbol', 'UNKNOWN')
@@ -294,9 +294,9 @@ class LiquiditySweepStrategy(StrategyBase):
         # CVD should be opposite to sweep direction (institutions accumulating opposite)
 
         if direction == 'LONG' and cvd > 0:
-            cvd_score = min(abs(cvd) / 10.0, 1.0)  # Normalize CVD
+            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)  # Normalize CVD
         elif direction == 'SHORT' and cvd < 0:
-            cvd_score = min(abs(cvd) / 10.0, 1.0)
+            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
         else:
             cvd_score = 0.0
 

@@ -313,15 +313,18 @@ class MarketStructurePositionManager:
             if structure_level:
                 # Place stop at structure level near entry (protected breakeven)
                 new_stop = structure_level.price
+                stop_type = 'BREAKEVEN_STRUCTURE'
             else:
                 # No structure found, use pure breakeven
                 new_stop = tracker.entry_price
+                stop_type = 'BREAKEVEN'
 
-            # Only move stop if it's better than current
+            # FIX: Always move stop if it's better, even without structure
+            # This ensures is_risk_free is set, allowing trailing to work (line 327)
             if tracker.direction == 'LONG' and new_stop > tracker.current_stop:
-                tracker.update_stop(new_stop, 'BREAKEVEN_STRUCTURE')
+                tracker.update_stop(new_stop, stop_type)
             elif tracker.direction == 'SHORT' and new_stop < tracker.current_stop:
-                tracker.update_stop(new_stop, 'BREAKEVEN_STRUCTURE')
+                tracker.update_stop(new_stop, stop_type)
 
         # 2. Trail stop at structure levels if 2R+
         if current_r >= self.min_r_for_trailing and tracker.is_risk_free:
@@ -357,7 +360,16 @@ class MarketStructurePositionManager:
         if not structure:
             return None
 
-        atr = market_data['close'].diff().abs().rolling(14).mean().iloc[-1] if len(market_data) > 14 else 0.0001
+        # FIX: Calculate proper ATR (True Range), not just close.diff()
+        if len(market_data) > 14:
+            high_low = market_data['high'] - market_data['low']
+            high_close = (market_data['high'] - market_data['close'].shift(1)).abs()
+            low_close = (market_data['low'] - market_data['close'].shift(1)).abs()
+            true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+            atr = true_range.rolling(14).mean().iloc[-1]
+        else:
+            atr = 0.0001
+
         max_distance = atr * self.structure_proximity_atr
 
         candidates = []

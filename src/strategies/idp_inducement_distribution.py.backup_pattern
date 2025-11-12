@@ -180,9 +180,9 @@ class IDPInducement(StrategyBase):
             return []
 
         # Get required order flow features
-        ofi = features.get('ofi')
-        cvd = features.get('cvd')
-        vpin = features.get('vpin')
+        ofi = features.get('ofi', 0.0)
+        cvd = features.get('cvd', 0.0)
+        vpin = features.get('vpin', 0.5)
 
         # Get symbol
         symbol = data.attrs.get('symbol', 'UNKNOWN')
@@ -289,9 +289,9 @@ class IDPInducement(StrategyBase):
         # For DOWN displacement: CVD should be negative (selling accumulation)
 
         if direction == 'UP' and cvd > 0:
-            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
+            cvd_score = min(abs(cvd) / 10.0, 1.0)
         elif direction == 'DOWN' and cvd < 0:
-            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
+            cvd_score = min(abs(cvd) / 10.0, 1.0)
         else:
             cvd_score = 0.0
 

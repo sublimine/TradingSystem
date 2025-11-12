@@ -294,9 +294,9 @@ class OrderFlowToxicityStrategy(StrategyBase):
         # CRITERION 3: CVD DIVERGENCE
         # CVD should align with fade direction (opposite to toxic flow)
         if fade_direction == 'LONG' and cvd > 0:
-            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
+            cvd_score = min(abs(cvd) / 10.0, 1.0)
         elif fade_direction == 'SHORT' and cvd < 0:
-            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
+            cvd_score = min(abs(cvd) / 10.0, 1.0)
         else:
             cvd_score = 0.0
 
