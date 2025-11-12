@@ -55,9 +55,10 @@ class KalmanPairsTrading(StrategyBase):
         self.vw = config.get('kalman_vw', 1e-3)  # Observation noise
 
         # Order flow thresholds - INSTITUTIONAL
-        self.ofi_pairs_threshold = config.get('ofi_pairs_threshold', 2.0)
-        self.cvd_directional_threshold = config.get('cvd_directional_threshold', 0.55)
-        self.vpin_threshold_max = config.get('vpin_threshold_max', 0.30)
+        # FIX: Validate thresholds to prevent division by zero
+        self.ofi_pairs_threshold = max(config.get('ofi_pairs_threshold', 2.0), 0.1)
+        self.cvd_directional_threshold = max(config.get('cvd_directional_threshold', 0.55), 0.1)
+        self.vpin_threshold_max = max(config.get('vpin_threshold_max', 0.30), 0.01)
 
         # Confirmation scoring
         self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
@@ -157,6 +158,9 @@ class KalmanPairsTrading(StrategyBase):
         innovation = spread - predicted_mean
         innovation_cov = predicted_cov + self.vw
 
+        # FIX: Protect against division by zero
+        if innovation_cov == 0:
+            innovation_cov = 1e-10
         kalman_gain = predicted_cov / innovation_cov
 
         updated_mean = predicted_mean + kalman_gain * innovation

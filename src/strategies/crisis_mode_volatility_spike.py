@@ -106,7 +106,10 @@ class CrisisModeVolatilitySpike(StrategyBase):
         if not volatility_spike:
             if self.in_crisis_mode:
                 self.logger.info("Crisis mode ended - volatility normalized")
+                # FIX: Reset state when exiting crisis mode
                 self.in_crisis_mode = False
+                self.crisis_peak_vpin = None
+                self.crisis_start_time = None
             return []
 
         # STEP 2: Enter crisis mode
@@ -243,6 +246,8 @@ class CrisisModeVolatilitySpike(StrategyBase):
             wick_ratio = (total_range - body) / total_range if total_range > 0 else 0
             recent_wicks.append(wick_ratio)
 
+        # FIX: Define variable before if block to prevent NameError
+        wick_decline = None
         if len(recent_wicks) >= 10:
             early_wicks = np.mean(recent_wicks[:5])
             late_wicks = np.mean(recent_wicks[-5:])
@@ -253,11 +258,13 @@ class CrisisModeVolatilitySpike(StrategyBase):
 
         criteria['price_stabilization'] = {
             'score': stabilization_score,
-            'wick_decline': float(wick_decline) if len(recent_wicks) >= 10 else None
+            'wick_decline': float(wick_decline) if wick_decline is not None else None
         }
 
         # CRITERION 5: VOLUME NORMALIZATION
         volumes = recent_bars['volume'].values
+        # FIX: Define variable before if block to prevent NameError
+        volume_decline = None
         if len(volumes) >= 10:
             early_volume = np.mean(volumes[:5])
             late_volume = np.mean(volumes[-5:])
@@ -268,7 +275,7 @@ class CrisisModeVolatilitySpike(StrategyBase):
 
         criteria['volume_normalization'] = {
             'score': volume_score,
-            'volume_decline': float(volume_decline) if len(volumes) >= 10 else None
+            'volume_decline': float(volume_decline) if volume_decline is not None else None
         }
 
         # Total score

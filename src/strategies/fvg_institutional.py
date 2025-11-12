@@ -33,6 +33,7 @@ import logging
 import numpy as np
 import pandas as pd
 from typing import Optional, Dict, Tuple, List
+from collections import deque
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 
@@ -120,7 +121,7 @@ class FVGInstitutional(StrategyBase):
 
         # State tracking
         self.active_gaps: List[FVGZone] = []
-        self.filled_gaps: List[FVGZone] = []
+        self.filled_gaps: deque = deque(maxlen=500)  # FIX: Limit to prevent memory leak
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info(f"🏆 INSTITUTIONAL FVG initialized")

@@ -38,6 +38,7 @@ Date: 2025-11-12
 import pandas as pd
 import numpy as np
 from typing import Dict, Optional, List, Tuple
+from collections import deque
 from datetime import datetime, timedelta
 import logging
 
@@ -105,7 +106,7 @@ class IDPInducement(StrategyBase):
 
         # State tracking
         self.active_patterns: List[Dict] = []
-        self.completed_patterns: List[Dict] = []
+        self.completed_patterns: deque = deque(maxlen=500)  # FIX: Limit to prevent memory leak
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info(f"🏆 INSTITUTIONAL IDP initialized")

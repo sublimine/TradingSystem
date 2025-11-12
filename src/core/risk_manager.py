@@ -670,6 +670,14 @@ class InstitutionalRiskManager:
 
         # Update equity
         self.current_equity += (self.current_equity * pnl_pct / 100)
+
+        # FIX: Check if new day and reset daily_pnl
+        from datetime import datetime
+        today = datetime.now().date()
+        if not hasattr(self, '_last_pnl_date') or self._last_pnl_date != today:
+            self.daily_pnl = 0.0
+            self._last_pnl_date = today
+
         self.daily_pnl += pnl_pct
 
         # Update peak
