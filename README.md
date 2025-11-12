@@ -192,64 +192,64 @@ trade_history/
 
 ## 🎯 24 Elite Strategies
 
-### 1. Liquidity & Order Flow (7 strategies)
+### 1. Liquidity & Microstructure (8 strategies)
 
 | Strategy | Description | Key Edge |
 |----------|-------------|----------|
-| **Wick Liquidity Sweep** | Detects wicks that swept stops, enters on retrace | Front-runs retail stop hunts |
-| **Order Block Detection** | Institutional accumulation/distribution zones | Enters at institutional prices |
-| **Fair Value Gap (FVG)** | Imbalance zones that price revisits | Mean-reversion to fair value |
-| **Liquidity Void Fill** | Large price gaps with no trading activity | High probability fill zones |
+| **Liquidity Sweep** | Detects wicks that swept stops, enters on retrace | Front-runs retail stop hunts |
+| **Order Block Institutional** | Institutional accumulation/distribution zones | Enters at institutional prices |
+| **FVG Institutional** | Fair value gaps - imbalance zones that price revisits | Mean-reversion to fair value |
+| **HTF-LTF Liquidity** | Multi-timeframe liquidity projection | HTF structure on LTF entries |
+| **IDP Inducement-Distribution** | Detects institutional traps (induce-distribute-price) | Fades false moves |
+| **Iceberg Detection** | Finds hidden institutional orders | Trades with institutions |
 | **Spoofing Detection L2** | Detects fake orders in Level 2 book | Fades manipulation |
-| **Iceberg Order Detection** | Finds hidden institutional orders | Trades with institutions |
-| **Order Flow Imbalance** | Aggressive buyers vs sellers asymmetry | Follows institutional flow |
+| **OFI Refinement** | Order flow imbalance with VPIN filter | Institutional flow direction |
 
-### 2. Statistical Arbitrage (3 strategies)
+### 2. Statistical & Quant (4 strategies)
 
 | Strategy | Description | Key Edge |
 |----------|-------------|----------|
-| **Mean Reversion Z-Score** | Statistical overbought/oversold | Quantitative edge |
+| **Mean Reversion Statistical** | Z-score based mean reversion with volume confirmation | Quantitative extremes |
 | **Statistical Arbitrage (Johansen)** | Cointegration-based pairs trading | Market-neutral profits |
-| **Calendar Arbitrage** | Exploits time-of-day patterns | Predictable inefficiencies |
+| **Kalman Pairs Trading** | Kalman filter for adaptive hedge ratios | Dynamic pairs |
+| **Correlation Divergence** | Trades correlation breakdowns between pairs | Relationship anomalies |
 
-### 3. Structure & Price Action (4 strategies)
-
-| Strategy | Description | Key Edge |
-|----------|-------------|----------|
-| **Breaker Block** | Failed order blocks become reversal zones | Traps breakout traders |
-| **Mitigation Block** | Price returning to unmitigated zones | Institutional retraces |
-| **Swing Failure Pattern** | False breakouts of swing highs/lows | Fade retail breakouts |
-| **Session Liquidity** | Targets session highs/lows for stops | Hunts predictable liquidity |
-
-### 4. Volume & Footprint (3 strategies)
+### 3. Regime & Volatility (4 strategies)
 
 | Strategy | Description | Key Edge |
 |----------|-------------|----------|
-| **CVD Divergence** | Cumulative volume delta vs price | Order flow divergences |
-| **Volume Profile POC** | Point of control mean reversion | High volume fair value |
-| **VWAP Reversion** | Volume-weighted average price | Institutional benchmark |
+| **Volatility Regime Adaptation** | Adapts parameters to vol regime (low/high/trending) | Context-aware trading |
+| **Crisis Mode Volatility Spike** | Trades extreme volatility reversals (flash crashes) | Crisis opportunities |
+| **Topological Data Analysis Regime** | Persistent homology for regime detection | Topological structure shifts |
+| **Fractal Market Structure** | Hurst exponent and fractal dimension analysis | Multi-scale patterns |
 
-### 5. Regime & Crisis (3 strategies)
-
-| Strategy | Description | Key Edge |
-|----------|-------------|----------|
-| **Regime Detector** | Adapts to trending/ranging/volatile regimes | Context-aware trading |
-| **TDA Regime-Adaptive** | Time-Driven Analysis with regime filters | Multi-dimensional edge |
-| **Crisis Mode Handler** | Reduces risk during market stress | Capital preservation |
-
-### 6. News & Events (2 strategies)
+### 4. Volume & Orderflow (3 strategies)
 
 | Strategy | Description | Key Edge |
 |----------|-------------|----------|
-| **NFP News Event** | Trades Non-Farm Payroll releases | Volatility expansion |
-| **Economic Calendar** | Filters high-impact news events | Avoids unpredictable events |
+| **Footprint Orderflow Clusters** | Volume-at-price absorption/exhaustion detection | Institutional footprint |
+| **Order Flow Toxicity** | VPIN-based toxic flow filter (blocks bad trades) | Avoids informed traders |
+| **Breakout Volume Confirmation** | Volume-confirmed breakouts only | Filters false breaks |
 
-### 7. Advanced Microstructure (2 strategies)
+### 5. Quality & Momentum (1 strategy)
 
 | Strategy | Description | Key Edge |
 |----------|-------------|----------|
-| **Order Book Pressure** | Bid/ask depth imbalances | Predicts short-term moves |
-| **Market Maker Delta** | Tracks market maker inventory | Institutional positioning |
+| **Momentum Quality** | High-quality momentum with VPIN and volume filters | Premium momentum only |
+
+### 6. Advanced Detection (3 strategies)
+
+| Strategy | Description | Key Edge |
+|----------|-------------|----------|
+| **VPIN Reversal Extreme** | Flash crash-style reversals at VPIN >0.85 | Extreme exhaustion |
+| **Correlation Cascade Detection** | Detects systemic correlation breakdowns | Contagion trading |
+| **Calendar Arbitrage Flows** | OPEX and quarter-end predictable flows | Institutional rebalancing |
+
+### 7. News & Events (1 strategy)
+
+| Strategy | Description | Key Edge |
+|----------|-------------|----------|
+| **NFP News Event Handler** | Trades NFP, FOMC, CPI, GDP events (3 phases) | Volatility expansion |
 
 ---
 

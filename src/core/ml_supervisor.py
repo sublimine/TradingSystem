@@ -87,26 +87,31 @@ class MLSupervisor:
         if not self.enabled:
             return
 
-        # 1. Check circuit breaker
-        self._check_circuit_breaker(current_equity, closed_trades)
+        try:
+            # 1. Check circuit breaker
+            self._check_circuit_breaker(current_equity, closed_trades)
 
-        if self.circuit_breaker_active:
-            logger.warning("🔴 CIRCUIT BREAKER ACTIVE - Trading paused")
-            return
+            if self.circuit_breaker_active:
+                logger.warning("🔴 CIRCUIT BREAKER ACTIVE - Trading paused")
+                return
 
-        # 2. Monitor and disable poor strategies
-        self._monitor_strategy_performance(closed_trades)
+            # 2. Monitor and disable poor strategies
+            self._monitor_strategy_performance(closed_trades)
 
-        # 3. Apply ML parameter optimizations
-        if self.auto_adjust_params and self.ml_engine:
-            self._apply_ml_optimizations()
+            # 3. Apply ML parameter optimizations
+            if self.auto_adjust_params and self.ml_engine:
+                self._apply_ml_optimizations()
 
-        # 4. Generate scheduled reports
-        self._check_report_schedule(closed_trades)
+            # 4. Generate scheduled reports
+            self._check_report_schedule(closed_trades)
 
-        # 5. Monitor ML feature importance changes
-        if self.ml_engine:
-            self._monitor_feature_importance()
+            # 5. Monitor ML feature importance changes
+            if self.ml_engine:
+                self._monitor_feature_importance()
+
+        except Exception as e:
+            logger.error(f"ML Supervisor error (non-fatal, continuing): {e}", exc_info=True)
+            # Continue trading even if supervisor fails - don't crash the system
 
     def _check_circuit_breaker(self, current_equity: float, closed_trades: List):
         """

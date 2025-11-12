@@ -711,6 +711,45 @@ class InstitutionalBrain:
             adjusted_signal = best_signal.copy()
             adjusted_signal.update(portfolio_eval['adjustments'])
 
+            # 7.5. APPLY STRATEGIC STOPS & TARGETS (structure-based)
+            try:
+                from src.features.strategic_stops import (
+                    calculate_strategic_stop,
+                    calculate_strategic_target
+                )
+
+                # Calculate strategic stop (wick sweep, OB, FVG, swing, ATR fallback)
+                strategic_stop, stop_type = calculate_strategic_stop(
+                    direction=best_signal['direction'],
+                    entry_price=best_signal['entry_price'],
+                    market_data=symbol_data,
+                    features=symbol_features,
+                    mtf_data=market_data if len(market_data) > 1 else None
+                )
+
+                # Calculate strategic target (untaken liq, OB, FVG, fractal, swing, RR fallback)
+                strategic_target, target_type = calculate_strategic_target(
+                    direction=best_signal['direction'],
+                    entry_price=best_signal['entry_price'],
+                    stop_loss=strategic_stop,
+                    market_data=symbol_data,
+                    features=symbol_features,
+                    mtf_data=market_data if len(market_data) > 1 else None
+                )
+
+                # Replace original stops/targets with strategic ones
+                adjusted_signal['stop_loss'] = strategic_stop
+                adjusted_signal['take_profit'] = strategic_target
+                adjusted_signal['stop_type'] = stop_type
+                adjusted_signal['target_type'] = target_type
+
+                logger.info(f"{symbol}: Strategic placement applied - "
+                          f"SL={stop_type}, TP={target_type}")
+
+            except Exception as e:
+                logger.warning(f"{symbol}: Strategic stops failed, using original: {e}")
+                # Keep original stops/targets from strategy
+
             # 8. Create execution order
             execution_order = {
                 'signal': adjusted_signal,
