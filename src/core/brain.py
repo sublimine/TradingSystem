@@ -59,8 +59,8 @@ class SignalArbitrator:
         # Strategy performance tracking (last 30 trades per strategy)
         self.strategy_performance: Dict[str, deque] = defaultdict(lambda: deque(maxlen=30))
 
-        # Recent signal outcomes
-        self.signal_history: List[Dict] = []
+        # Recent signal outcomes - FIX: Limit size to prevent memory leak
+        self.signal_history: deque = deque(maxlen=1000)
 
     def arbitrate_signals(self, signals: List[Dict], market_context: Dict,
                          regime: str) -> Optional[Dict]:
@@ -314,7 +314,8 @@ class PortfolioOrchestrator:
 
         # Portfolio state
         self.active_positions: Dict[str, Dict] = {}
-        self.pending_orders: List[Dict] = []
+        # FIX: Limit pending_orders to prevent memory leak
+        self.pending_orders: deque = deque(maxlen=100)
 
         # Exposure limits
         self.max_positions_per_symbol = config.get('max_positions_per_symbol', 2)

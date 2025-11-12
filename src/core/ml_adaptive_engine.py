@@ -164,9 +164,9 @@ class TradeMemoryDatabase:
         self.storage_path = storage_path
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
-        # In-memory caches
-        self.trades: List[TradeRecord] = []
-        self.signals: List[SignalRecord] = []
+        # In-memory caches - FIX: Limit size to prevent memory leaks
+        self.trades: deque = deque(maxlen=5000)  # Keep last 5000 trades
+        self.signals: deque = deque(maxlen=10000)  # Keep last 10000 signals
 
         # Performance indexes
         self.trades_by_strategy: Dict[str, List[TradeRecord]] = defaultdict(list)
