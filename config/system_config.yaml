@@ -57,6 +57,13 @@ ml:
   save_checkpoints: true            # Save ML model checkpoints
   checkpoint_frequency: 50          # Save checkpoint every N trades
 
+# ML Supervisor - Autonomous Decision Making (AUTO-ENABLED)
+ml_supervisor:
+  enabled: true                     # Enable autonomous supervision
+  auto_disable_threshold_r: -10.0   # Auto-disable strategy if loses > 10R
+  auto_adjust_params: true          # Auto-apply ML parameter optimizations
+  min_trades_before_disable: 10     # Minimum trades before auto-disable
+
 # Logging Settings
 logging:
   level: 'INFO'                     # 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR'

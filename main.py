@@ -38,6 +38,7 @@ import MetaTrader5 as mt5
 # Import core components
 from src.core.brain import InstitutionalBrain
 from src.core.ml_adaptive_engine import MLAdaptiveEngine
+from src.core.ml_supervisor import MLSupervisor
 from src.core.risk_manager import RiskManager
 from src.core.position_manager import PositionManager
 from src.core.regime_detector import RegimeDetector
@@ -142,13 +143,28 @@ class EliteTradingSystem:
         self.reporting = InstitutionalReportingSystem(output_dir='reports/')
         logger.info("✓ Institutional Reporting System initialized")
 
+        # 9. ML Supervisor (AUTO-ENABLED - Takes autonomous action)
+        self.ml_supervisor = MLSupervisor(
+            config=self.config,
+            ml_engine=self.ml_engine,
+            strategy_orchestrator=self.strategy_orchestrator,
+            reporting_system=self.reporting
+        )
+        logger.info("✓✓ ML Supervisor ENABLED (autonomous decision-making active)")
+
         # State
         self.is_running = False
+        self.closed_trades = []  # Track all closed trades
 
         logger.info("=" * 80)
-        logger.info("SYSTEM INITIALIZATION COMPLETE")
+        logger.info("SYSTEM INITIALIZATION COMPLETE - FULLY AUTONOMOUS")
         logger.info(f"ML Engine: {'ENABLED ✓' if self.ml_engine else 'DISABLED ✗'}")
+        logger.info(f"ML Supervisor: {'ENABLED ✓' if self.ml_supervisor.enabled else 'DISABLED ✗'}")
         logger.info(f"Strategies Loaded: {len(self.strategy_orchestrator.strategies)}")
+        logger.info("Auto-disable losing strategies: ENABLED")
+        logger.info("Auto-adjust parameters: ENABLED")
+        logger.info("Circuit breakers: ENABLED")
+        logger.info("Automatic reports: ENABLED")
         logger.info("=" * 80)
 
     def _load_config(self, config_path: str) -> dict:
@@ -254,15 +270,29 @@ class EliteTradingSystem:
                     self.brain.process_signals(signals)
 
                 # 5. Update open positions (check stops, targets, trailing)
-                self.position_manager.update_positions(
+                closed_today = self.position_manager.update_positions(
                     self.mtf_manager.get_current_data()
                 )
 
-                # 6. Generate daily report (if new day)
+                # Track closed trades
+                if closed_today:
+                    self.closed_trades.extend(closed_today)
+
+                # 6. ML SUPERVISOR - Autonomous decision-making
+                current_equity = self._get_current_equity()
+                open_positions = self.position_manager.get_open_positions()
+
+                self.ml_supervisor.supervise(
+                    current_equity=current_equity,
+                    open_positions=open_positions,
+                    closed_trades=self.closed_trades
+                )
+
+                # 7. Generate daily report (if new day)
                 if self._is_new_day():
                     self._generate_daily_report()
 
-                # 7. Sleep (adjust based on timeframe)
+                # 8. Sleep (adjust based on timeframe)
                 import time
                 time.sleep(60)  # 1 minute between updates
 
@@ -335,6 +365,13 @@ class EliteTradingSystem:
 
         # Print results
         self._print_backtest_results(results, analysis)
+
+    def _get_current_equity(self) -> float:
+        """Get current account equity from MT5."""
+        account_info = mt5.account_info()
+        if account_info:
+            return float(account_info.equity)
+        return 0.0
 
     def _is_new_day(self) -> bool:
         """Check if it's a new trading day."""
