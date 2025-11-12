@@ -27,7 +27,7 @@ from typing import Optional, Dict, List, Tuple
 from dataclasses import dataclass
 from collections import deque
 import logging
-from strategies.strategy_base import StrategyBase, Signal
+from .strategy_base import StrategyBase, Signal
 
 # Import de la base de estrategia
 

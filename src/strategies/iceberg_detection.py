@@ -10,9 +10,9 @@ import numpy as np
 from typing import Dict, Optional, List
 from datetime import datetime
 import logging
-from strategies.strategy_base import StrategyBase, Signal
+from .strategy_base import StrategyBase, Signal
 
-from features.orderbook_l2 import (
+from ..features.orderbook_l2 import (
     parse_l2_snapshot,
     detect_iceberg_signature,
     OrderBookSnapshot

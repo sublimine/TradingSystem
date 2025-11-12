@@ -11,14 +11,14 @@ from typing import Dict, Optional, List
 from datetime import datetime, timedelta
 import logging
 
-from strategies.strategy_base import StrategyBase, Signal
-from features.displacement import (
-    detect_displacement, 
+from .strategy_base import StrategyBase, Signal
+from ..features.displacement import (
+    detect_displacement,
     validate_order_block_retest,
     calculate_footprint_direction,
     OrderBlock
 )
-from features.ofi import calculate_ofi
+from ..features.ofi import calculate_ofi
 
 logger = logging.getLogger(__name__)
 

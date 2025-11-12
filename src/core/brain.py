@@ -718,13 +718,29 @@ class InstitutionalBrain:
                     calculate_strategic_target
                 )
 
+                # Get MTF data for this symbol (M5, M15, H1, H4)
+                mtf_data_dict = None
+                if self.mtf_manager:
+                    try:
+                        mtf_data_dict = {
+                            'M5': self.mtf_manager.get_data(symbol, 'M5'),
+                            'M15': self.mtf_manager.get_data(symbol, 'M15'),
+                            'H1': self.mtf_manager.get_data(symbol, 'H1'),
+                            'H4': self.mtf_manager.get_data(symbol, 'H4'),
+                        }
+                        # Remove None values
+                        mtf_data_dict = {k: v for k, v in mtf_data_dict.items() if v is not None and not v.empty}
+                    except Exception as mtf_err:
+                        logger.debug(f"{symbol}: MTF data unavailable: {mtf_err}")
+                        mtf_data_dict = None
+
                 # Calculate strategic stop (wick sweep, OB, FVG, swing, ATR fallback)
                 strategic_stop, stop_type = calculate_strategic_stop(
                     direction=best_signal['direction'],
                     entry_price=best_signal['entry_price'],
                     market_data=symbol_data,
                     features=symbol_features,
-                    mtf_data=market_data if len(market_data) > 1 else None
+                    mtf_data=mtf_data_dict
                 )
 
                 # Calculate strategic target (untaken liq, OB, FVG, fractal, swing, RR fallback)
@@ -734,7 +750,7 @@ class InstitutionalBrain:
                     stop_loss=strategic_stop,
                     market_data=symbol_data,
                     features=symbol_features,
-                    mtf_data=market_data if len(market_data) > 1 else None
+                    mtf_data=mtf_data_dict
                 )
 
                 # Replace original stops/targets with strategic ones

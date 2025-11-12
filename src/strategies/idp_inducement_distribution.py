@@ -11,8 +11,8 @@ from typing import Dict, Optional, List
 from datetime import datetime
 import logging
 
-from strategies.strategy_base import StrategyBase, Signal
-from features.delta_volume import (
+from .strategy_base import StrategyBase, Signal
+from ..features.delta_volume import (
     classify_trades,
     identify_idp_pattern,
     IDPPhase
