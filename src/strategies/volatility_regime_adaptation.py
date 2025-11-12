@@ -9,6 +9,7 @@ entry thresholds, stop distances, and position sizing accordingly.
 import numpy as np
 import pandas as pd
 from typing import List, Dict, Optional
+from collections import deque
 import logging
 from datetime import datetime
 from .strategy_base import StrategyBase, Signal
@@ -51,7 +52,8 @@ class VolatilityRegimeAdaptation(StrategyBase):
         self.min_regime_confidence = config.get('min_regime_confidence', 0.6)
 
         self.hmm_model = None
-        self.volatility_history = []
+        # FIX BUG #10: Use deque with maxlen to prevent memory leak
+        self.volatility_history = deque(maxlen=1000)
         self.current_regime = None
         self.regime_confidence = 0.0
 

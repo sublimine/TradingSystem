@@ -261,7 +261,8 @@ class IcebergDetection(StrategyBase):
             # INSTITUTIONAL: Validate with order flow
             ofi = features.get('ofi', 0)
             cvd = features.get('cvd', 0)
-            vpin = features.get('vpin', 1.0)
+            # FIX BUG #32: Use neutral default 0.5 instead of worst-case 1.0
+            vpin = features.get('vpin', 0.5)
 
             # Determine expected direction
             if iceberg.get('side') == 'BID' or current_price > iceberg_level:

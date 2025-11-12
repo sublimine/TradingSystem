@@ -41,6 +41,7 @@ Date: 2025-11-12
 import numpy as np
 import pandas as pd
 from typing import List, Dict, Optional, Tuple
+from collections import deque
 import logging
 from datetime import datetime
 from .strategy_base import StrategyBase, Signal
@@ -81,7 +82,8 @@ class OrderFlowToxicityStrategy(StrategyBase):
 
         # INSTITUTIONAL ORDER FLOW PARAMETERS
         self.ofi_reversal_threshold = config.get('ofi_reversal_threshold', 3.0)
-        self.cvd_divergence_threshold = config.get('cvd_divergence_threshold', 0.6)
+        # FIX BUG #1: Changed from cvd_divergence_threshold to cvd_confirmation_threshold for consistency
+        self.cvd_confirmation_threshold = config.get('cvd_confirmation_threshold', 0.6)
 
         # Toxicity duration
         self.min_consecutive_toxic_bars = config.get('min_consecutive_buckets', 2)  # Use existing param name
@@ -98,8 +100,9 @@ class OrderFlowToxicityStrategy(StrategyBase):
         self.take_profit_r_multiple = config.get('take_profit_r_multiple', 3.0)
 
         # State tracking
-        self.vpin_history = []
-        self.ofi_history = []
+        # FIX BUG #14-15: Use deque with maxlen to prevent memory leak
+        self.vpin_history = deque(maxlen=5000)
+        self.ofi_history = deque(maxlen=5000)
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info(f"🏆 INSTITUTIONAL Order Flow Toxicity initialized")

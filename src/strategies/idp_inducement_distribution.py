@@ -88,6 +88,8 @@ class IDPInducement(StrategyBase):
         # INSTITUTIONAL ORDER FLOW PARAMETERS
         self.ofi_absorption_threshold = params.get('ofi_absorption_threshold', 3.0)
         self.cvd_accumulation_min = params.get('cvd_accumulation_min', 0.6)
+        # FIX BUG #4: Add cvd_confirmation_threshold (used in evaluate) as alias
+        self.cvd_confirmation_threshold = self.cvd_accumulation_min
         self.vpin_threshold_max = params.get('vpin_threshold_max', 0.30)
 
         # Distribution (Phase 2) parameters

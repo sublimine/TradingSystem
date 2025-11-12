@@ -71,6 +71,8 @@ class LiquiditySweepStrategy(StrategyBase):
         # INSTITUTIONAL ORDER FLOW PARAMETERS
         self.ofi_absorption_threshold = config.get('ofi_absorption_threshold', 3.0)
         self.cvd_divergence_min = config.get('cvd_divergence_min', 0.6)
+        # FIX BUG #3: Add cvd_confirmation_threshold (used in evaluate) as alias
+        self.cvd_confirmation_threshold = self.cvd_divergence_min
         self.vpin_threshold_max = config.get('vpin_threshold', 0.30)  # Use existing param name
 
         # Reversal criteria

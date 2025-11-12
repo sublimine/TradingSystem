@@ -84,19 +84,34 @@ Debe mostrar:
 
 ### Modo Automático (Recomendado)
 
+**WINDOWS (PowerShell):**
+```powershell
+.\start_trading.ps1
+```
+
+**LINUX (Bash):**
 ```bash
+chmod +x start_trading.sh
 ./start_trading.sh
 ```
 
-Este script:
-1. ✅ Ejecuta pre-flight checks
-2. ✅ Configura environment
-3. ✅ Verifica database
-4. ✅ Verifica MT5
-5. ✅ Lanza engine con auto-restart
+Ambos scripts:
+1. ✅ Ejecutan pre-flight checks
+2. ✅ Configuran environment
+3. ✅ Verifican database
+4. ✅ Verifican MT5
+5. ✅ Lanzan engine con auto-restart
 
 ### Modo Manual
 
+**WINDOWS (PowerShell):**
+```powershell
+$env:PYTHONPATH = "$PSScriptRoot;$PSScriptRoot\src;$env:PYTHONPATH"
+cd scripts
+python live_trading_engine_institutional.py
+```
+
+**LINUX (Bash):**
 ```bash
 export PYTHONPATH="/home/user/TradingSystem:/home/user/TradingSystem/src:$PYTHONPATH"
 cd scripts
@@ -108,17 +123,38 @@ python3 live_trading_engine_institutional.py
 ## PASO 5: MONITOREO
 
 ### Terminal 1: Trading Engine
+
+**WINDOWS:**
+```powershell
+.\start_trading.ps1
+```
+
+**LINUX:**
 ```bash
 ./start_trading.sh
 ```
 
 ### Terminal 2: Monitor en vivo
+
+**WINDOWS:**
+```powershell
+.\monitor.ps1
+```
+
+**LINUX:**
 ```bash
 chmod +x monitor.sh
 ./monitor.sh
 ```
 
 ### Logs en tiempo real
+
+**WINDOWS:**
+```powershell
+Get-Content logs\trading_$(Get-Date -Format "yyyyMMdd").log -Wait -Tail 20
+```
+
+**LINUX:**
 ```bash
 tail -f logs/trading_$(date +%Y%m%d).log
 ```
@@ -172,6 +208,18 @@ wine --version
 ```
 
 ### Error: "Database connection failed"
+
+**WINDOWS:**
+```powershell
+# Verificar PostgreSQL service
+Get-Service -Name "postgresql*"
+Start-Service "postgresql-x64-14"  # Ajustar versión
+
+# Test connection
+psql -U trading_user -d trading_system -c "SELECT 1;"
+```
+
+**LINUX:**
 ```bash
 # Verificar PostgreSQL
 sudo systemctl status postgresql
@@ -191,6 +239,17 @@ echo $PYTHONPATH
 ```
 
 ### Engine crashes repetidamente
+
+**WINDOWS:**
+```powershell
+# Ver logs
+Get-Content logs\trading_$(Get-Date -Format "yyyyMMdd").log | Select-String "ERROR"
+
+# Re-ejecutar pre-flight check
+python scripts/pre_flight_check.py
+```
+
+**LINUX:**
 ```bash
 # Ver logs
 cat logs/trading_$(date +%Y%m%d).log | grep ERROR
@@ -216,11 +275,30 @@ python3 scripts/pre_flight_check.py
 
 ## COMANDOS ÚTILES
 
+**WINDOWS (PowerShell):**
+```powershell
+# Ver estrategias activas
+Select-String -Path "scripts\live_trading_engine*.py" -Pattern "STRATEGY_WHITELIST"
+
+# Ver posiciones abiertas
+python -c "import MetaTrader5 as mt5; mt5.initialize(); print(mt5.positions_get())"
+
+# Limpiar logs antiguos (>30 días)
+Get-ChildItem logs\*.log | Where-Object {$_.LastWriteTime -lt (Get-Date).AddDays(-30)} | Remove-Item
+
+# Backup database
+pg_dump -U trading_user trading_system > backup_$(Get-Date -Format "yyyyMMdd").sql
+
+# Stop trading (gracefully)
+Get-Process python | Where-Object {$_.CommandLine -like "*live_trading_engine*"} | Stop-Process
+```
+
+**LINUX (Bash):**
 ```bash
 # Ver estrategias activas
 grep "STRATEGY_WHITELIST" scripts/live_trading_engine*.py
 
-# Ver posiciones abiertas (desde MT5 terminal)
+# Ver posiciones abiertas
 python3 -c "import MetaTrader5 as mt5; mt5.initialize(); print(mt5.positions_get())"
 
 # Limpiar logs antiguos (>30 días)

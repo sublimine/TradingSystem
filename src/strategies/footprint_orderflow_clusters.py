@@ -43,6 +43,7 @@ import pandas as pd
 from typing import List, Dict, Optional, Tuple
 import logging
 from datetime import datetime
+from collections import deque  # FIX BUG #9: For memory-limited active_clusters
 from .strategy_base import StrategyBase, Signal
 
 
@@ -116,7 +117,8 @@ class FootprintOrderflowClusters(StrategyBase):
 
         # State tracking
         self.volume_profile = {}  # {price_level: volume}
-        self.active_clusters = []
+        # FIX BUG #9: Use deque with maxlen to prevent memory leak
+        self.active_clusters = deque(maxlen=1000)
 
         self.logger.info(f"🏆 INSTITUTIONAL Footprint Orderflow Clusters initialized (DEGRADED MODE)")
         self.logger.info(f"   Mode: {self.mode} (tick volume proxy)")

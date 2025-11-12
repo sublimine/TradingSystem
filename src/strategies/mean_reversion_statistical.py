@@ -83,6 +83,8 @@ class MeanReversionStatistical(StrategyBase):
         # INSTITUTIONAL ORDER FLOW PARAMETERS
         self.ofi_exhaustion_threshold = config.get('ofi_exhaustion_threshold', 2.0)
         self.cvd_divergence_threshold = config.get('cvd_divergence_threshold', 0.6)
+        # FIX BUG #2: Add cvd_confirmation_threshold (used in evaluate) as alias
+        self.cvd_confirmation_threshold = self.cvd_divergence_threshold
         self.vpin_threshold_max = config.get('vpin_threshold_max', 0.35)
 
         # Exhaustion detection

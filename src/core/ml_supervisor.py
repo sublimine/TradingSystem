@@ -13,6 +13,7 @@ Version: 1.0
 """
 
 import logging
+from collections import deque
 import yaml
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -58,7 +59,8 @@ class MLSupervisor:
 
         # State
         self.circuit_breaker_active = False
-        self.disabled_strategies = []
+        # FIX BUG #16: Use deque with maxlen to prevent memory leak
+        self.disabled_strategies = deque(maxlen=100)
         self.last_report_date = None
         self.session_drawdown_r = 0.0
 

@@ -18,6 +18,7 @@ import pandas as pd
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 import logging
+from collections import deque
 from scipy import stats
 from sklearn.preprocessing import StandardScaler
 
@@ -67,7 +68,8 @@ class RegimeDetector:
         self.regime_duration_bars = 0
 
         # Historical tracking
-        self.regime_history = []
+        # FIX BUG #17: Use deque with maxlen to prevent memory leak
+        self.regime_history = deque(maxlen=1000)
 
         logger.info(f"Regime Detector initialized: lookback={self.lookback_period}")
 

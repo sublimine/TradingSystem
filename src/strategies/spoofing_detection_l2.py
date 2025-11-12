@@ -13,6 +13,7 @@ Win Rate: 58-66% (requires L2 data)
 import numpy as np
 import pandas as pd
 from typing import List, Dict, Optional
+from collections import deque
 import logging
 from datetime import datetime
 from .strategy_base import StrategyBase, Signal
@@ -31,7 +32,8 @@ class SpoofingDetectionL2(StrategyBase):
         self.stop_loss_atr = config.get('stop_loss_atr', 1.5)
         self.take_profit_r = config.get('take_profit_r', 2.0)
 
-        self.l2_history = []  # Store recent L2 snapshots
+        # FIX BUG #11: Use deque with maxlen to prevent memory leak
+        self.l2_history = deque(maxlen=500)  # Store recent L2 snapshots
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def evaluate(self, market_data: pd.DataFrame, features: Dict) -> List[Signal]:
