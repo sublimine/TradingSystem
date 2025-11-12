@@ -346,7 +346,7 @@ class StatisticalArbitrageJohansen(StrategyBase):
                                   market_data: pd.DataFrame, current_time,
                                   features: Dict) -> Optional[Signal]:
         """
-        Create statistical arbitrage signal.
+        Create statistical arbitrage signal with OFI/CVD/VPIN confirmation.
         """
         coint_data = self.cointegrated_pairs[pair_key]
         symbol1 = coint_data['symbol1']
@@ -362,6 +362,25 @@ class StatisticalArbitrageJohansen(StrategyBase):
             direction = 'LONG'
             primary_symbol = symbol1
         else:
+            return None
+
+        # INSTITUTIONAL: Validate with order flow
+        ofi = features.get('ofi', 0)
+        cvd = features.get('cvd', 0)
+        vpin = features.get('vpin', 1.0)
+
+        # Check OFI alignment (institutions should be positioning for convergence)
+        expected_direction = -1 if zscore > 0 else 1
+        ofi_aligned = (ofi > 0 and expected_direction > 0) or (ofi < 0 and expected_direction < 0)
+
+        # If OFI strongly contradicts, skip
+        if abs(ofi) > 3.0 and not ofi_aligned:
+            self.logger.debug(f"Johansen signal rejected: OFI misaligned")
+            return None
+
+        # If VPIN too high (toxic), skip
+        if vpin > 0.40:
+            self.logger.debug(f"Johansen signal rejected: VPIN too high {vpin:.3f}")
             return None
 
         # Entry price (for primary symbol)
@@ -380,11 +399,11 @@ class StatisticalArbitrageJohansen(StrategyBase):
             risk = stop_loss - entry_price
             take_profit = entry_price - (risk * self.take_profit_r)
 
-        # Sizing based on confidence
-        if abs(zscore) > 3.0 and half_life < 2.0:
-            sizing_level = 4  # High confidence
-        elif abs(zscore) > 2.8:
-            sizing_level = 3  # Medium confidence
+        # Sizing based on confidence + order flow
+        if abs(zscore) > 3.0 and half_life < 2.0 and ofi_aligned and vpin < 0.25:
+            sizing_level = 4  # High confidence + clean flow
+        elif abs(zscore) > 2.8 and ofi_aligned:
+            sizing_level = 3  # Medium confidence + aligned flow
         else:
             sizing_level = 2  # Standard
 
@@ -405,16 +424,22 @@ class StatisticalArbitrageJohansen(StrategyBase):
                 'spread_zscore': float(zscore),
                 'half_life_bars': float(half_life),
                 'spread_value': float(spread_data['spread']),
+                'ofi': float(ofi),
+                'cvd': float(cvd),
+                'vpin': float(vpin),
+                'ofi_aligned': ofi_aligned,
                 'risk_reward_ratio': float(self.take_profit_r),
+                'partial_exits': {'50%_at': 1.5, '30%_at': 2.5, '20%_trail': 'to_target'},
                 'setup_type': 'STATISTICAL_ARBITRAGE_JOHANSEN',
-                'research_basis': 'Johansen_1991_Cointegration_Vidyamurthy_2004',
+                'research_basis': 'Johansen_1991_Cointegration_Vidyamurthy_2004_Easley_2012',
                 'expected_win_rate': 0.70,
                 'rationale': f"Cointegrated pair {pair_key} divergence. Z-score {zscore:.2f}, "
-                            f"half-life {half_life:.1f} bars. Mean reversion expected."
+                            f"half-life {half_life:.1f} bars. Mean reversion expected. "
+                            f"OFI {'aligned' if ofi_aligned else 'neutral'}, VPIN={vpin:.3f}"
             }
         )
 
         self.logger.warning(f"🚨 STAT ARB SIGNAL: {direction} {pair_key} @ z={zscore:.2f}, "
-                          f"half_life={half_life:.1f}")
+                          f"half_life={half_life:.1f}, OFI={'✓' if ofi_aligned else '~'}")
 
         return signal
