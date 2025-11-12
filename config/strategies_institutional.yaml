@@ -314,25 +314,32 @@ htf_ltf_liquidity:
   enabled: true
 
   # Timeframe configuration
-  htf_timeframes: ['H1', 'H4', 'D1']
+  htf_timeframes: ['H4', 'D1']
   calculate_htf_internally: true
+  swing_lookback: 20
+
+  # INSTITUTIONAL ORDER FLOW PARAMETERS
+  ofi_defense_threshold: 3.0              # INSTITUTIONAL: OFI threshold for zone defense
+  cvd_confirmation_threshold: 0.6         # INSTITUTIONAL: CVD confirmation threshold
+  vpin_threshold_max: 0.30                # INSTITUTIONAL: Maximum VPIN (clean flow)
+  min_confirmation_score: 3.5             # INSTITUTIONAL: Minimum score (0-5) to enter
 
   # Projection parameters - ELITE INSTITUTIONAL
   projection_tolerance_pips: 2
-  swing_lookback_bars: 32                 # ELITE: Was 20 (institutional swings)
-  rejection_wick_minimum: 0.60
+  rejection_wick_min_pct: 0.60
   zone_tolerance_pips: 2
-  min_zone_touches: 4                     # ELITE: NEW (validated institutional zones)
+  min_zone_touches: 1                     # INSTITUTIONAL: First touch tradeable with confirmation
+
+  # Risk management - INSTITUTIONAL
+  stop_buffer_atr: 1.0
+  take_profit_atr: 3.0
 
   # Triggers
   triggers: ['rejection_candle', 'volume_climax', 'imbalance_flip']
   min_triggers_required: 1
 
-  # Risk management
-  stop_loss_buffer_atr: 0.75
-
   # HTF update
-  htf_update_interval_minutes: 60         # TODO: Change to event-driven
+  htf_update_interval_minutes: 60
 
 # ============================================================================
 # ICEBERG DETECTION
