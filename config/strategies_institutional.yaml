@@ -547,6 +547,12 @@ footprint_orderflow_clusters:
   # Absorption detection - ELITE
   absorption_ratio_min: 4.0               # ELITE: 4.0x = high volume, low movement
 
+  # INSTITUTIONAL ORDER FLOW PARAMETERS
+  ofi_absorption_threshold: 3.0           # INSTITUTIONAL: OFI threshold at cluster
+  cvd_confirmation_threshold: 0.6         # INSTITUTIONAL: CVD confirmation threshold
+  vpin_threshold_max: 0.30                # INSTITUTIONAL: Maximum VPIN (clean flow)
+  min_confirmation_score: 3.5             # INSTITUTIONAL: Minimum score (0-5) to enter
+
   # Exhaustion detection - ELITE
   exhaustion_imbalance_threshold: 0.80    # ELITE: 80%+ imbalance = exhaustion
   exhaustion_bars_lookback: 10            # ELITE: 10 bars for pattern
