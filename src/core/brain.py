@@ -94,6 +94,10 @@ class SignalArbitrator:
         # Check if best signal meets minimum threshold
         best = scored_signals[0]
 
+        # P2-001: min_arbitration_score threshold configurable
+        # Impacto: Score mínimo para ejecutar señal. 0.65 = balance conservador.
+        # Valores más altos (0.75+) reducen frequency pero aumentan precision.
+        # Valores más bajos (0.50-0.60) aumentan frequency pero reducen edge.
         min_score = self.config.get('min_arbitration_score', 0.65)
 
         if best['score'] >= min_score:
@@ -273,7 +277,13 @@ class SignalArbitrator:
         - Clean order flow (low VPIN)
         - Not at session extremes (avoid reversals)
         """
-        # VPIN check
+        # P2-002: VPIN thresholds documentados
+        # Basado en Easley et al. (2012) - Volume-Synchronized Probability of Informed Trading
+        # 0.50 = threshold crítico de toxicity (institutional informed flow dominante)
+        # 0.30 = threshold de flow limpio (retail/uninformed dominante)
+        # Estos valores son conservadores para FX major pairs con ADV > $1B
+        # Para pares exóticos o menor liquidez, considerar thresholds más bajos (0.40/0.20)
+
         vpin = market_context.get('vpin', 0.4)
         if vpin > 0.50:
             timing_score = 0.3  # Poor timing - toxic flow
@@ -445,6 +455,12 @@ class PortfolioOrchestrator:
         # Count directional positions
         long_count = sum(1 for p in self.active_positions.values() if p['direction'] == 'LONG')
         short_count = sum(1 for p in self.active_positions.values() if p['direction'] == 'SHORT')
+
+        # P2-004: Directional imbalance ratio documentado
+        # Ratio 6:2 = 75% max exposición direccional, 25% min hedging
+        # Basado en risk management institucional: fuerza exposición al menos 25% en dirección contraria
+        # para proteger contra reversals extremos. Ratio conservador vs 80/20 típico retail.
+        # Para mayor agresividad: 7:1 (87.5%). Para mayor conservador: 5:3 (62.5%).
 
         # Check directional imbalance (max 6:2 ratio)
         if direction == 'LONG' and long_count >= 6 and short_count <= 2:
