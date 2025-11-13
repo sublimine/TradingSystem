@@ -104,21 +104,25 @@ class PositionSizer:
             win_rate = historical_stats['wins'] / historical_stats['trades']
             avg_win = historical_stats.get('avg_win_r', 2.0)
             avg_loss = abs(historical_stats.get('avg_loss_r', -1.0))
-            
-            if avg_loss == 0:
-                avg_loss = 1.0
-            
+
+            # P1-010: Usar max() para mínimo razonable en lugar de check exacto
+            avg_loss = max(avg_loss, 0.1)  # Mínimo razonable para evitar b gigante
+
             b = avg_win / avg_loss
         else:
             primary_target = list(signal.target_profile.values())[0] if signal.target_profile else 2.0
             b = primary_target
             win_rate = 0.50 + (signal.confidence - 0.50) * 0.20
-        
+
+        # P1-010: Validar b > 0 para evitar división por cero
+        if b <= 0:
+            return 0.0
+
         p = win_rate
         q = 1 - p
-        
+
         kelly = (p * b - q) / b
-        
+
         return max(0.0, kelly)
     
     def _get_confidence_multiplier(self, confidence: float) -> float:

@@ -24,16 +24,17 @@ def calculate_rsi(prices: pd.Series, period: int = 14) -> pd.Series:
         return pd.Series(index=prices.index, dtype=float)
     
     delta = prices.diff()
-    
+
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
-    
+
     avg_gain = gain.rolling(window=period, min_periods=period).mean()
     avg_loss = loss.rolling(window=period, min_periods=period).mean()
-    
-    rs = avg_gain / avg_loss
+
+    # P1-005: Proteger división por avg_loss cercano a cero
+    rs = avg_gain / avg_loss.replace(0, 1e-10)
     rsi = 100 - (100 / (1 + rs))
-    
+
     return rsi
 
 
@@ -152,12 +153,16 @@ def calculate_stochastic(high: pd.Series, low: pd.Series, close: pd.Series,
     """
     lowest_low = low.rolling(window=period, min_periods=period).min()
     highest_high = high.rolling(window=period, min_periods=period).max()
-    
-    stoch = 100 * (close - lowest_low) / (highest_high - lowest_low)
-    
+
+    # P1-006: Validar rango para evitar división por cero en mercados planos
+    price_range = highest_high - lowest_low
+    stoch = pd.Series(50.0, index=close.index)  # Neutral por defecto
+    valid_range = price_range > 1e-10
+    stoch[valid_range] = 100 * (close[valid_range] - lowest_low[valid_range]) / price_range[valid_range]
+
     k = stoch.rolling(window=smooth_k, min_periods=smooth_k).mean()
     d = k.rolling(window=smooth_d, min_periods=smooth_d).mean()
-    
+
     return k, d
 
 
@@ -241,10 +246,12 @@ def calculate_adx(high: pd.Series, low: pd.Series, close: pd.Series,
     
     plus_di = 100 * (plus_dm.rolling(window=period).mean() / atr_series)
     minus_di = 100 * (minus_dm.rolling(window=period).mean() / atr_series)
-    
-    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
+
+    # P1-008: Proteger división por suma de DI cuando ambos son cero
+    sum_di = plus_di + minus_di
+    dx = 100 * (plus_di - minus_di).abs() / sum_di.replace(0, 1)
     adx = dx.rolling(window=period).mean()
-    
+
     return adx
 
 
@@ -289,9 +296,13 @@ def calculate_williams_r(high: pd.Series, low: pd.Series, close: pd.Series,
     """
     highest_high = high.rolling(window=period, min_periods=period).max()
     lowest_low = low.rolling(window=period, min_periods=period).min()
-    
-    williams_r = -100 * (highest_high - close) / (highest_high - lowest_low)
-    
+
+    # P1-007: Validar rango para evitar división por cero
+    price_range = highest_high - lowest_low
+    williams_r = pd.Series(-50.0, index=close.index)  # Neutral por defecto
+    valid_range = price_range > 1e-10
+    williams_r[valid_range] = -100 * (highest_high[valid_range] - close[valid_range]) / price_range[valid_range]
+
     return williams_r
 
 
@@ -313,9 +324,12 @@ def calculate_cci(high: pd.Series, low: pd.Series, close: pd.Series,
     typical_price = (high + low + close) / 3
     sma_tp = typical_price.rolling(window=period, min_periods=period).mean()
     mean_deviation = (typical_price - sma_tp).abs().rolling(window=period, min_periods=period).mean()
-    
-    cci = (typical_price - sma_tp) / (constant * mean_deviation)
-    
+
+    # P1-009: Validar mean_deviation > 0 para evitar división por cero
+    cci = pd.Series(0.0, index=close.index)  # Neutral por defecto
+    valid_deviation = mean_deviation > 1e-10
+    cci[valid_deviation] = (typical_price[valid_deviation] - sma_tp[valid_deviation]) / (constant * mean_deviation[valid_deviation])
+
     return cci
 
 

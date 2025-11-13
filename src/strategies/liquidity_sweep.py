@@ -179,12 +179,19 @@ class LiquiditySweepStrategy(StrategyBase):
             'order_book_imbalance': 0,
             'vpin_toxicity': 0
         }
-        
+
+        # P1-021: Validar datos no son NaN antes de calcular min/max
         if level_info['type'] == 'support':
-            penetration_depth = (level_price - recent_bars['low'].min()) * 10000
+            if recent_bars['low'].notna().all():
+                penetration_depth = (level_price - recent_bars['low'].min()) * 10000
+            else:
+                penetration_depth = 0.0  # Datos inválidos, no hay penetración válida
         else:
-            penetration_depth = (recent_bars['high'].max() - level_price) * 10000
-        
+            if recent_bars['high'].notna().all():
+                penetration_depth = (recent_bars['high'].max() - level_price) * 10000
+            else:
+                penetration_depth = 0.0
+
         if self.penetration_min <= penetration_depth <= self.penetration_max:
             criteria_scores['penetration_depth'] = 1
         

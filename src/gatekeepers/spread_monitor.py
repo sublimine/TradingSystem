@@ -78,15 +78,19 @@ class SpreadMonitor:
                                 mid: float) -> float:
         """
         Calcula quoted spread (spread del libro).
-        
+
         Args:
             bid: Precio bid
             ask: Precio ask
             mid: Mid price
-            
+
         Returns:
             Quoted spread en basis points
         """
+        # P1-001: Validar mid > 0 para evitar división por cero
+        if mid <= 0:
+            return float('inf')
+
         spread = ask - bid
         spread_bp = (spread / mid) * 10000
         return spread_bp
@@ -97,28 +101,32 @@ class SpreadMonitor:
                                    direction: int) -> float:
         """
         Calcula effective spread (costo real de transacción).
-        
+
         Effective Spread = 2 * |Trade Price - Mid Price|
-        
+
         Multiplicamos por 2 porque el spread es el costo round-trip
         (comprar y vender).
-        
+
         Args:
             trade_price: Precio de la transacción
             mid_price: Mid price en momento de transacción
             direction: +1 para compra, -1 para venta
-            
+
         Returns:
             Effective spread en basis points
         """
+        # P1-002: Validar mid_price > 0 para evitar división por cero
+        if mid_price <= 0:
+            return float('inf')
+
         # Para compra: trade_price debería estar en/sobre mid
         # Para venta: trade_price debería estar en/bajo mid
         deviation = abs(trade_price - mid_price)
         effective_spread = 2 * deviation
-        
+
         # Convertir a basis points
         spread_bp = (effective_spread / mid_price) * 10000
-        
+
         return spread_bp
     
     def update_quoted(self,
@@ -226,10 +234,11 @@ class SpreadMonitor:
             return None
         
         median = self.get_median_spread()
-        
-        if median is None or median == 0:
+
+        # P1-004: Validar median > 0 (usar <= para cubrir negativos)
+        if median is None or median <= 0:
             return None
-        
+
         return self.current_spread / median
     
     def should_halt_trading(self, halt_threshold: float = 5.0) -> bool:

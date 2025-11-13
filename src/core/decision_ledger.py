@@ -76,10 +76,10 @@ class DecisionLedger:
     ):
         """
         Añade metadata detallada de ejecución a una decisión.
-        
+
         Esta metadata es crítica para TCA (Transaction Cost Analysis)
         y para entrenar modelos de fill probability y venue selection.
-        
+
         Args:
             decision_id: ID de la decisión
             mid_at_send: Mid price en el momento de enviar la orden
@@ -89,8 +89,9 @@ class DecisionLedger:
             lp_name: Nombre del LP/venue usado
             reject_reason: Razón de rechazo si la orden no se llenó
         """
-        for decision in self.decisions:
-            if decision['decision_id'] == decision_id:
+        # P1-011: Iterar sobre items() no keys(). decisions es OrderedDict[str, Dict]
+        for uid, decision_data in self.decisions.items():
+            if decision_data['payload'].get('decision_id') == decision_id:
                 execution_meta = {
                     'mid_at_send': mid_at_send,
                     'mid_at_fill': mid_at_fill,
@@ -100,7 +101,8 @@ class DecisionLedger:
                     'reject_reason': reject_reason,
                     'timestamp_added': datetime.now().isoformat()
                 }
-                decision['execution_metadata'] = execution_meta
+                decision_data['execution_metadata'] = execution_meta
+                logger.debug(f"METADATA_ADDED: {decision_id} -> {uid}")
                 break
 
     def export_to_json(self, filepath: str):
