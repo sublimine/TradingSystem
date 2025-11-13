@@ -1,0 +1,247 @@
+================================================================================
+AUDITORÍA src/core/ - QUICK REFERENCE GUIDE
+================================================================================
+
+ARCHIVOS REVISADOS: 11
+HALLAZGOS: 45 (12 CRÍTICOS, 20 IMPORTANTES, 13 MENORES)
+
+================================================================================
+CRÍTICOS ORDENADOS POR PROBABILIDAD DE CRASH
+================================================================================
+
+1. H1.2/H1.3 | DECISION_LEDGER métodos inexistentes
+   Archivos: conflict_arbiter.py:474, decision_ledger.py:92
+   Riesgo: CRASH garantizado
+   Fix Time: 1.5 horas
+
+2. H1.8 | División por cero en slippage
+   Archivo: conflict_arbiter.py:709
+   Línea: top_of_book_estimate puede ser 0
+   Riesgo: ZeroDivisionError
+   Fix Time: 1 hora
+
+3. H1.4 | max() sobre diccionario vacío
+   Archivo: conflict_arbiter.py:599
+   Riesgo: ValueError
+   Fix Time: 30 minutos
+
+4. H1.5 | Race condition en intention_locks
+   Archivo: conflict_arbiter.py:257-289
+   Riesgo: Corrupción de datos en multi-threading
+   Fix Time: 2 horas
+
+5. H1.6 | Budget check hardcoded
+   Archivo: conflict_arbiter.py:782
+   Riesgo: Sobre-alocación de capital (FINANCIERO)
+   Fix Time: 2 horas
+
+================================================================================
+TOP 5 ARCHIVOS CON MÁS PROBLEMAS
+================================================================================
+
+1. conflict_arbiter.py (14 hallazgos: 8 críticos, 4 importantes, 2 menores)
+   - Dependencias circulares
+   - Métodos inexistentes llamados
+   - Race conditions
+   - Hardcoded values
+   
+2. decision_ledger.py (8 hallazgos: 2 críticos, 4 importantes, 2 menores)
+   - Iteración incorrecta sobre dict
+   - Sin sincronización multi-thread
+   - Validaciones faltantes
+   
+3. portfolio_manager.py (8 hallazgos: 1 crítico, 5 importantes, 2 menores)
+   - Firma de método incorrecta
+   - Arquitectura inconsistente
+   - Manejo de errores inadequado
+   
+4. regime_engine.py (7 hallazgos: 1 crítico, 4 importantes, 2 menores)
+   - Potencial NaN en cálculos
+   - Hardcoded thresholds
+   - Validaciones faltantes
+   
+5. position_sizer.py (3 hallazgos: 0 críticos, 2 importantes, 1 menor)
+   - Acceso incorrecto a diccionario
+   - Parámetros hardcoded
+
+✓ CLEAN: budget_manager.py (0 hallazgos)
+
+================================================================================
+ERRORES POR CATEGORÍA
+================================================================================
+
+LÓGICA (10):
+  - H1.2: Método inexistente
+  - H1.3: Dict iteration incorrecto
+  - H1.4: max() sin guard
+  - H2.1: Dict iteration incorrecto
+  - H3.1: write() firma incorrecta
+  - H4.1: NaN propagation
+  - H4.3: corrcoef sin validación
+  - H5.1: target_profile access
+  - H6.1: Memory accumulation
+  - H1.7: Dict iteration (duplicate)
+
+CONFIGURACIÓN (12):
+  - H1.9: family_budgets hardcoded
+  - H1.10: no-trade zones hardcoded
+  - H1.11: EV params hardcoded
+  - H4.2: Thresholds duplicados
+  - H4.4: lookback/confirm_bars hardcoded
+  - H4.5: Cache window hardcoded
+  - H5.2: Kelly params hardcoded
+  - H5.3: Magic numbers
+  - H6.2: CORRELATION_TRACKER no configurable
+  - H8.1: Defaults hardcoded
+  - H3.2: family_allocations incompleto
+  - H3.3: Dos fuentes de presupuesto
+
+CONCURRENCIA (3):
+  - H1.5: intention_locks race condition
+  - H2.2: DECISION_LEDGER sin sincronización
+  - H7.1: Singleton sin reset
+
+MANEJO DE ERRORES (6):
+  - H2.3: max_size no validado
+  - H2.4: Evicción sin logging
+  - H2.5: Timestamp hardcoded
+  - H2.6: export_to_json sin error handling
+  - H3.4: Path validation faltante
+  - H3.5: Assert sin contexto
+
+ARQUITECTURA (7):
+  - H1.1: Dependencias circulares
+  - H1.12: Método no documentado
+  - H2.7: Firma flexible confusa
+  - H3.6: Inicialización tardía
+  - H3.8: Try/except amplio
+  - H4.6: polyfit sin error handling
+  - H9.1: Serialización datetime
+
+DOCUMENTACIÓN (3):
+  - H2.8: Docstring incompleto
+  - H4.7: Logger no documentado
+  - H8.1: Metadata no clara
+
+================================================================================
+MAPEO RÁPIDO: LÍNEA DE CÓDIGO A PROBLEMA
+================================================================================
+
+conflict_arbiter.py:
+  Línea 33-41     | H1.1  | Dependencias circulares
+  Línea 167-172   | H1.9  | family_budgets hardcoded
+  Línea 159-164   | H1.10 | no_trade_zones hardcoded
+  Línea 183-192   | H1.11 | EV params hardcoded
+  Línea 255       | H1.13 | batch_id vulnerable
+  Línea 257-289   | H1.5  | Race condition locks
+  Línea 474       | H1.2  | generate_decision_uid() no existe
+  Línea 599       | H1.4  | max() sin guard
+  Línea 709       | H1.8  | División por cero
+  Línea 782       | H1.6  | Budget hardcoded 0.01
+  Línea 804       | H1.12 | calculate_regime_weight sin verificación
+  Línea 1040-1063 | H1.14 | Método dinámico
+
+decision_ledger.py:
+  Línea 19-21     | H2.3  | max_size no validado
+  Línea 27        | H2.7  | write() firma flexible
+  Línea 50-51     | H2.5  | Timestamp hardcoded
+  Línea 56-57     | H2.4  | Evicción sin logging
+  Línea 63-64     | H2.8  | get() sin docstring
+  Línea 92-104    | H2.1  | Iteración dict incorrecta (CRÍTICO)
+  Línea 106-109   | H2.6  | export_to_json sin error handling
+  Línea 112       | H2.2  | Instancia global sin Lock (CRÍTICO)
+
+portfolio_manager.py:
+  Línea 31-36     | H3.2  | family_allocations incompleto (95%)
+  Línea 52        | H3.3  | BudgetManager vs conflict_arbiter
+  Línea 98        | H3.7  | Conversión innecesaria
+  Línea 116-127   | H3.8  | Try/except amplio
+  Línea 129       | H3.1  | write() firma incorrecta (CRÍTICO)
+  Línea 166       | H3.5  | Assert sin mensaje
+  Línea 200-218   | H3.6  | Inicialización tardía
+  Línea 226-230   | H3.4  | export_to_json sin validación
+
+regime_engine.py:
+  Línea 15        | H4.7  | Logger no documentado
+  Línea 52        | H4.5  | spread_baseline_window hardcoded
+  Línea 95-105    | H4.2  | Thresholds duplicados
+  Línea 113-120   | H4.2  | Thresholds duplicados (again)
+  Línea 189       | H4.3  | corrcoef sin validación NaN
+  Línea 289-295   | H4.1  | Covariance puede ser NaN (CRÍTICO)
+  Línea 337-338   | H4.4  | lookback/confirm_bars hardcoded
+  Línea 623       | H4.6  | polyfit sin error handling
+
+position_sizer.py:
+  Línea 31-34     | H5.2  | Kelly params hardcoded
+  Línea 113       | H5.1  | target_profile access sin guard
+  Línea 124-132   | H5.3  | Magic numbers confidence
+
+correlation_tracker.py:
+  Línea 31        | H6.1  | deque maxlen sin TTL
+  Línea 162       | H6.2  | CORRELATION_TRACKER no configurable
+
+signal_bus.py:
+  Línea 127       | H7.1  | Singleton sin reset
+
+strategy_adapter.py:
+  Línea 101-102   | H8.1  | Defaults hardcoded
+
+signal_schema.py:
+  Línea 85-87     | H9.1  | to_dict() datetime no serializable
+
+================================================================================
+PLAN DE ACCIÓN POR PRIORIDAD
+================================================================================
+
+DÍA 1 (TODAY) - 3 HORAS:
+  □ H1.2  | Implementar generate_decision_uid() en DecisionLedger
+  □ H1.3  | Corregir iteración sobre dict en add_execution_metadata()
+  □ H3.1  | Ajustar firma de write() en portfolio_manager.py
+
+DÍA 2 - 5 HORAS:
+  □ H1.5  | Proteger intention_locks con threading.Lock()
+  □ H1.8  | Agregar guards contra división por cero
+  □ H1.6  | Hacer budget check dinámico (integrar PositionSizer)
+
+DÍA 3-4 - 4.5 HORAS:
+  □ H2.2  | Agregar Lock a DecisionLedger.write()
+  □ H4.1  | Validar NaN en covariance
+  □ H1.4  | Proteger max() con validación
+
+SEMANA 2 - 4 HORAS:
+  □ H1.1  | Resolver dependencias circulares (refactor arquitectónico)
+
+BACKLOG (Importantes):
+  □ Extraer todos los hardcoded values a config files
+  □ Implementar proper error handling en métodos de IO
+  □ Agregar métodos reset() a singletons
+  □ Documentar dependencias de métodos no obviyas
+
+================================================================================
+INDICADORES DE CALIDAD
+================================================================================
+
+Antes de auditoría:
+  - Cobertura de tests: [DESCONOCIDA]
+  - Densidad de cobertura: [DESCONOCIDA]
+  - Métodos sin docstring: ~15+
+
+Después de fixes:
+  - Todos los 12 críticos: RESUELTOS
+  - 20 importantes: PARCIALMENTE RESUELTOS
+  - 13 menores: A BACKLOG
+  - Tests sugeridos: 20+ para los módulos de core/
+
+================================================================================
+CONTACTO Y PREGUNTAS
+================================================================================
+
+Este informe fue generado automáticamente.
+Para detalles completos, consultar AUDIT_CORE_20251113.md
+Para soluciones paso a paso, consultar AUDIT_CRITICAL_ISSUES.md
+
+Auditoría: 2025-11-13
+Analista: Sistema automático
+Estado: REQUIERE ACCIÓN INMEDIATA
+
+================================================================================

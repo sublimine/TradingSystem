@@ -1,0 +1,114 @@
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ AUDITORÍA EXHAUSTIVA - src/gatekeepers/                                                                       │
+│ Fecha: 2025-11-13 | Componentes: 5 | Hallazgos: 10 (3 CRÍTICOS, 4 IMPORTANTES, 2 MENORES)                   │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║ HALLAZGOS CRÍTICOS - REQUIEREN ACCIÓN INMEDIATA                                                               ║
+╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                                                ║
+║ CR1 │ COMPONENTE: SpreadMonitor | LÍNEAS: 63, 184-198, 233                                                   ║
+║ ────┼──────────────────────────────────────────────────────────────────────────────────────────────────────   ║
+║     │ PROBLEMA: Mediana rodante se ajusta gradualmente durante estrés                                        ║
+║     │ IMPACTO:  Permite trades a spreads tóxicos (2-3x superior al "normal")                                 ║
+║     │ EJEMPLO:  Spread 1→3→5→10 bp = Sistema alerta en 5.0x cuando mediana ya subió                        ║
+║     │ SOLUCIÓN: Implementar detección de aceleración (velocidad de cambio)                                   ║
+║     │ ESFUERZO: BAJO (agregar método get_spread_acceleration())                                             ║
+║                                                                                                                ║
+║ CR2 │ COMPONENTE: KylesLambdaEstimator | LÍNEAS: 150, 205-241                                              ║
+║ ────┼──────────────────────────────────────────────────────────────────────────────────────────────────────   ║
+║     │ PROBLEMA: Sin histórico en primeros 500+ trades (requiere 50 estimaciones)                            ║
+║     │ IMPACTO:  Vulnerable a flash crash en primeros 30-60 segundos sin límite de lambda                   ║
+║     │ EJEMPLO:  Flash crash t=30s = sin protección porque no hay media histórica                          ║
+║     │ SOLUCIÓN: Implementar warm-up con thresholds absolutos (no relativos)                                ║
+║     │ ESFUERZO: MEDIO (agregar get_quick_lambda_estimate() y should_halt_trading_warmup())                ║
+║                                                                                                                ║
+║ CR3 │ COMPONENTE: ePINEstimator | LÍNEAS: 154, 176                                                          ║
+║ ────┼──────────────────────────────────────────────────────────────────────────────────────────────────────   ║
+║     │ PROBLEMA: Sin PIN en primeros 200+ trades (ePIN requiere 20, VPIN requiere 10 buckets)              ║
+║     │ IMPACTO:  Vulnerable a informed traders en primeros 2 minutos sin detección                         ║
+║     │ EJEMPLO:  Insider trading t=1min = sin límite de PIN porque buckets no llenos                      ║
+║     │ SOLUCIÓN: Implementar rapid ePIN con threshold agresivo en ventana corta                            ║
+║     │ ESFUERZO: MEDIO (agregar get_rapid_epin() y should_reduce_sizing_rapid())                          ║
+║                                                                                                                ║
+╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║ HALLAZGOS IMPORTANTES - IMPLEMENTAR EN PRÓXIMA REVISIÓN                                                       ║
+╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                                                ║
+║ IM1 │ GatekeeperIntegrator     │ Sin validación cross-gatekeeper              │ BAJO       │ Debugging      ║
+║ IM2 │ GatekeeperAdapter        │ Primer tick ignorado en inicialización       │ BAJO       │ Auditoría      ║
+║ IM3 │ Todos                     │ Logging en DEBUG level (difícil auditoría)   │ TRIVIAL    │ Producción     ║
+║ IM4 │ KylesLambdaEstimator     │ Edge case: clasificación ambigua             │ BAJO       │ Regresión      ║
+║                                                                                                                ║
+╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║ HALLAZGOS MENORES - CONSIDERAR                                                                                ║
+╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                                                ║
+║ MN1 │ SpreadMonitor            │ Insuficientes datos al inicio (<10)           │ Cubierta   │ CR1            ║
+║ MN2 │ ePINEstimator            │ Fórmula simplificada (no PIN completo)        │ TRIVIAL    │ Documentación  ║
+║                                                                                                                ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ EVALUACIÓN POR COMPONENTE                                                                                    ┃
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃                                                                                                                ┃
+┃ COMPONENTE              THRESHOLDS  LÓGICA  FALSE POS  FALSE NEG  PERF  LOGGING  INTEGRACIÓN  CALIFICACIÓN ┃
+┃ ──────────────────────  ──────────  ──────  ─────────  ─────────  ────  ───────  ───────────  ─────────── ┃
+┃ SpreadMonitor           ✓ Bien     ✓ OK    ✓ Bajo     ✗ ALTO     ✓ OK  ✓ OK     ✓ OK         C (CR1)     ┃
+┃ KylesLambdaEstimator    ✓ Bien     ✓ OK    ✓ Bajo     ✗ ALTO     ✓ OK  ! DEBUG   ✓ OK         C (CR2)     ┃
+┃ ePINEstimator           ✓ Bien     ✓ OK    ✓ Bajo     ✗ ALTO     ✓ OK  ! DEBUG   ✓ OK         C (CR3)     ┃
+┃ GatekeeperIntegrator    ✓ Bien     ✓ OK    ✓ Bajo     ✓ Bajo     ✓ OK  ! DEBUG   ✗ Sin cross  B (IM1)     ┃
+┃ GatekeeperAdapter       N/A        ✓ OK    ✓ Bajo     ✓ Bajo     ✓ OK  ✓ OK     ✗ Init risk  B (IM2)     ┃
+┃                                                                                                                ┃
+┃ LEYENDA: ✓=OK, ✗=Problema, !=Subóptimo, C=Crítico, B=Bueno con issues, N/A=No aplica                       ┃
+┃                                                                                                                ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ MATRIZ DE RIESGOS                                                                                              │
+├────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                                │
+│ RIESGO                          PROBABILIDAD    IMPACTO    VENTANA     MITIGACIÓN                            │
+│ ──────────────────────────────  ──────────────  ─────────  ──────────  ────────────────────────────────────  │
+│ Flash crash sin protección      MEDIA           ALTO       0-60s       CR2: warm-up lambda                 │
+│ Stress gradual no detectado     BAJA-MEDIA      ALTO       Largo       CR1: aceleración spread             │
+│ Informed traders al inicio      BAJA            ALTO       0-120s      CR3: rapid PIN                      │
+│ Datos corruptos no validados    BAJA            MEDIO      Ocasional   IM1: cross-validation               │
+│ Auditoría incompleta            BAJA            BAJO       Siempre     IM2: fix initialization             │
+│                                                                                                                │
+│ RIESGO GENERAL: ALTO en primeros minutos, BAJO en operación normal (después de 5 min)                      │
+│                                                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ RECOMENDACIONES PRIORIZADAS                                                                                   │
+├────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                                │
+│ PRIORIDAD 1 - IMPLEMENTAR ESTA SEMANA:                                                                        │
+│ ├─ CR1: Agregar detección de aceleración de spread (BAJO esfuerzo, ALTO impacto)                            │
+│ ├─ CR2: Implementar warm-up phase para Kyle's Lambda (MEDIO esfuerzo, ALTO impacto)                         │
+│ └─ CR3: Implementar rapid PIN initialization (MEDIO esfuerzo, ALTO impacto)                                 │
+│                                                                                                                │
+│ PRIORIDAD 2 - PRÓXIMA REVISIÓN (1-2 semanas):                                                                │
+│ ├─ IM1: Validación cross-gatekeeper (BAJO esfuerzo, MEDIO impacto)                                          │
+│ ├─ IM2: Fix initialization primer tick (BAJO esfuerzo, BAJO impacto)                                        │
+│ └─ IM3: Cambiar logging a INFO (TRIVIAL esfuerzo, BAJO impacto)                                             │
+│                                                                                                                │
+│ PRIORIDAD 3 - DOCUMENTACIÓN:                                                                                  │
+│ └─ MN2: Documentar limitaciones de ePIN simplificado (TRIVIAL)                                               │
+│                                                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ CONCLUSIÓN                                                                                                      │
+├────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                                │
+│ Arquitectura:      BUENA - Sistema bien diseñado con múltiples capas de protección                           │
+│ Implementación:    PROBLEMÁTICA - Vulnerabilidades críticas en inicialización y detección gradual             │
+│ Calidad General:   BUENA en operación normal, RIESGOSA en primeros minutos                                   │
+│ Riesgo General:    ALTO - Pérdidas potenciales en spread y adverse selection en primeros 5 minutos          │
+│                                                                                                                │
+│ ACCIÓN URGENTE: Implementar CR1, CR2, CR3 para asegurar protección desde segundo 1 de trading.              │
+│                                                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
