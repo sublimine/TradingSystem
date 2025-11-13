@@ -166,10 +166,11 @@ class KylesLambdaEstimator:
         # Calcular lambda = Cov(ΔP, SV) / Var(SV)
         covariance = np.cov(delta_prices, signed_vols)[0, 1]
         variance_sv = np.var(signed_vols)
-        
-        if variance_sv > 1e-10:  # Evitar división por valores muy pequeños
+
+        # P1-019: Aumentar threshold a 1e-6 para evitar lambda spike artificial
+        if variance_sv > 1e-6:
             lambda_estimate = covariance / variance_sv
-            
+
             # Calcular error estándar
             residuals = delta_prices - lambda_estimate * signed_vols
             mse = np.mean(residuals ** 2)

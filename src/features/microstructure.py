@@ -193,8 +193,9 @@ def calculate_roll_measure(prices: pd.Series) -> float:
     
     if covariance >= 0:
         return 0
-    
-    spread_estimate = 2 * np.sqrt(-covariance)
+
+    # P1-020: Usar abs() para evitar warning de sqrt negativo en edge cases
+    spread_estimate = 2 * np.sqrt(abs(covariance))
     return spread_estimate
 
 

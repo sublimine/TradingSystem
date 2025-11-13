@@ -95,8 +95,10 @@ class SignalBus:
                     f"(signals={len(signals)})"
                 )
             except Exception as e:
-                logger.error(
-                    f"DECISION_ERROR: {group_key} failed: {e}", exc_info=True
+                # P1-015: Usar CRITICAL para errores en arbiter que causan REJECT
+                logger.critical(
+                    f"DECISION_ERROR_CRITICAL: {group_key} arbiter failed, señal rechazada: {e}",
+                    exc_info=True
                 )
                 decisions[group_key] = ConflictResolution(
                     decision="REJECT",
