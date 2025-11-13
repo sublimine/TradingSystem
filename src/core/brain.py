@@ -220,7 +220,18 @@ class SignalArbitrator:
         }
 
         regime_fits = fit_matrix.get(regime, {})
-        return regime_fits.get(strategy_name, 0.7)  # Default neutral
+        fit_score = regime_fits.get(strategy_name, None)
+
+        # P2-019: Logging cuando estrategia no está en fit_matrix (usar default)
+        if fit_score is None:
+            logger.warning(
+                f"REGIME_FIT_DEFAULT: Strategy '{strategy_name}' not in fit_matrix "
+                f"for regime '{regime}'. Using default 0.7. "
+                f"Consider adding to fit_matrix if strategy becomes permanent."
+            )
+            fit_score = 0.7  # Default neutral
+
+        return fit_score
 
     def _evaluate_risk_reward(self, signal: Dict) -> float:
         """Evaluate risk-reward profile of signal."""

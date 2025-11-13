@@ -107,13 +107,17 @@ class LiquiditySweepStrategy(StrategyBase):
                 continue
             
             period_data = market_data.tail(period_minutes).copy()
-            
+
+            # P2-022: Validar bounds antes de swing detection para evitar IndexError
+            if len(period_data) < 5:
+                continue  # Necesitamos al menos 5 barras para window de ±2
+
             highs = period_data['high'].values
             swing_high_indices = []
             for i in range(2, len(highs) - 2):
                 if highs[i] == max(highs[i-2:i+3]):
                     swing_high_indices.append(i)
-            
+
             lows = period_data['low'].values
             swing_low_indices = []
             for i in range(2, len(lows) - 2):
