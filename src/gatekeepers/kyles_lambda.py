@@ -56,6 +56,15 @@ class KylesLambdaEstimator:
             historical_window: Ventana para estadísticas históricas (default: 1000)
             warm_up_threshold: Mínimo de trades antes de usar ratios (default: 100)
             warm_up_absolute_lambda: Threshold absoluto durante warm-up (default: 0.05)
+
+        P2-009: Kyle's Lambda warm-up thresholds
+        warm_up_threshold=100 trades: Mínimo estadístico para calcular media/std históricos confiables
+          - <50 trades: variance muy alta, ratios inestables
+          - 100-200 trades: ~1-2 sesiones trading, suficiente para capturar régimen actual
+        warm_up_absolute_lambda=0.05: Threshold conservador durante warm-up
+          - Lambda >0.05 = impacto precio >5 pips por lote, indica illiquidity crítica
+          - Basado en análisis empírico FX majors: lambda típico 0.01-0.03 en condiciones normales
+        Post warm-up se usa ratio vs media histórica (más adaptativo)
         """
         self.estimation_window = estimation_window
         self.update_frequency = update_frequency

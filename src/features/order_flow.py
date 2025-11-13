@@ -20,11 +20,18 @@ class VPINCalculator:
     def __init__(self, bucket_size: int = 50000, num_buckets: int = 50):
         """
         Initialize VPIN calculator.
-        
+
         Args:
             bucket_size: Volume threshold for each bucket
             num_buckets: Number of buckets to maintain for rolling calculation
         """
+        # P2-008: VPIN bucket parameters (Easley et al. 2012)
+        # bucket_size=50000: Volume por bucket calibrado para FX majors con ADV ~$1B
+        #   - 50K captura ~5 min de flow en horario activo, suficiente para detectar toxicity
+        #   - Muy pequeño (<10K) = ruido, muy grande (>100K) = lag excesivo
+        # num_buckets=50: Rolling window de ~50 buckets = 4 horas flow aprox
+        #   - Balance entre sensibilidad (detectar toxicity rápido) y estabilidad (evitar false positives)
+        # Para instrumentos menos líquidos considerar bucket_size proporcional a ADV
         self.bucket_size = bucket_size
         self.num_buckets = num_buckets
         self.buckets = deque(maxlen=num_buckets)
@@ -35,13 +42,21 @@ class VPINCalculator:
     def add_trade(self, volume: float, trade_direction: int) -> Optional[float]:
         """
         Add trade to VPIN calculator and return current VPIN if bucket completed.
-        
+
         Args:
             volume: Trade volume
             trade_direction: 1 for buy, -1 for sell, 0 for unclassified
-            
+
         Returns:
             Current VPIN value if bucket completed, None otherwise
+
+        P2-023: trade_direction==0 handling documented
+        IMPORTANT: When trade_direction is 0 (unclassified/neutral), this method returns None.
+        Callers MUST validate return value before using:
+            vpin = calculator.add_trade(volume, direction)
+            if vpin is not None:
+                # Safe to use vpin
+        Failing to check for None can cause AttributeError or incorrect calculations.
         """
         if trade_direction == 0:
             return None
