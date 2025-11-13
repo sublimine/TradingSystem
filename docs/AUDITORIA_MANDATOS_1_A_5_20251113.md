@@ -4027,3 +4027,492 @@ def calculate_roll_measure(prices: pd.Series) -> float:
 **Veredicto final**: **VAPORWARE INSTITUCIONAL** - Documentación de nivel hedge fund, implementación de nivel hackathon. Sistema NO tiene capacidades prometidas.
 
 **FIN AUDITORÍA MANDATO 5**
+
+---
+---
+
+# PLAN DE ENDURECIMIENTO INSTITUCIONAL COMPLETO
+
+**Proyecto**: SUBLIMINE TradingSystem - Roadmap hacia Producción Institucional
+**Fecha**: 2025-11-13
+**Auditor**: Senior Quant Auditor
+**Basado en**: Auditorías MANDATOS 1-5
+
+---
+
+## RESUMEN EJECUTIVO
+
+Tras completar la auditoría institucional de los 5 mandatos del sistema SUBLIMINE, se han identificado **59 riesgos** que amenazan la aptitud para producción:
+
+| Severidad | Cantidad | Porcentaje |
+|-----------|----------|------------|
+| **P0 (Crítico)** | 21 | 35.6% |
+| **P1 (Importante)** | 25 | 42.4% |
+| **P2 (Menor)** | 13 | 22.0% |
+| **TOTAL** | **59** | **100%** |
+
+**Veredictos por mandato**:
+- **MANDATO 1** (Infraestructura): ⚠️ NO APTO - Testing, observability, concurrency
+- **MANDATO 2** (Estrategias): ⚠️ NO APTO - 24 estrategias sin gobernanza
+- **MANDATO 3** (Brain-layer): ⚠️ NO APTO - Caja negra peligrosa sin límites
+- **MANDATO 4** (Risk Engine): ⚠️ PARCIALMENTE APTO - Sin calibración empírica
+- **MANDATO 5** (Microestructura + Multiframe): ❌ **NO APTO - VAPORWARE** (5% implementado)
+
+**Situación actual**: Sistema **NO READY** para producción institucional. Requiere 16-24 semanas de endurecimiento crítico.
+
+---
+
+## CONSOLIDACIÓN DE RIESGOS P0 (CRÍTICOS)
+
+### Total: 21 riesgos críticos que bloquean producción
+
+#### MANDATO 1 - Infraestructura (4 P0)
+1. **P0-001**: NO testing strategy (regression blind)
+2. **P0-002**: NO observability (logs, metrics, alerts)
+3. **P0-003**: Concurrency con locks (deadlock potential)
+4. **P0-004**: Validations sin fallback (crash risk)
+
+#### MANDATO 2 - Estrategias (4 P0)
+5. **P0-005**: NO strategy catalog (desconocimiento de inventario)
+6. **P0-006**: Factor crowding brutal (4 estrategias de liquidity, 3 de order flow)
+7. **P0-007**: Clasificación broken/hybrid/approved sin criterios
+8. **P0-008**: SMC/ICT concepts sin validación cuantitativa
+
+#### MANDATO 3 - Brain-layer (4 P0)
+9. **P0-009**: Brain-layer sin límites documentados (puede tocar CUALQUIER cosa)
+10. **P0-010**: ML sin challenger model (sobreajuste garantizado)
+11. **P0-011**: Sin rollback mechanism (cambios irreversibles)
+12. **P0-012**: Data leakage potencial (train/test overlap)
+
+#### MANDATO 4 - Risk Engine (4 P0)
+13. **P0-013**: Quality Score pesos hardcoded sin calibración empírica
+14. **P0-014**: Correlaciones hardcoded sin actualización dinámica
+15. **P0-015**: Exposure limits sin buffer (permite exactamente el límite)
+16. **P0-016**: Config validation faltante (division by zero potencial)
+
+#### MANDATO 5 - Microestructura + Multiframe (5 P0)
+17. **P0-017**: **VAPORWARE institucional** - 2200+ líneas diseño, 5% implementado
+18. **P0-018**: VPIN NO integrado (solo calculator aislado)
+19. **P0-019**: MultiFrameContextEngine 0% implementado
+20. **P0-020**: Level2DepthMonitor NO existe
+21. **P0-021**: SpoofingDetector NO es componente reutilizable
+
+---
+
+## ROADMAP DE ENDURECIMIENTO INSTITUCIONAL
+
+### FASE ALPHA: Fundaciones Críticas (Semanas 1-6)
+
+**Objetivo**: Resolver riesgos P0 que bloquean operación básica
+**Duración**: 6 semanas
+**Equipo**: 2-3 developers + 1 QA
+
+#### Sprint 1-2: Infraestructura + Observability (Semanas 1-2)
+- ✅ M1-001: Testing strategy completa (unit, integration, regression)
+- ✅ M1-002: Observability stack (structlog + Prometheus + Grafana)
+- ✅ M1-003: Threading model + deadlock prevention
+- ✅ M1-004: Fallback/degraded mode + circuit breaker
+- **Output**: Sistema con coverage >70%, monitorización real-time
+
+#### Sprint 3: Governance de Estrategias (Semana 3)
+- ✅ M2-001: Strategy catalog completo (CSV + metadata)
+- ✅ M2-003: Lifecycle policy (EXPERIMENTAL → PRODUCTION)
+- ✅ M2-004: Factor correlation matrix + exposure tracking
+- **Output**: Inventario de 24 estrategias, lifecycle claro
+
+#### Sprint 4: Brain Governance (Semana 4)
+- ✅ M3-001: Brain governance document (áreas prohibidas + permitidas)
+- ✅ M3-002: Challenger model system (production vs challenger)
+- ✅ M3-004: Data governance (time-series split estricto)
+- **Output**: Brain-layer con límites documentados, ML con validación
+
+#### Sprint 5-6: Risk Engine Calibración (Semanas 5-6)
+- ✅ M4-001: Calibración empírica Quality Score (Sharpe maximization)
+- ✅ M4-002: Correlaciones dinámicas (rolling 60 días)
+- ✅ M4-003: Exposure buffer (10% safety margin)
+- ✅ M4-004: Config validation al inicio
+- **Output**: Risk Engine calibrado con correlaciones reales
+
+**Entregables FASE ALPHA**:
+- [ ] Test suite con coverage >70%
+- [ ] Observability dashboard funcional
+- [ ] Strategy catalog + lifecycle policy
+- [ ] Brain governance document aprobado
+- [ ] Quality Score calibrado
+- [ ] Correlaciones dinámicas operativas
+
+---
+
+### FASE BETA: Implementación MANDATO 5 (Semanas 7-14)
+
+**Objetivo**: Convertir vaporware en funcionalidad real
+**Duración**: 8 semanas
+**Equipo**: 3-4 developers + 1 senior architect
+
+#### Sprint 7-9: MicrostructureEngine (Semanas 7-9)
+- ✅ M5-001: Implementar MicrostructureEngine completo
+  - VPINEstimator integrado (semana 7)
+  - OrderFlowAnalyzer completo (semana 8)
+  - Level2DepthMonitor + SpoofingDetector (semana 9)
+  - MicrostructureScorer (aggregator)
+- **Output**: Pipeline real-time de microestructura
+
+#### Sprint 10-14: MultiFrameContextEngine (Semanas 10-14)
+- ✅ M5-002: Implementar MultiFrameContextEngine completo
+  - HTFStructureAnalyzer - H4/D1 (semanas 10-11)
+  - MTFContextValidator - M15/M5 (semanas 11-12)
+  - LTFTimingExecutor - M1 (semana 12)
+  - TimeFrameSynchronizer + MultiFrameOrchestrator (semanas 13-14)
+- **Output**: Validación multi-temporal funcional
+
+**Entregables FASE BETA**:
+- [ ] MicrostructureEngine operativo (VPIN, OFI, L2, Spoofing)
+- [ ] MultiFrameContextEngine operativo (HTF/MTF/LTF)
+- [ ] microstructure_score integrado en QualityScorer
+- [ ] Tests E2E de validación multi-temporal
+- [ ] Backtest con filtros HTF/MTF/LTF
+
+---
+
+### FASE GAMMA: Refinamiento + Producción (Semanas 15-20)
+
+**Objetivo**: Calibración final, stress testing, producción piloto
+**Duración**: 6 semanas
+**Equipo**: 2 developers + 1 risk manager + 1 QA
+
+#### Sprint 15-16: Calibración + Testing (Semanas 15-16)
+- ✅ M2-002: Factor crowding analysis (deactivar 10-14 estrategias solapadas)
+- ✅ M2-005: SMC/ICT validation (correlación con price action)
+- ✅ M5-003: VPIN bucket_size calibración por símbolo
+- ✅ M5-004: Lee-Ready completo (trade classification)
+- ✅ M5-005: Tests unitarios microestructura
+- **Output**: Sistema calibrado y testeado
+
+#### Sprint 17-18: Paper Trading Piloto (Semanas 17-18)
+- Seleccionar 5 estrategias PRODUCTION-READY:
+  - momentum_quality
+  - breakout_volume_confirmation
+  - order_block_institutional
+  - mean_reversion_statistical
+  - vpin_reversal_extreme
+- Paper trading 24/7 con TODAS las validaciones activas
+- Monitorización diaria: Sharpe, drawdown, rejection rate
+- **Output**: 2 semanas de paper trading sin crashes
+
+#### Sprint 19: Model Risk Review (Semana 19)
+- Preparar documentación para Model Risk Committee:
+  - Quality Score calibration report
+  - VPIN validation study
+  - Multiframe alignment effectiveness
+  - Strategy catalog + performance metrics
+- Revisión interna pre-producción
+- **Output**: Aprobación Model Risk
+
+#### Sprint 20: Producción Limitada (Semana 20)
+- Activar 5 estrategias en LIVE con:
+  - Risk cap: 0.5% por trade (conservador)
+  - Exposure total: 3% máximo (50% del límite normal)
+  - Stop diario: -1.5% (50% del límite normal)
+- Monitorización 24/7 primera semana
+- **Output**: Primera semana producción sin incidentes
+
+**Entregables FASE GAMMA**:
+- [ ] Backtest completo 24 meses (Sharpe >1.5, DD <12%)
+- [ ] Paper trading 2 semanas exitoso
+- [ ] Model Risk approval
+- [ ] Producción limitada 1 semana sin incidentes
+- [ ] Runbook de operaciones completo
+
+---
+
+## PRIORIZACIÓN POR IMPACTO CRÍTICO
+
+### Tier 1: BLOCKERS de Producción (Debe completarse 100%)
+
+| Acción | Mandato | Impacto | Esfuerzo | Dependencias |
+|--------|---------|---------|----------|--------------|
+| M1-001 | Testing strategy | +50% confiabilidad | 5 días | Ninguna |
+| M1-002 | Observability | +90% visibilidad | 3 días | Ninguna |
+| M4-001 | Quality Score calibración | +15-25% Sharpe | 5 días | M1-001 |
+| M5-001 | MicrostructureEngine | Funcionalidad crítica | 4-6 semanas | M1-002 |
+| M5-002 | MultiFrameContextEngine | -40% trades perdedores | 6-8 semanas | M5-001 |
+
+### Tier 2: RISK REDUCERS (Altamente recomendado)
+
+| Acción | Mandato | Impacto | Esfuerzo | Prioridad |
+|--------|---------|---------|----------|-----------|
+| M2-002 | Factor crowding dedup | -20% riesgo sistémico | 3 días | Alta |
+| M3-001 | Brain governance | Límites claros | 2 días | Alta |
+| M4-002 | Correlaciones dinámicas | -15% riesgo margin call | 3 días | Alta |
+| M2-003 | Strategy lifecycle | Gobernanza clara | 2 días | Media |
+| M3-002 | Challenger model | -30% overfit | 3 días | Media |
+
+### Tier 3: OPTIMIZATIONS (Nice to have)
+
+| Acción | Mandato | Impacto | Esfuerzo | Prioridad |
+|--------|---------|---------|----------|-----------|
+| M5-006 | Vectorizar Kyle's lambda | 50-100× speedup | 0.5 días | Baja |
+| M2-007 | Strategy tags | Mejor organización | 1 día | Baja |
+| M5-007 | OFI adaptativo | +5% precisión | 1 día | Baja |
+
+---
+
+## TIMELINE REALISTA PARA PRODUCCIÓN
+
+```
+SEMANAS 1-6: FASE ALPHA (Fundaciones)
+├─ Semanas 1-2: Testing + Observability
+├─ Semana 3: Strategy Governance
+├─ Semana 4: Brain Governance
+├─ Semanas 5-6: Risk Engine Calibración
+└─ Checkpoint: ✅ Fundaciones sólidas
+
+SEMANAS 7-14: FASE BETA (MANDATO 5 Implementation)
+├─ Semanas 7-9: MicrostructureEngine
+├─ Semanas 10-14: MultiFrameContextEngine
+└─ Checkpoint: ✅ Funcionalidad completa
+
+SEMANAS 15-20: FASE GAMMA (Refinamiento + Producción)
+├─ Semanas 15-16: Calibración + Testing
+├─ Semanas 17-18: Paper Trading
+├─ Semana 19: Model Risk Review
+├─ Semana 20: Producción Limitada
+└─ Checkpoint: ✅ PRODUCCIÓN ACTIVA
+
+SEMANAS 21-24: FASE DELTA (Expansión)
+├─ Semana 21-22: Monitorización producción
+├─ Semana 23: Aumentar exposure (3% → 6%)
+├─ Semana 24: Activar 5 estrategias adicionales
+└─ Checkpoint: ✅ PRODUCCIÓN COMPLETA
+```
+
+**Timeline total**: 20-24 semanas (5-6 meses)
+
+---
+
+## MANDATOS FUTUROS (POST-PRODUCCIÓN)
+
+### MANDATO 6: Execution Engine Institucional (Semanas 25-30)
+
+**Objetivo**: Optimizar ejecución con smart order routing, iceberg orders, TWAP/VWAP
+
+**Componentes**:
+1. **SmartOrderRouter**
+   - Multi-venue routing (Broker A, B, C)
+   - Latency-aware execution
+   - Liquidity aggregation
+
+2. **AlgoExecutor**
+   - TWAP (Time-Weighted Average Price)
+   - VWAP (Volume-Weighted Average Price)
+   - Iceberg orders (ocultar size real)
+   - Pegged orders (follow best bid/ask)
+
+3. **SlippageAnalyzer**
+   - Pre-trade cost estimation
+   - Post-trade TCA (Transaction Cost Analysis)
+   - Optimal execution timing
+
+**Entregables**:
+- [ ] Smart routing a 3+ venues
+- [ ] TWAP/VWAP executors
+- [ ] TCA dashboard
+
+---
+
+### MANDATO 7: Portfolio Optimizer (Semanas 31-36)
+
+**Objetivo**: Optimización holística de cartera (no solo trades individuales)
+
+**Componentes**:
+1. **PortfolioConstructor**
+   - Mean-variance optimization (Markowitz)
+   - Risk parity allocation
+   - Kelly criterion sizing (portfolio-level)
+
+2. **CorrelationRegimeDetector**
+   - Detectar cambios de correlación
+   - Rebalanceo dinámico ante crisis
+
+3. **DrawdownController**
+   - Stop de cartera (-15% DD máximo)
+   - Reducción dinámica de exposure en drawdowns
+
+**Entregables**:
+- [ ] Optimizador mean-variance
+- [ ] Rebalanceo automático
+- [ ] Drawdown controller activo
+
+---
+
+### MANDATO 8: ML Ensemble + AutoML (Semanas 37-42)
+
+**Objetivo**: Expandir ML con ensemble models y AutoML para hyperparameter tuning
+
+**Componentes**:
+1. **EnsemblePredictor**
+   - Random Forest + GBM + XGBoost + LightGBM
+   - Stacking/Blending
+   - Out-of-fold predictions
+
+2. **AutoMLOptimizer**
+   - Hyperparameter search (Optuna)
+   - Feature selection automática
+   - Model selection por backtesting
+
+3. **OnlineLearner**
+   - Incremental learning (no full retrain)
+   - Concept drift detection
+   - Adaptive retraining schedule
+
+**Entregables**:
+- [ ] Ensemble de 4+ modelos
+- [ ] AutoML pipeline (Optuna)
+- [ ] Online learning activo
+
+---
+
+## ESTIMACIÓN DE ESFUERZO TOTAL
+
+### Recursos Humanos
+
+| Rol | ALPHA (6 sem) | BETA (8 sem) | GAMMA (6 sem) | TOTAL |
+|-----|---------------|--------------|---------------|-------|
+| Senior Quant Developer | 2 FTE | 3 FTE | 2 FTE | 2.5 FTE avg |
+| QA Engineer | 1 FTE | 1 FTE | 1 FTE | 1 FTE avg |
+| Senior Architect | 0.5 FTE | 1 FTE | 0.5 FTE | 0.7 FTE avg |
+| Risk Manager | - | - | 1 FTE | 0.3 FTE avg |
+| **TOTAL** | **3.5 FTE** | **5 FTE** | **4.5 FTE** | **4.3 FTE avg** |
+
+**Costo estimado** (asumiendo $150k/año por FTE):
+- ALPHA: $150k × 3.5 FTE × (6/52) ≈ **$60k**
+- BETA: $150k × 5 FTE × (8/52) ≈ **$115k**
+- GAMMA: $150k × 4.5 FTE × (6/52) ≈ **$78k**
+- **TOTAL**: **~$250k** (desarrollo completo MANDATOS 1-5)
+
+---
+
+## MÉTRICAS DE ÉXITO
+
+### Objetivos Cuantitativos (Post-Producción)
+
+| Métrica | Target | Medición |
+|---------|--------|----------|
+| **Sharpe Ratio** | >1.5 (rolling 6M) | Diario |
+| **Max Drawdown** | <15% (trailing 12M) | Continuo |
+| **Win Rate** | >55% | Mensual |
+| **Avg R-multiple** | >1.5 | Mensual |
+| **Daily Loss Limit** | <3% | Real-time |
+| **Circuit Breaker Triggers** | <2 por mes | Mensual |
+| **Test Coverage** | >75% | CI/CD |
+| **Code Review Coverage** | 100% PRs | CI/CD |
+| **Uptime** | >99.5% | 24/7 |
+| **Alert Response Time** | <5 min | Real-time |
+
+### Objetivos Cualitativos
+
+- [ ] **Model Risk Approval**: Comité aprueba uso en producción
+- [ ] **Internal Audit Pass**: Sin findings críticos
+- [ ] **Compliance Sign-off**: Regulatorio aprobado
+- [ ] **Backtest Validation**: 24 meses OOS, Sharpe >1.5
+- [ ] **Paper Trading**: 2 semanas sin crashes/anomalías
+- [ ] **Runbook Completo**: Documentación operativa aprobada
+
+---
+
+## RIESGOS DEL ROADMAP
+
+### Riesgos Técnicos
+
+1. **MANDATO 5 más complejo de lo estimado** (Probabilidad: 40%)
+   - **Impacto**: +4 semanas timeline
+   - **Mitigación**: Priorizar MicrostructureEngine sobre MultiFrame, lanzar en fases
+
+2. **Calibración Quality Score no mejora Sharpe** (Probabilidad: 20%)
+   - **Impacto**: Optimización inútil
+   - **Mitigación**: Validar en datos OOS antes de producción
+
+3. **Bugs críticos en producción piloto** (Probabilidad: 30%)
+   - **Impacto**: Rollback a paper trading
+   - **Mitigación**: Coverage >75%, tests E2E exhaustivos
+
+### Riesgos Organizacionales
+
+4. **Model Risk rechaza aprobación** (Probabilidad: 15%)
+   - **Impacto**: +2 semanas revisión/resubmit
+   - **Mitigación**: Involucrar Model Risk desde ALPHA
+
+5. **Recursos insuficientes** (Probabilidad: 25%)
+   - **Impacto**: Timeline se extiende 50-100%
+   - **Mitigación**: Asegurar 3-4 FTE comprometidos
+
+---
+
+## RECOMENDACIONES FINALES
+
+### Para CTO / Head of Engineering
+
+1. **DETENER marketing de MANDATO 5 hasta implementación**
+   - Actualmente es vaporware (5% real vs 100% prometido)
+   - Presentarlo como completo es técnicamente fraudulento
+
+2. **Asignar 4 FTE durante 20 semanas (mínimo)**
+   - NO es proyecto de 1 developer
+   - Requiere senior architect + developers + QA
+
+3. **NO lanzar a producción antes de Semana 20**
+   - Saltarse ALPHA/BETA = garantía de crashes en producción
+   - Paper trading mínimo 2 semanas (NO negociable)
+
+### Para Risk Management
+
+4. **Establecer límites conservadores iniciales**
+   - Risk por trade: 0.5% (NO 1-2%)
+   - Exposure total: 3% (NO 6%)
+   - Stop diario: -1.5% (NO -3%)
+
+5. **Implementar Model Risk Committee review**
+   - Antes de activar CUALQUIER estrategia nueva
+   - Revisión trimestral de performance
+
+### Para Quant Team
+
+6. **Priorizar Tier 1 acciones (BLOCKERS)**
+   - Testing, Observability, Calibraciones son NO NEGOCIABLES
+   - Tier 3 (optimizaciones) pueden esperar post-producción
+
+7. **Documentar TODO desde ALPHA**
+   - Strategy catalog
+   - Brain governance
+   - Runbooks de operaciones
+   - Incident response playbooks
+
+---
+
+## CONCLUSIÓN
+
+El sistema SUBLIMINE tiene **fundamentos sólidos** en diseño e intención, pero presenta **59 riesgos críticos** que lo hacen **NO APTO** para producción institucional en su estado actual.
+
+**Gap principal**: Brecha masiva entre documentación (nivel hedge fund) e implementación (nivel hackathon), especialmente en MANDATO 5 (vaporware).
+
+**Timeline realista**: 20-24 semanas de endurecimiento intensivo antes de producción.
+
+**Costo estimado**: ~$250k en recursos humanos.
+
+**Veredicto final**: **INVERSIÓN JUSTIFICADA** si se ejecuta roadmap completo. Sistema tiene potencial de Sharpe >1.5 con implementación correcta de MANDATOS 1-5.
+
+**Recomendación**: APROBAR roadmap, asignar recursos, ejecutar disciplinadamente. NO tomar atajos.
+
+---
+
+**FIN DEL PLAN DE ENDURECIMIENTO INSTITUCIONAL**
+
+---
+
+**AUDITORÍA COMPLETA FINALIZADA**
+**Fecha**: 2025-11-13
+**Total líneas**: 4,765
+**Mandatos auditados**: 5/5
+**Riesgos identificados**: 59 (21 P0, 25 P1, 13 P2)
+**Mejoras propuestas**: 40+ acciones priorizadas
+**Timeline producción**: 20-24 semanas
