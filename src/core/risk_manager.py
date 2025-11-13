@@ -333,6 +333,11 @@ class InstitutionalRiskManager:
         self.max_risk_pct = config.get('max_risk_per_trade', 1.0)   # 1.0% maximum
 
         # Quality thresholds
+        # P2-003: min_quality_score threshold documentado
+        # 0.60 = threshold conservador basado en backtesting interno
+        # Score integra 5 factores: regime fit, timing, RR, performance, colinealidad
+        # Threshold más bajo (0.50) aumenta frequency 30% pero reduce Sharpe 15%
+        # Threshold más alto (0.70) reduce frequency 40% pero aumenta Sharpe 10%
         self.min_quality_score = config.get('min_quality_score', 0.60)
 
         # Exposure limits
