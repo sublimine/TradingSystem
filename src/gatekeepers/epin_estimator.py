@@ -47,40 +47,51 @@ class ePINEstimator:
     def __init__(self,
                  volume_buckets: int = 50,
                  bucket_size: float = 10000.0,
-                 epin_window: int = 100):
+                 epin_window: int = 100,
+                 warm_up_threshold: int = 100,
+                 warm_up_absolute_pin: float = 0.75):
         """
         Inicializa el estimador.
-        
+
         Args:
             volume_buckets: Número de buckets para VPIN (default: 50)
             bucket_size: Volumen target por bucket (default: 10000)
             epin_window: Ventana para ePIN simple (default: 100)
+            warm_up_threshold: Mínimo de trades antes de usar PIN dinámico (default: 100)
+            warm_up_absolute_pin: Threshold absoluto durante warm-up (default: 0.75)
         """
         self.volume_buckets = volume_buckets
         self.bucket_size = bucket_size
         self.epin_window = epin_window
-        
+
+        # CR13 FIX: Agregar warm-up phase para prevenir false negatives
+        self.warm_up_threshold = warm_up_threshold
+        self.warm_up_absolute_pin = warm_up_absolute_pin
+        self.trades_observed = 0
+
         # Buckets para VPIN
         self.buy_volumes = deque(maxlen=volume_buckets)
         self.sell_volumes = deque(maxlen=volume_buckets)
-        
+
         # Bucket actual acumulándose
         self.current_bucket_buy = 0.0
         self.current_bucket_sell = 0.0
         self.current_bucket_total = 0.0
-        
+
         # Para ePIN simple
         self.trade_directions = deque(maxlen=epin_window)
-        
+
         # Valores actuales
         self.current_vpin = None
         self.current_epin = None
-        
+
         self.logger = logging.getLogger(self.__class__.__name__)
-        
+
         self.logger.info(
             f"ePIN/VPIN Estimator inicializado: "
-            f"buckets={volume_buckets}, bucket_size={bucket_size}, epin_window={epin_window}"
+            f"buckets={volume_buckets}, bucket_size={bucket_size}, epin_window={epin_window}, "
+            f"warm_up_threshold={warm_up_threshold}, "
+            f"warm_up_absolute_pin={warm_up_absolute_pin}"
         )
     
     def classify_trade(self, 
@@ -115,7 +126,10 @@ class ePINEstimator:
         """
         # Clasificar dirección
         direction = self.classify_trade(price, prev_mid)
-        
+
+        # CR13 FIX: Incrementar contador para warm-up phase
+        self.trades_observed += 1
+
         # Actualizar ePIN simple
         self.trade_directions.append(direction)
         self._update_epin()
@@ -213,51 +227,101 @@ class ePINEstimator:
     def should_halt_trading(self, halt_threshold: float = 0.85) -> bool:
         """
         Determina si se debe detener trading basándose en PIN.
-        
+
         Args:
             halt_threshold: PIN threshold para halt (default: 0.85)
-            
+
         Returns:
             True si PIN indica halt
         """
+        # CR13 FIX: Durante warm-up, usar threshold absoluto
+        if self.trades_observed < self.warm_up_threshold:
+            pin = self.get_pin()  # ePIN simple disponible desde primer trade
+
+            if pin is None:
+                # Sin datos → conservador: halt trading
+                self.logger.warning(
+                    f"HALT WARM-UP: Sin datos de PIN (trades={self.trades_observed}/{self.warm_up_threshold}). "
+                    f"Conservador: bloquear trading hasta warm-up completo."
+                )
+                return True
+
+            # Usar threshold absoluto durante warm-up
+            should_halt = pin > self.warm_up_absolute_pin
+
+            if should_halt:
+                self.logger.warning(
+                    f"HALT WARM-UP: PIN = {pin:.4f} > "
+                    f"{self.warm_up_absolute_pin:.4f} (threshold absoluto). "
+                    f"Trades observados: {self.trades_observed}/{self.warm_up_threshold}."
+                )
+
+            return should_halt
+
+        # Post-warm-up: usar threshold dinámico
         pin = self.get_pin()
-        
+
         if pin is None:
-            return False
-        
+            # CR13 FIX: Si no hay datos post-warm-up, ser conservador
+            self.logger.warning("HALT: Sin datos válidos de PIN. Conservador: bloquear trading.")
+            return True
+
         should_halt = pin > halt_threshold
-        
+
         if should_halt:
             self.logger.warning(
                 f"HALT RECOMENDADO: PIN = {pin:.4f} > {halt_threshold}. "
                 f"Alta probabilidad de informed trading."
             )
-        
+
         return should_halt
     
     def should_reduce_sizing(self, reduce_threshold: float = 0.70) -> bool:
         """
         Determina si se debe reducir sizing basándose en PIN.
-        
+
         Args:
             reduce_threshold: PIN threshold para reducción (default: 0.70)
-            
+
         Returns:
             True si PIN indica reducir sizing
         """
+        # CR13 FIX: Durante warm-up, usar threshold absoluto más conservador
+        if self.trades_observed < self.warm_up_threshold:
+            pin = self.get_pin()
+
+            if pin is None:
+                # Sin datos → conservador: reducir sizing
+                return True
+
+            # Usar threshold absoluto más bajo para reducción (87% del halt threshold)
+            reduce_absolute_threshold = self.warm_up_absolute_pin * 0.87  # ~0.65
+            should_reduce = pin > reduce_absolute_threshold
+
+            if should_reduce:
+                self.logger.info(
+                    f"REDUCIR SIZING WARM-UP: PIN = {pin:.4f} > "
+                    f"{reduce_absolute_threshold:.4f} (threshold absoluto). "
+                    f"Trades observados: {self.trades_observed}/{self.warm_up_threshold}."
+                )
+
+            return should_reduce
+
+        # Post-warm-up: usar threshold dinámico
         pin = self.get_pin()
-        
+
         if pin is None:
-            return False
-        
+            # CR13 FIX: Si no hay datos post-warm-up, conservador: reducir sizing
+            return True
+
         should_reduce = pin > reduce_threshold
-        
+
         if should_reduce:
             self.logger.info(
                 f"REDUCIR SIZING: PIN = {pin:.4f} > {reduce_threshold}. "
                 f"Informed trading detectado."
             )
-        
+
         return should_reduce
     
     def get_sizing_multiplier(self,

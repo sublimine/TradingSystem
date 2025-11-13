@@ -53,7 +53,7 @@ class MT5Connector:
         try:
             account = mt5.account_info()
             return account is not None
-        except:
+        except Exception:  # P1-014: No capturar SystemExit/KeyboardInterrupt
             return False
     
     def disconnect(self):

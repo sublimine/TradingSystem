@@ -20,9 +20,9 @@ MEJORAS IMPLEMENTADAS:
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Deque
 from datetime import datetime
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass, asdict
 import threading
 import logging
@@ -133,8 +133,10 @@ class ConflictArbiter:
         self.decision_tick_ms = 200
         self.batch_id_counter = 0
         self.batch_id_lock = threading.Lock()
-        
+
         # Intention locks
+        # CR8 FIX: Agregar mutex para proteger acceso concurrente a intention_locks dict
+        self.intention_locks_mutex = threading.Lock()
         self.intention_locks: Dict[str, IntentionLock] = {}
         self.lock_timeout_seconds = 5.0
         
@@ -202,7 +204,8 @@ class ConflictArbiter:
         )
         
         # Historial de decisiones
-        self.decision_history: List[ConflictResolution] = []
+        # P1-027: Usar deque(maxlen) para evitar memory leak en long-running systems
+        self.decision_history: Deque[ConflictResolution] = deque(maxlen=10000)
         
         # MÃ©tricas
         self.stats = {
@@ -258,44 +261,48 @@ class ConflictArbiter:
         """Adquiere lock de intenciÃ³n."""
         lock_key = f"{instrument}_{horizon}"
         now = datetime.now()
-        
-        if lock_key in self.intention_locks:
-            existing_lock = self.intention_locks[lock_key]
-            age = (now - existing_lock.timestamp).total_seconds()
-            
-            if age > self.lock_timeout_seconds:
-                logger.warning(
-                    f"LOCK_TIMEOUT: Liberando lock expirado {lock_key} "
-                    f"(batch={existing_lock.batch_id}, age={age:.1f}s)"
-                )
-                del self.intention_locks[lock_key]
-            else:
-                logger.debug(
-                    f"LOCK_CONTENTION: {lock_key} locked por {existing_lock.batch_id}"
-                )
-                self.stats['race_conditions_prevented'] += 1
-                return False
-        
-        self.intention_locks[lock_key] = IntentionLock(
-            instrument=instrument,
-            horizon=horizon,
-            batch_id=batch_id,
-            timestamp=now,
-            thread_id=threading.get_ident()
-        )
-        
-        logger.debug(f"LOCK_ACQUIRED: {lock_key} por {batch_id}")
-        return True
+
+        # CR8 FIX: Proteger acceso a intention_locks dict con mutex
+        with self.intention_locks_mutex:
+            if lock_key in self.intention_locks:
+                existing_lock = self.intention_locks[lock_key]
+                age = (now - existing_lock.timestamp).total_seconds()
+
+                if age > self.lock_timeout_seconds:
+                    logger.warning(
+                        f"LOCK_TIMEOUT: Liberando lock expirado {lock_key} "
+                        f"(batch={existing_lock.batch_id}, age={age:.1f}s)"
+                    )
+                    del self.intention_locks[lock_key]
+                else:
+                    logger.debug(
+                        f"LOCK_CONTENTION: {lock_key} locked por {existing_lock.batch_id}"
+                    )
+                    self.stats['race_conditions_prevented'] += 1
+                    return False
+
+            self.intention_locks[lock_key] = IntentionLock(
+                instrument=instrument,
+                horizon=horizon,
+                batch_id=batch_id,
+                timestamp=now,
+                thread_id=threading.get_ident()
+            )
+
+            logger.debug(f"LOCK_ACQUIRED: {lock_key} por {batch_id}")
+            return True
     
     def release_intention_lock(self, instrument: str, horizon: str, batch_id: str):
         """Libera lock de intenciÃ³n."""
         lock_key = f"{instrument}_{horizon}"
-        
-        if lock_key in self.intention_locks:
-            lock = self.intention_locks[lock_key]
-            if lock.batch_id == batch_id:
-                del self.intention_locks[lock_key]
-                logger.debug(f"LOCK_RELEASED: {lock_key} por {batch_id}")
+
+        # CR8 FIX: Proteger acceso a intention_locks dict con mutex
+        with self.intention_locks_mutex:
+            if lock_key in self.intention_locks:
+                lock = self.intention_locks[lock_key]
+                if lock.batch_id == batch_id:
+                    del self.intention_locks[lock_key]
+                    logger.debug(f"LOCK_RELEASED: {lock_key} por {batch_id}")
     
     def decide(self, signals: List[InstitutionalSignal], 
                data: pd.DataFrame, features: Dict,
@@ -682,10 +689,17 @@ class ConflictArbiter:
         - adv: k_adv Ã— (notional / ADV_daily)
         """
         base = self.ev_params['slippage_base_bp']
-        
+
         # Vol component
         returns = data['close'].pct_change().dropna()
-        vol_realized = returns.tail(20).std() if len(returns) >= 20 else returns.std()
+        # P1-016: Validar que tail(20) tenga >= 2 elementos antes de std()
+        tail_returns = returns.tail(20)
+        if len(tail_returns) >= 2:
+            vol_realized = tail_returns.std()
+        elif len(returns) >= 2:
+            vol_realized = returns.std()
+        else:
+            vol_realized = 0.0  # No hay suficientes datos para volatilidad
         vol_component = vol_realized * 10000 * self.ev_params['slippage_vol_multiplier']
         
         # Depth component

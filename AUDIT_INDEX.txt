@@ -1,0 +1,93 @@
+================================================================================
+ÍNDICE DE REPORTES DE AUDITORÍA - src/features/
+================================================================================
+Fecha: 2025-11-13
+Total Documentos: 4
+
+Para acceder a los reportes, ejecute:
+================================================================================
+
+1. VER RESUMEN VISUAL RÁPIDO:
+   cat /home/user/TradingSystem/AUDIT_FEATURES_SUMMARY.txt
+
+2. VER HALLAZGOS CRÍTICOS:
+   cat /home/user/TradingSystem/AUDIT_CRITICAL_FINDINGS.md
+
+3. VER ANÁLISIS DETALLADO COMPLETO:
+   cat /home/user/TradingSystem/AUDIT_FEATURES_DETAILED.md
+
+4. VER GUÍA DE USO:
+   cat /home/user/TradingSystem/AUDIT_FEATURES_README.md
+
+================================================================================
+UBICACIONES DE ARCHIVOS
+================================================================================
+
+/home/user/TradingSystem/
+├── AUDIT_FEATURES_SUMMARY.txt          (12 KB) - Quick reference
+├── AUDIT_CRITICAL_FINDINGS.md          (5.6 KB) - Critical issues only
+├── AUDIT_FEATURES_DETAILED.md          (20 KB) - Full analysis
+├── AUDIT_FEATURES_README.md            (4 KB) - How to use
+└── AUDIT_INDEX.txt                     (Este archivo)
+
+================================================================================
+CONTENIDO RESUMIDO
+================================================================================
+
+Hallazgos Totales: 24
+- Críticos: 7 (Bloquea producción)
+- Importantes: 11 (Próxima iteración)
+- Menores: 6 (Refactor futuro)
+
+Módulos Analizados: 12
+- technical_indicators.py
+- statistical_models.py
+- microstructure.py
+- order_flow.py
+- ofi.py
+- mtf.py
+- gaps.py
+- tns.py
+- orderbook_l2.py
+- displacement.py
+- delta_volume.py
+- derived_features.py
+
+================================================================================
+PROBLEMAS PRINCIPALES
+================================================================================
+
+1. Funciones Duplicadas (3 en statistical_models.py)
+2. Funciones Incompletas (4 stubs: detect_divergence, project_htf_to_ltf, detect_fvg, parse_time_sales)
+3. División por Cero (4 funciones sin validación)
+4. Comparación de Floats Incorrecta (2 casos)
+5. Sin Validación de Inputs (4+ casos)
+
+================================================================================
+RECOMENDACIONES DE ACCIÓN
+================================================================================
+
+INMEDIATO (Prioridad 1):
+- Consolidar funciones duplicadas en statistical_models.py
+- Completar funciones incompletas (stubs)
+Tiempo: 8 horas
+
+PRÓXIMA ITERACIÓN (Prioridad 2):
+- Arreglar división por cero
+- Cambiar comparaciones float
+- Agregar validación de inputs
+Tiempo: 4 horas
+
+FUTURO (Prioridad 3):
+- Consolidar trade classification
+- Agregar type hints
+- Usar constantes globales
+Tiempo: No urgente
+
+================================================================================
+COMANDO RÁPIDO PARA VER ESTADÍSTICAS
+================================================================================
+
+wc -l /home/user/TradingSystem/AUDIT*.{md,txt}
+
+================================================================================

@@ -1,25 +1,8 @@
 """
-Liquidity Sweep Detection Strategy - INSTITUTIONAL GRADE
+Liquidity Sweep Detection Strategy
 
-🏆 REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL PRICE ACTION GARBAGE
-
-Detects when institutions sweep retail stop losses using REAL order flow analysis:
-- OFI (Order Flow Imbalance) to detect institutional absorption
-- CVD (Cumulative Volume Delta) for directional bias confirmation
-- VPIN to identify informed trading vs noise
-- Volume-at-price footprint to see where absorption occurs
-- L2 order book pressure (if available)
-
-NOT just "wick beyond level + volume spike" retail garbage.
-
-RESEARCH BASIS:
-- Easley et al. (2012): "Flow Toxicity and Liquidity in Electronic Markets"
-- Cont, Stoikov, Talreja (2010): "A Stochastic Model for Order Book Dynamics"
-- Hasbrouck (2007): "Empirical Market Microstructure"
-
-Author: Elite Institutional Trading System
-Version: 2.0 INSTITUTIONAL
-Date: 2025-11-12
+Identifies instances where price briefly penetrates technical levels with anomalous
+volume before reversing, indicating institutional absorption of retail stop orders.
 """
 
 import numpy as np
@@ -33,394 +16,258 @@ from .strategy_base import StrategyBase, Signal
 
 class LiquiditySweepStrategy(StrategyBase):
     """
-    INSTITUTIONAL Liquidity Sweep Detection using real order flow.
-
-    Entry occurs after confirming:
-    1. Level penetration (wick beyond swing high/low)
-    2. OFI spike (institutional absorption)
-    3. CVD divergence (institutions buying while retail selling or vice versa)
-    4. VPIN confirmation (informed trading)
-    5. Rapid reversal back inside level
-
-    Win Rate: 68-75% (institutional grade with order flow confirmation)
+    Strategy that detects liquidity sweeps at critical technical levels.
+    
+    Entry occurs after confirming sweep characteristics including penetration depth,
+    volume anomaly, reversal velocity, order book imbalance, and order flow toxicity.
     """
-
+    
     def __init__(self, config: Dict):
         """
-        Initialize INSTITUTIONAL liquidity sweep strategy.
-
+        Initialize liquidity sweep strategy.
+        
         Required config parameters:
-            - lookback_periods: Periods for swing identification (bars)
-            - penetration_min_pips: Minimum penetration beyond level
-            - penetration_max_pips: Maximum penetration (too much = breakout not sweep)
-            - ofi_absorption_threshold: OFI threshold for absorption detection
-            - cvd_divergence_min: Minimum CVD divergence for confirmation
-            - vpin_threshold_max: Maximum VPIN (too high = toxic, avoid)
-            - reversal_velocity_min: Minimum reversal speed (pips/bar)
-            - min_confirmation_score: Minimum score (0-5) to enter
+            - lookback_periods: List of periods for swing point identification [24h, 48h, 72h]
+            - proximity_threshold: Distance to level to activate monitoring (pips)
+            - penetration_min: Minimum penetration beyond level (pips)
+            - penetration_max: Maximum penetration beyond level (pips)
+            - volume_threshold_multiplier: Volume must exceed this multiple of average
+            - reversal_velocity_min: Minimum speed of price return (pips/minute)
+            - imbalance_threshold: Minimum order book imbalance during sweep
+            - vpin_threshold: Minimum VPIN level indicating toxic flow
+            - min_confirmation_score: Minimum total confirmation score (0-5)
         """
         super().__init__(config)
-
-        # Swing detection
+        
         self.lookback_periods = config.get('lookback_periods', [60, 120, 240])  # 1h, 2h, 4h
-
-        # Penetration criteria
-        self.penetration_min_pips = config.get('penetration_min', 6)  # Updated param name
-        self.penetration_max_pips = config.get('penetration_max', 22)  # Updated param name
-
-        # INSTITUTIONAL ORDER FLOW PARAMETERS
-        self.ofi_absorption_threshold = config.get('ofi_absorption_threshold', 3.0)
-        self.cvd_divergence_min = config.get('cvd_divergence_min', 0.6)
-        # FIX BUG #3: Add cvd_confirmation_threshold (used in evaluate) as alias
-        self.cvd_confirmation_threshold = self.cvd_divergence_min
-        self.vpin_threshold_max = config.get('vpin_threshold', 0.30)  # Use existing param name
-
-        # Reversal criteria
-        self.reversal_velocity_min = config.get('reversal_velocity_min', 25.0)  # From config
-
-        # Confirmation score
-        self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
-
-        # Tracking
+        self.proximity_threshold = config.get('proximity_threshold', 10)
+        self.penetration_min = config.get('penetration_min', 3)
+        self.penetration_max = config.get('penetration_max', 15)
+        self.volume_threshold = config.get('volume_threshold_multiplier', 1.3)  # MÃƒÆ’Ã‚Â¡s sensible
+        self.reversal_velocity_min = config.get('reversal_velocity_min', 3.5)
+        self.imbalance_threshold = config.get('imbalance_threshold', 0.3)
+        self.vpin_threshold = config.get('vpin_threshold', 0.45)  # MAX seguro, no mÃƒÆ’Ã‚Â­nimo
+        self.min_confirmation_score = config.get('min_confirmation_score', 3)
+        
         self.identified_levels = {}
-        self.active_sweeps = {}
-
+        self.active_monitors = {}
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info(f"🏆 INSTITUTIONAL Liquidity Sweep initialized")
-        self.logger.info(f"   OFI absorption threshold: {self.ofi_absorption_threshold}")
-        self.logger.info(f"   CVD divergence min: {self.cvd_divergence_min}")
-        self.logger.info(f"   VPIN threshold max: {self.vpin_threshold_max}")
-
+        
     def evaluate(self, market_data: pd.DataFrame, features: Dict) -> List[Signal]:
         """
-        Evaluate for INSTITUTIONAL liquidity sweep opportunities.
-
+        Evaluate market for liquidity sweep opportunities.
+        
         Args:
-            market_data: Recent OHLCV data
-            features: Pre-calculated features (MUST include OFI, CVD, VPIN)
-
+            market_data: Recent OHLCV data with at least 72 hours of history
+            features: Pre-calculated features including swing points, VPIN, imbalances
+            
         Returns:
-            List of signals
+            List of signals generated (may be empty)
         """
-        if len(market_data) < 100:
-            return []
-
-        # Validate required features exist
         if not self.validate_inputs(market_data, features):
             return []
-
-        # Get required features
-        ofi = features.get('ofi')
-        cvd = features.get('cvd')
-        vpin = features.get('vpin')
-
-        # Get symbol
-        symbol = market_data.attrs.get('symbol', 'UNKNOWN')
-        current_price = market_data['close'].iloc[-1]
-        current_time = market_data.index[-1] if hasattr(market_data, 'index') else datetime.now()
-
-        # Update critical swing levels
-        self._update_swing_levels(market_data, symbol)
-
-        # Check for recent level sweeps
-        recent_bars = market_data.tail(20)
-
+        
         signals = []
-
+        symbol = market_data['symbol'].iloc[-1] if 'symbol' in market_data.columns else 'UNKNOWN'
+        
+        self._update_critical_levels(market_data, features)
+        
+        current_price = market_data['close'].iloc[-1]
+        current_time = market_data.index[-1]
+        
+        self._update_monitors(symbol, current_price, current_time)
+        
+        recent_bars = market_data.tail(10)
         for level_price, level_info in self.identified_levels.get(symbol, {}).items():
-            # Check if level was penetrated recently
-            sweep_detected, sweep_info = self._detect_level_sweep(
-                recent_bars, level_price, level_info
-            )
-
-            if not sweep_detected:
-                continue
-
-            # INSTITUTIONAL CONFIRMATION using order flow
-            confirmation_score, criteria = self._evaluate_institutional_confirmation(
-                recent_bars, sweep_info, ofi, cvd, vpin, features
-            )
-
-            if confirmation_score >= self.min_confirmation_score:
-                signal = self._generate_sweep_signal(
-                    symbol, current_time, current_price, level_price,
-                    level_info, sweep_info, confirmation_score, criteria,
-                    market_data
+            if self._check_level_penetration(recent_bars, level_price, level_info['type']):
+                
+                confirmation_score, criteria_scores = self._evaluate_sweep_criteria(
+                    recent_bars, level_price, level_info, features
                 )
-                if signal:
-                    signals.append(signal)
-                    self.logger.warning(f"🎯 {symbol}: INSTITUTIONAL LIQUIDITY SWEEP - "
-                                      f"Score={confirmation_score:.1f}/5.0, "
-                                      f"OFI={ofi:.2f}, CVD={cvd:.1f}, VPIN={vpin:.2f}")
-
+                
+                if confirmation_score >= self.min_confirmation_score:
+                    signal = self._generate_signal(
+                        symbol, current_time, level_price, level_info,
+                        confirmation_score, criteria_scores, market_data
+                    )
+                    if signal:
+                        signals.append(signal)
+        
         return signals
-
-    def _update_swing_levels(self, market_data: pd.DataFrame, symbol: str):
-        """Identify critical swing high/low levels for sweep detection."""
+    
+    def _update_critical_levels(self, market_data: pd.DataFrame, features: Dict):
+        """Identify and update critical technical levels from swing points."""
+        symbol = market_data['symbol'].iloc[-1] if 'symbol' in market_data.columns else 'UNKNOWN'
+        
         if symbol not in self.identified_levels:
             self.identified_levels[symbol] = {}
-
-        for period in self.lookback_periods:
-            if len(market_data) < period:
+        
+        for period_minutes in self.lookback_periods:
+            if len(market_data) < period_minutes:
                 continue
-
-            period_data = market_data.tail(period)
-
-            # Detect swing highs
+            
+            period_data = market_data.tail(period_minutes).copy()
+            
             highs = period_data['high'].values
-            for i in range(5, len(highs) - 5):
-                # Swing high = high[i] is highest in window
-                if highs[i] == max(highs[i-5:i+6]):
-                    level_price = round(highs[i], 5)
-
-                    if level_price not in self.identified_levels[symbol]:
-                        self.identified_levels[symbol][level_price] = {
-                            'type': 'resistance',
-                            'period': period,
-                            'touches': 1,
-                            'last_seen': datetime.now()
-                        }
-
-            # Detect swing lows
+            swing_high_indices = []
+            for i in range(2, len(highs) - 2):
+                if highs[i] == max(highs[i-2:i+3]):
+                    swing_high_indices.append(i)
+            
             lows = period_data['low'].values
-            for i in range(5, len(lows) - 5):
-                if lows[i] == min(lows[i-5:i+6]):
-                    level_price = round(lows[i], 5)
-
-                    if level_price not in self.identified_levels[symbol]:
-                        self.identified_levels[symbol][level_price] = {
-                            'type': 'support',
-                            'period': period,
-                            'touches': 1,
-                            'last_seen': datetime.now()
-                        }
-
-        # Clean old levels
-        cutoff_time = datetime.now() - timedelta(hours=24)
-        for level_price in list(self.identified_levels.get(symbol, {}).keys()):
-            if self.identified_levels[symbol][level_price]['last_seen'] < cutoff_time:
-                del self.identified_levels[symbol][level_price]
-
-    def _detect_level_sweep(self, recent_bars: pd.DataFrame, level_price: float,
-                           level_info: Dict) -> Tuple[bool, Optional[Dict]]:
-        """
-        Detect if level was swept (penetrated then reversed).
-
-        Returns:
-            (sweep_detected, sweep_info_dict)
-        """
-        level_type = level_info['type']
-
-        for i in range(len(recent_bars) - 3, len(recent_bars)):
-            bar = recent_bars.iloc[i]
-
-            if level_type == 'resistance':
-                # Check if high penetrated level
-                penetration_pips = (bar['high'] - level_price) * 10000
-
-                if self.penetration_min_pips <= penetration_pips <= self.penetration_max_pips:
-                    # Check if closed back below (reversal)
-                    if bar['close'] < level_price:
-                        # Calculate reversal velocity
-                        reversal_distance = (bar['high'] - bar['close']) * 10000
-
-                        sweep_info = {
-                            'direction': 'SHORT',  # Sweep up then reverse down
-                            'penetration_pips': penetration_pips,
-                            'reversal_distance_pips': reversal_distance,
-                            'sweep_bar_index': i,
-                            'sweep_high': bar['high'],
-                            'sweep_close': bar['close'],
-                            'level_type': level_type
-                        }
-                        return True, sweep_info
-
-            else:  # support
-                # Check if low penetrated level
-                penetration_pips = (level_price - bar['low']) * 10000
-
-                if self.penetration_min_pips <= penetration_pips <= self.penetration_max_pips:
-                    # Check if closed back above (reversal)
-                    if bar['close'] > level_price:
-                        reversal_distance = (bar['close'] - bar['low']) * 10000
-
-                        sweep_info = {
-                            'direction': 'LONG',  # Sweep down then reverse up
-                            'penetration_pips': penetration_pips,
-                            'reversal_distance_pips': reversal_distance,
-                            'sweep_bar_index': i,
-                            'sweep_low': bar['low'],
-                            'sweep_close': bar['close'],
-                            'level_type': level_type
-                        }
-                        return True, sweep_info
-
-        return False, None
-
-    def _evaluate_institutional_confirmation(self, recent_bars: pd.DataFrame,
-                                            sweep_info: Dict, ofi: float,
-                                            cvd: float, vpin: float,
-                                            features: Dict) -> Tuple[float, Dict]:
-        """
-        INSTITUTIONAL order flow confirmation of liquidity sweep.
-
-        Evaluates 5 criteria (each worth 0-1.0 points):
-        1. OFI Absorption (institutions absorbing retail stops)
-        2. CVD Divergence (CVD opposite to sweep direction)
-        3. VPIN Clean (not toxic flow)
-        4. Reversal Velocity (rapid reversal = strong absorption)
-        5. Volume Spike (high volume during sweep)
-
-        Returns:
-            (total_score, criteria_dict)
-        """
-        direction = sweep_info['direction']
-        sweep_bar_idx = sweep_info['sweep_bar_index']
-
-        criteria = {}
-
-        # CRITERION 1: OFI ABSORPTION (most important)
-        # For LONG sweep: Institutions BUYING (positive OFI) while price swept down
-        # For SHORT sweep: Institutions SELLING (negative OFI) while price swept up
-
-        if direction == 'LONG':
-            # Sweep went down, should see positive OFI (buying pressure)
-            ofi_score = min(abs(ofi) / self.ofi_absorption_threshold, 1.0) if ofi > 0 else 0.0
+            swing_low_indices = []
+            for i in range(2, len(lows) - 2):
+                if lows[i] == min(lows[i-2:i+3]):
+                    swing_low_indices.append(i)
+            
+            for idx in swing_high_indices[-5:]:
+                level_price = round(highs[idx], 5)
+                self.identified_levels[symbol][level_price] = {
+                    'type': 'resistance',
+                    'period': period_minutes,
+                    'touches': 1,
+                    'last_updated': datetime.now()
+                }
+            
+            for idx in swing_low_indices[-5:]:
+                level_price = round(lows[idx], 5)
+                self.identified_levels[symbol][level_price] = {
+                    'type': 'support',
+                    'period': period_minutes,
+                    'touches': 1,
+                    'last_updated': datetime.now()
+                }
+    
+    def _update_monitors(self, symbol: str, current_price: float, current_time: datetime):
+        """Update monitoring status for levels approaching current price."""
+        if symbol not in self.active_monitors:
+            self.active_monitors[symbol] = {}
+        
+        for level_price, level_info in self.identified_levels.get(symbol, {}).items():
+            distance_pips = abs(current_price - level_price) * 10000
+            
+            if distance_pips <= self.proximity_threshold:
+                if level_price not in self.active_monitors[symbol]:
+                    self.active_monitors[symbol][level_price] = {
+                        'activated': current_time,
+                        'snapshots': []
+                    }
+    
+    def _check_level_penetration(self, recent_bars: pd.DataFrame, 
+                                 level_price: float, level_type: str) -> bool:
+        """Check if price has penetrated the specified level."""
+        if level_type == 'support':
+            penetration = recent_bars['low'].min() < level_price
+            reversal = recent_bars['close'].iloc[-1] >= level_price
         else:
-            # Sweep went up, should see negative OFI (selling pressure)
-            ofi_score = min(abs(ofi) / self.ofi_absorption_threshold, 1.0) if ofi < 0 else 0.0
+            penetration = recent_bars['high'].max() > level_price
+            reversal = recent_bars['close'].iloc[-1] <= level_price
+        
+        return penetration and reversal
+    
+    def _evaluate_sweep_criteria(self, recent_bars: pd.DataFrame, level_price: float,
+                                 level_info: Dict, features: Dict) -> Tuple[int, Dict]:
+        """
+        Evaluate five confirmation criteria for liquidity sweep.
+        
+        Returns tuple of (total_score, individual_criteria_scores)
+        """
+        criteria_scores = {
+            'penetration_depth': 0,
+            'volume_anomaly': 0,
+            'reversal_velocity': 0,
+            'order_book_imbalance': 0,
+            'vpin_toxicity': 0
+        }
 
-        criteria['ofi_absorption'] = ofi_score
-
-        # CRITERION 2: CVD DIVERGENCE
-        # CVD should be opposite to sweep direction (institutions accumulating opposite)
-
-        if direction == 'LONG' and cvd > 0:
-            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)  # Normalize CVD
-        elif direction == 'SHORT' and cvd < 0:
-            cvd_score = min(abs(cvd) / (self.cvd_confirmation_threshold * 16.67), 1.0)
+        # P1-021: Validar datos no son NaN antes de calcular min/max
+        if level_info['type'] == 'support':
+            if recent_bars['low'].notna().all():
+                penetration_depth = (level_price - recent_bars['low'].min()) * 10000
+            else:
+                penetration_depth = 0.0  # Datos inválidos, no hay penetración válida
         else:
-            cvd_score = 0.0
+            if recent_bars['high'].notna().all():
+                penetration_depth = (recent_bars['high'].max() - level_price) * 10000
+            else:
+                penetration_depth = 0.0
 
-        criteria['cvd_divergence'] = cvd_score
-
-        # CRITERION 3: VPIN CLEAN (not too high = not toxic)
-        # Lower VPIN = cleaner flow = better
-        vpin_score = max(0, 1.0 - (vpin / self.vpin_threshold_max)) if self.vpin_threshold_max > 0 else 0.5
-        criteria['vpin_clean'] = vpin_score
-
-        # CRITERION 4: REVERSAL VELOCITY
-        reversal_velocity = sweep_info['reversal_distance_pips']
-        velocity_score = min(reversal_velocity / self.reversal_velocity_min, 1.0)
-        criteria['reversal_velocity'] = velocity_score
-
-        # CRITERION 5: VOLUME SPIKE during sweep
-        if sweep_bar_idx < len(recent_bars):
-            sweep_volume = recent_bars.iloc[sweep_bar_idx]['volume']
-            avg_volume = recent_bars['volume'].iloc[:-1].mean()
-
-            volume_ratio = sweep_volume / avg_volume if avg_volume > 0 else 1.0
-            volume_score = min((volume_ratio - 1.0) / 2.0, 1.0)  # Score based on 1-3x volume
-            volume_score = max(0, volume_score)
-        else:
-            volume_score = 0.0
-
-        criteria['volume_spike'] = volume_score
-
-        # TOTAL SCORE (out of 5.0)
-        total_score = (
-            ofi_score +
-            cvd_score +
-            vpin_score +
-            velocity_score +
-            volume_score
-        )
-
-        return total_score, criteria
-
-    def _generate_sweep_signal(self, symbol: str, current_time, current_price: float,
-                               level_price: float, level_info: Dict, sweep_info: Dict,
-                               confirmation_score: float, criteria: Dict,
-                               market_data: pd.DataFrame) -> Optional[Signal]:
-        """Generate signal for confirmed institutional liquidity sweep."""
-
-        direction = sweep_info['direction']
-
-        # Calculate ATR for stops/targets
-        atr = self._calculate_atr(market_data)
-
-        # STOP LOSS: Beyond the sweep point (institutions won't let it get hit)
-        if direction == 'LONG':
-            # Entry near current price, stop below sweep low
+        if self.penetration_min <= penetration_depth <= self.penetration_max:
+            criteria_scores['penetration_depth'] = 1
+        
+        sweep_bar_idx = recent_bars['low'].idxmin() if level_info['type'] == 'support' else recent_bars['high'].idxmax()
+        sweep_volume = recent_bars.loc[sweep_bar_idx, 'volume']
+        avg_volume = recent_bars['volume'].mean()
+        
+        if sweep_volume >= avg_volume * self.volume_threshold:
+            criteria_scores['volume_anomaly'] = 1
+        
+        bars_since_sweep = len(recent_bars) - list(recent_bars.index).index(sweep_bar_idx) - 1
+        if bars_since_sweep > 0:
+            price_reversal = abs(recent_bars['close'].iloc[-1] - recent_bars.loc[sweep_bar_idx, 'close']) * 10000
+            reversal_velocity = price_reversal / bars_since_sweep
+            
+            if reversal_velocity >= self.reversal_velocity_min:
+                criteria_scores['reversal_velocity'] = 1
+        
+        if 'order_book_imbalance' in features:
+            current_imbalance = features['order_book_imbalance']
+            expected_direction = -1 if level_info['type'] == 'support' else 1
+            
+            if abs(current_imbalance) >= self.imbalance_threshold and np.sign(current_imbalance) == expected_direction:
+                criteria_scores['order_book_imbalance'] = 1
+        
+        if 'vpin' in features:
+            current_vpin = features['vpin']
+            if current_vpin >= self.vpin_threshold:
+                criteria_scores['vpin_toxicity'] = 1
+        
+        total_score = sum(criteria_scores.values())
+        
+        return total_score, criteria_scores
+    
+    def _generate_signal(self, symbol: str, timestamp: datetime, level_price: float,
+                        level_info: Dict, confirmation_score: int, criteria_scores: Dict,
+                        market_data: pd.DataFrame) -> Optional[Signal]:
+        """Generate trading signal after successful sweep detection."""
+        current_price = market_data['close'].iloc[-1]
+        
+        recent_highs = market_data['high'].tail(14)
+        recent_lows = market_data['low'].tail(14)
+        atr_value = (recent_highs - recent_lows).mean()
+        
+        if level_info['type'] == 'support':
+            direction = 'LONG'
             entry_price = current_price
-            stop_loss = sweep_info['sweep_low'] - (atr * 0.5)  # Small buffer below sweep
-            risk = entry_price - stop_loss
-            take_profit = entry_price + (risk * 3.0)  # 3R target
-
-        else:  # SHORT
+            stop_loss = level_price - (atr_value * 1.5)
+            take_profit = current_price + (abs(current_price - stop_loss) * 3.0)
+        else:
+            direction = 'SHORT'
             entry_price = current_price
-            stop_loss = sweep_info['sweep_high'] + (atr * 0.5)  # Small buffer above sweep
-            risk = stop_loss - entry_price
-            take_profit = entry_price - (risk * 3.0)
-
-        # Validate risk is reasonable
-        if risk <= 0 or risk > atr * 3.0:
-            return None
-
+            stop_loss = level_price + (atr_value * 1.5)
+            take_profit = current_price - (abs(stop_loss - current_price) * 3.0)
+        
+        sizing_level = 4 if confirmation_score == 5 else 3
+        
+        metadata = {
+            'level_price': float(level_price),
+            'level_type': level_info['type'],
+            'confirmation_score': confirmation_score,
+            'criteria_scores': criteria_scores,
+            'atr': float(atr_value),
+            'strategy_version': '1.0'
+        }
+        
         signal = Signal(
-            timestamp=current_time,
+            timestamp=timestamp,
             symbol=symbol,
-            strategy_name='LiquiditySweep_Institutional',
+            strategy_name=self.name,
             direction=direction,
-            entry_price=entry_price,
-            stop_loss=stop_loss,
-            take_profit=take_profit,
-            sizing_level=3,  # Moderate sizing
-            metadata={
-                'level_price': float(level_price),
-                'level_type': level_info['type'],
-                'penetration_pips': float(sweep_info['penetration_pips']),
-                'reversal_pips': float(sweep_info['reversal_distance_pips']),
-                'confirmation_score': float(confirmation_score),
-                'ofi_score': float(criteria['ofi_absorption']),
-                'cvd_score': float(criteria['cvd_divergence']),
-                'vpin_score': float(criteria['vpin_clean']),
-                'velocity_score': float(criteria['reversal_velocity']),
-                'volume_score': float(criteria['volume_spike']),
-                'setup_type': 'INSTITUTIONAL_LIQUIDITY_SWEEP',
-                'expected_win_rate': 0.70 + (confirmation_score / 20.0),  # 70-75% WR
-                # Partial exits
-                'partial_exit_1': {'r_level': 1.5, 'percent': 50},
-                'partial_exit_2': {'r_level': 2.5, 'percent': 30},
-            }
+            entry_price=float(entry_price),
+            stop_loss=float(stop_loss),
+            take_profit=float(take_profit),
+            sizing_level=sizing_level,
+            metadata=metadata
         )
-
+        
         return signal
-
-    def _calculate_atr(self, market_data: pd.DataFrame, period: int = 14) -> float:
-        """Calculate ATR for stop/target placement."""
-        high = market_data['high']
-        low = market_data['low']
-        close = market_data['close'].shift(1)
-
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
-
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        return atr if not pd.isna(atr) else (market_data['high'].iloc[-1] - market_data['low'].iloc[-1])
-
-    def validate_inputs(self, market_data: pd.DataFrame, features: Dict) -> bool:
-        """Validate required inputs are present."""
-        if len(market_data) < 50:
-            return False
-
-        required_features = ['ofi', 'cvd', 'vpin']
-        for feature in required_features:
-            if feature not in features:
-                self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")
-                return False
-
-        return True

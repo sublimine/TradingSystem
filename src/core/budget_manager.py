@@ -32,9 +32,13 @@ class BudgetManager:
             family_allocations: Dict[familia, fracción] donde fracción suma <= 1.0
                                Ej: {'momentum': 0.30, 'mean_reversion': 0.25, 'breakout': 0.20}
         """
+        # P1-024: Validar total_capital >= 0 para evitar utilization negativa
+        if total_capital < 0:
+            raise ValueError(f"total_capital debe ser >= 0, recibido: {total_capital}")
+
         self.total_capital = total_capital
         self.family_allocations = family_allocations
-        
+
         # Validar que allocations no excedan 100%
         total_allocation = sum(family_allocations.values())
         if total_allocation > 1.0:

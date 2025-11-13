@@ -41,13 +41,15 @@ def calculate_ofi(bars_df: pd.DataFrame, window_size: int = 20) -> pd.Series:
     # Normalizar por la suma total de volumen en la ventana para hacer comparable
     ofi = signed_volume.rolling(window=window_size, min_periods=1).sum()
     total_volume = bars_df['volume'].rolling(window=window_size, min_periods=1).sum()
-    
+
+    # P1-003: Usar max() para validación robusta en lugar de epsilon pequeño
     # Normalizar OFI para que esté en rango [-1, 1]
-    ofi_normalized = ofi / (total_volume + 1e-10)  # Evitar división por cero
-    
+    total_volume_safe = total_volume.where(total_volume > 1e-6, 1e-6)
+    ofi_normalized = ofi / total_volume_safe
+
     # Reemplazar NaN con 0
     ofi_normalized = ofi_normalized.fillna(0.0)
-    
+
     return ofi_normalized
 
 
