@@ -1635,3 +1635,1027 @@ def _analyze_momentum_quality(self, market_data: pd.DataFrame, features: Dict) -
 ---
 
 **FIN AUDITORÍA MANDATO 2**
+
+---
+
+## MANDATO 3 – AUDITORÍA INSTITUCIONAL
+
+**Alcance**: Brain-layer (SignalArbitrator, ML Adaptive Engine), meta-capa de decisión, integración con QualityScorer/MicrostructureEngine/ExposureManager.
+
+**Estado actual**: DISEÑADO PERO SIN GOVERNANCE – **Caja negra potencialmente peligrosa sin límites claros ni model risk management**.
+
+---
+
+### RIESGOS / DEBILIDADES DETECTADAS
+
+#### **P0 (CRÍTICO) – Riesgos que pueden causar pérdidas severas o anular controles de riesgo**
+
+**P0-009: Brain-layer puede modificar decisiones sin límites documentados**
+
+**Descripción**:
+- `brain.py` y `ml_adaptive_engine.py` implementan:
+  - `SignalArbitrator`: Selecciona entre señales conflictivas.
+  - `ML Adaptive Engine`: Aprende de trades pasados y ajusta parámetros.
+- **NO existe documento que defina** qué puede y NO puede tocar el brain-layer:
+  - ¿Puede modificar risk caps (2% por idea)?
+  - ¿Puede anular SL estructurales?
+  - ¿Puede cambiar pesos del QualityScorer?
+  - ¿Puede desactivar estrategias?
+  - ¿Puede ignorar reglas de ExposureManager?
+
+**Evidencia**:
+- `brain.py:56-148`: `_score_signal()` usa pesos hardcodeados (40%, 25%, 20%, 10%, 5%).
+- `ml_adaptive_engine.py`: Implementa "Parameter Optimizer" y "Risk Parameter Adapter".
+- **NO existe `docs/BRAIN_LAYER_GOVERNANCE.md`** con áreas prohibidas.
+- **NO existe `docs/MODEL_RISK_POLICY.md`** que defina cómo se valida el brain-layer.
+
+**Impacto**:
+- **Muy alto**:
+  - **Brain-layer descontrolado puede anular risk caps** → pérdidas catastróficas.
+  - **Puede degradar QualityScorer** ajustando pesos incorrectamente.
+  - **Sin límites, puede entrar en loop de auto-destrucción** (ej: ajustar parámetros tras pérdidas, causando más pérdidas).
+  - **Auditoría rechazaría sistema** sin governance de modelo predictivo.
+
+**Escenario de fallo**:
+```
+1. Brain-layer detecta que estrategia X pierde dinero.
+2. Ajusta pesos del QualityScorer para bajar peso de 'pedigree'.
+3. Ahora todas las estrategias pasan threshold, incluyendo malas.
+4. Sistema genera más pérdidas.
+5. Brain-layer sobre-reacciona, desactiva estrategias buenas.
+→ Colapso del sistema.
+```
+
+**Severidad**: **P0 – CRÍTICO**
+
+---
+
+**P0-010: ML Adaptive Engine sin challenger model ni validación independiente**
+
+**Descripción**:
+- `ml_adaptive_engine.py` implementa:
+  - `RandomForestClassifier` para predecir éxito de señales.
+  - `GradientBoostingRegressor` para predecir PnL.
+  - `Ridge` regression para optimizar parámetros.
+- **Problemas**:
+  - NO hay **challenger model** (segundo modelo que valida predicciones del primero).
+  - NO hay **backtesting del brain-layer** (¿funciona realmente o genera noise?).
+  - NO hay **métricas de calidad del modelo** (accuracy, precision, recall, AUC).
+  - NO hay **validación out-of-sample** antes de aplicar ajustes.
+
+**Evidencia**:
+- `ml_adaptive_engine.py:38-40`: Imports de sklearn (RandomForest, GradientBoosting, Ridge).
+- NO existe `docs/ML_MODEL_VALIDATION.md`.
+- NO hay carpeta `models/validation/` con métricas.
+
+**Impacto**:
+- **Muy alto**:
+  - **Modelo puede overfittear** a ruido → decisiones incorrectas.
+  - **Sin validación, modelo puede degradarse** sin que nadie lo detecte.
+  - **Riesgo de data leakage** (entrenar con datos futuros por error).
+  - **Model Risk rechazaría modelo** sin validación rigurosa.
+
+**Severidad**: **P0 – CRÍTICO**
+
+---
+
+**P0-011: Ausencia de rollback mechanism si brain-layer se comporta mal**
+
+**Descripción**:
+- Brain-layer ajusta parámetros dinámicamente.
+- **NO hay mecanismo de rollback** si:
+  - Ajustes causan pérdidas > X%.
+  - Modelo ML se degrada (accuracy cae).
+  - Brain-layer rechaza señales buenas consistentemente.
+
+**Evidencia**:
+- NO existe `docs/BRAIN_LAYER_ROLLBACK_POLICY.md`.
+- NO hay código que detecte comportamiento anómalo del brain-layer.
+- NO hay snapshot de parámetros antes de ajustes.
+
+**Impacto**:
+- **Alto**:
+  - **Ajustes malos son irreversibles** → sistema queda degradado.
+  - **No se puede volver a última configuración buena** rápidamente.
+  - **Pérdidas se acumulan** mientras se diagnostica problema.
+
+**Severidad**: **P0 – CRÍTICO**
+
+---
+
+**P0-012: Data leakage potencial en learning loop**
+
+**Descripción**:
+- `TradeMemoryDatabase` almacena trades completos.
+- **Riesgo**: Si learning loop usa datos del futuro para calibrar decisiones presentes:
+  - Ej: Ajustar pesos del QualityScorer usando PnL de trades que aún no cerraron.
+  - Ej: Entrenar modelo ML con datos de régimen futuro.
+
+**Evidencia**:
+- `ml_adaptive_engine.py`: Implementa `TradeMemoryDatabase` y `SignalRecord`.
+- NO hay validación explícita de time-series split (train/validation temporal).
+- NO existe `docs/DATA_GOVERNANCE_ML.md` que prevenga data leakage.
+
+**Impacto**:
+- **Muy alto**:
+  - **Backtest falso positivo**: Modelo parece funcionar en backtest pero falla en vivo.
+  - **Overfitting severo** a datos históricos.
+  - **Pérdidas en producción** por decisiones basadas en datos contaminados.
+
+**Severidad**: **P0 – CRÍTICO**
+
+---
+
+#### **P1 (IMPORTANTE) – Degrada calidad institucional**
+
+**P1-011: Pesos del SignalArbitrator hardcodeados sin justificación empírica**
+
+**Descripción**:
+- `brain.py:108-141`: Scoring de señales usa pesos:
+  - Quality: 40%
+  - Performance: 25%
+  - Regime: 20%
+  - Risk-Reward: 10%
+  - Timing: 5%
+
+- **NO hay justificación**:
+  - ¿Por qué 40% quality y no 50%?
+  - ¿Por qué timing solo 5% cuando microestructura es crítica?
+  - ¿Se derivaron de backtest o son arbitrarios?
+
+**Evidencia**:
+- Pesos hardcodeados en código.
+- NO existe `docs/ARBITRATOR_WEIGHT_CALIBRATION.md`.
+
+**Impacto**:
+- **Medio**:
+  - **Pesos subóptimos** → selección de señales no maximiza Sharpe.
+  - **Sin calibración, pesos se vuelven obsoletos** con cambios de mercado.
+
+**Severidad**: **P1 – IMPORTANTE**
+
+---
+
+**P1-012: Regime-strategy fit matrix hardcodeada sin actualización dinámica**
+
+**Descripción**:
+- `brain.py:183-223`: `fit_matrix` hardcodeado con valores tipo:
+```python
+'TREND_STRONG_UP': {
+    'momentum_quality': 1.0,
+    'breakout_volume_confirmation': 0.95,
+    # ...
+}
+```
+
+- **Problemas**:
+  - Valores fijos sin proceso de calibración.
+  - NO se actualiza con performance real de estrategias en cada régimen.
+  - Si régimen cambia, matriz puede quedar obsoleta.
+
+**Evidencia**:
+- `brain.py:183`: `fit_matrix` dict hardcodeado.
+- NO existe `tools/calibrate_regime_fit.py`.
+
+**Impacto**:
+- **Medio**:
+  - **Estrategias mal asignadas a regímenes** → peor performance.
+  - **No adaptación a cambios estructurales de mercado**.
+
+**Severidad**: **P1 – IMPORTANTE**
+
+---
+
+**P1-013: ML Adaptive Engine sin métricas de monitoreo continuo**
+
+**Descripción**:
+- Modelos ML entrenados, pero:
+  - **NO hay métricas de health**:
+    - Accuracy en ventana deslizante.
+    - Precision/Recall en últimas N predicciones.
+    - AUC degradándose.
+  - **NO hay alertas** si modelo se degrada.
+
+**Evidencia**:
+- NO existe `src/monitoring/ml_model_monitor.py`.
+- NO hay dashboard de métricas ML.
+
+**Impacto**:
+- **Medio**:
+  - **Modelo degrada silenciosamente** → decisiones incorrectas sin detección.
+  - **No se sabe cuándo re-entrenar** modelo.
+
+**Severidad**: **P1 – IMPORTANTE**
+
+---
+
+**P1-014: Falta de separación research vs production en ML pipeline**
+
+**Descripción**:
+- Código ML mezclado con lógica de producción.
+- **NO hay separación clara**:
+  - ¿Dónde se entrenan modelos? (research environment).
+  - ¿Dónde se validan? (validation environment).
+  - ¿Dónde se despliegan? (production).
+  - ¿Cómo se versionan modelos?
+
+**Evidencia**:
+- NO existe `models/` con versionado (v1.0, v1.1, etc.).
+- NO hay `MLflow` o sistema de tracking de experimentos.
+
+**Impacto**:
+- **Medio**:
+  - **Modelos experimentales pueden llegar a producción** sin validación.
+  - **Dificulta rollback** a versión anterior de modelo.
+
+**Severidad**: **P1 – IMPORTANTE**
+
+---
+
+**P1-015: Brain-layer sin circuit breaker ante comportamiento anómalo**
+
+**Descripción**:
+- Brain-layer puede generar decisiones anómalas:
+  - Rechazar 100% de señales durante 1 hora.
+  - Aprobar señales de muy baja calidad (<0.30).
+  - Cambiar pesos del arbitrator abruptamente.
+
+- **NO hay circuit breaker** que detecte y detenga comportamiento anómalo.
+
+**Evidencia**:
+- NO existe `src/safety/brain_circuit_breaker.py`.
+- NO hay reglas tipo:
+```python
+if rejection_rate_last_hour > 0.95:
+    # ALERT: Brain-layer rechazando TODO
+    switch_to_manual_mode()
+```
+
+**Impacto**:
+- **Medio**:
+  - **Comportamiento anómalo no detectado** → pérdida de oportunidades o pérdidas materiales.
+
+**Severidad**: **P1 – IMPORTANTE**
+
+---
+
+#### **P2 (MENOR) – Calidad de código, documentación**
+
+**P2-007: Comentarios "NOT retail" agresivos en brain.py**
+
+**Descripción**:
+```python
+# brain.py:3
+This is NOT a simple signal combiner. This is an advanced orchestration layer
+that thinks at the PORTFOLIO level, not individual trade level.
+```
+
+- Tono defensivo poco profesional.
+
+**Impacto**: **Bajo** - Auditoría podría cuestionar profesionalismo.
+
+**Severidad**: **P2 – MENOR**
+
+---
+
+**P2-008: Falta de docstrings completos en métodos ML**
+
+**Descripción**:
+- Muchas funciones en `ml_adaptive_engine.py` sin docstrings completos:
+  - Parámetros de entrada.
+  - Outputs esperados.
+  - Excepciones.
+
+**Impacto**: **Bajo** - Dificulta mantenimiento.
+
+**Severidad**: **P2 – MENOR**
+
+---
+
+### RESUMEN DE RIESGOS MANDATO 3
+
+| Severidad | Cantidad | Críticos destacados |
+|-----------|----------|---------------------|
+| **P0 (CRÍTICO)** | 4 | Sin límites claros, Sin challenger model, Sin rollback, Data leakage potencial |
+| **P1 (IMPORTANTE)** | 5 | Pesos hardcoded, Fit matrix fija, Sin monitoreo ML, Sin research/production split, Sin circuit breaker |
+| **P2 (MENOR)** | 2 | Comentarios agresivos, Docstrings incompletos |
+| **TOTAL** | **11** | **4 P0 requieren acción inmediata** |
+
+---
+
+### MEJORAS INSTITUCIONALES RECOMENDADAS
+
+#### **Acción M3-001: Definir governance estricta del brain-layer**
+
+**Qué hacer**:
+1. Crear `docs/BRAIN_LAYER_GOVERNANCE.md`:
+
+```markdown
+# BRAIN LAYER GOVERNANCE
+
+## Áreas Prohibidas (NO TOCAR JAMÁS)
+
+### 1. Risk Caps
+- Brain-layer **NUNCA puede modificar**:
+  - Máximo 2.0% riesgo por idea.
+  - Caps de exposición total (símbolo, estrategia, dirección).
+  - Stop loss estructurales.
+
+### 2. Quality Score Threshold
+- Brain-layer **NO puede bajar** threshold de QualityScorer <0.50.
+- Puede sugerir ajustes de pesos SOLO dentro de bandas:
+  - Pedigree: [0.20, 0.30]
+  - Signal: [0.20, 0.30]
+  - Microstructure: [0.15, 0.25]
+  - Data Health: [0.10, 0.20]
+  - Portfolio: [0.10, 0.20]
+
+### 3. Estrategias
+- Brain-layer puede:
+  - ✅ Ajustar pesos de estrategias en fit_matrix dentro de ±0.10.
+  - ✅ Marcar estrategias como "under review".
+- Brain-layer NO puede:
+  - ❌ Desactivar estrategias PRODUCTION sin aprobación humana.
+  - ❌ Activar estrategias EXPERIMENTAL en producción.
+
+### 4. ExposureManager
+- Brain-layer NO puede:
+  - ❌ Anular límites de correlación.
+  - ❌ Ignorar exposición por factor macro.
+
+## Áreas Permitidas (CON RESTRICCIONES)
+
+### 1. Signal Arbitration
+- ✅ Seleccionar entre señales conflictivas.
+- ✅ Ajustar pesos de arbitrator dentro de bandas predefinidas.
+
+### 2. Regime Fit
+- ✅ Ajustar fit_matrix dentro de ±0.10 de valor base.
+- ✅ Sugerir recalibración de regímenes.
+
+### 3. Parameter Tuning
+- ✅ Ajustar thresholds de estrategias dentro de ±20% del valor base.
+- ✅ Solo si backtest valida mejora.
+
+## Proceso de Aprobación de Cambios
+
+1. Brain-layer propone cambio → log detallado.
+2. Cambio se valida en **paper trading** durante ≥1 semana.
+3. Si Sharpe mejora ≥10% → aprobación automática.
+4. Si cambio afecta risk caps → aprobación humana obligatoria.
+```
+
+2. Implementar en código:
+```python
+# src/governance/brain_governor.py
+class BrainGovernor:
+    FORBIDDEN_ACTIONS = [
+        'modify_risk_caps',
+        'disable_production_strategy',
+        'bypass_exposure_limits',
+    ]
+
+    ALLOWED_PARAMETER_RANGES = {
+        'quality_score_weights': {
+            'pedigree': (0.20, 0.30),
+            'signal': (0.20, 0.30),
+            # ...
+        },
+        'fit_matrix_adjustment': (-0.10, +0.10),
+    }
+
+    def validate_action(self, action, params):
+        if action in self.FORBIDDEN_ACTIONS:
+            raise ForbiddenActionError(f"{action} is forbidden")
+
+        if action == 'adjust_quality_weights':
+            for key, value in params.items():
+                min_val, max_val = self.ALLOWED_PARAMETER_RANGES['quality_score_weights'][key]
+                if not (min_val <= value <= max_val):
+                    raise ValueError(f"{key}={value} out of range [{min_val}, {max_val}]")
+
+        return True
+```
+
+**Impacto**: **Muy alto** – Previene que brain-layer cause daños.
+
+**Prioridad**: **P0 – INMEDIATA**
+
+---
+
+#### **Acción M3-002: Implementar challenger model y validación rigurosa**
+
+**Qué hacer**:
+1. Crear `docs/ML_MODEL_VALIDATION.md`:
+
+```markdown
+# ML MODEL VALIDATION POLICY
+
+## Requerimientos Mínimos
+
+Cualquier modelo ML debe cumplir:
+1. **Backtest out-of-sample** ≥6 meses.
+2. **Accuracy ≥65%** en predecir señales ganadoras.
+3. **Precision ≥60%** (evitar falsos positivos).
+4. **Walk-forward validation** en ≥3 períodos.
+
+## Challenger Model
+
+Todo modelo en producción debe tener challenger:
+- Modelo A (producción) vs Modelo B (challenger).
+- Comparación mensual de performance.
+- Si challenger supera modelo A durante 2 meses → promoción.
+
+## Métricas de Monitoreo
+
+En ventana deslizante de 30 días:
+- Accuracy actual vs esperada.
+- Drift detection (distribución de features cambia).
+- Calibration error (predicciones vs realidad).
+
+Si alguna métrica degrada >20% → ALERT + rollback a modelo anterior.
+```
+
+2. Implementar challenger model:
+```python
+# src/ml/challenger_model.py
+class ChallengerModelSystem:
+    def __init__(self):
+        self.production_model = load_model('models/production/v1.2.pkl')
+        self.challenger_model = load_model('models/challenger/v1.3.pkl')
+
+        self.production_metrics = deque(maxlen=100)
+        self.challenger_metrics = deque(maxlen=100)
+
+    def predict(self, features):
+        # Ambos modelos predicen
+        prod_pred = self.production_model.predict(features)
+        chall_pred = self.challenger_model.predict(features)
+
+        # Usar producción para decisión
+        # Registrar ambos para comparación
+        self.production_metrics.append({'prediction': prod_pred, ...})
+        self.challenger_metrics.append({'prediction': chall_pred, ...})
+
+        return prod_pred
+
+    def evaluate_challenger(self):
+        """Comparar performance mensual."""
+        prod_accuracy = calculate_accuracy(self.production_metrics)
+        chall_accuracy = calculate_accuracy(self.challenger_metrics)
+
+        if chall_accuracy > prod_accuracy + 0.05:  # +5% mejor
+            logger.warning("Challenger model outperforms production")
+            # Trigger human review
+```
+
+**Impacto**: **Muy alto** – Valida que modelo ML realmente funciona.
+
+**Prioridad**: **P0 – INMEDIATA**
+
+---
+
+#### **Acción M3-003: Implementar rollback mechanism automático**
+
+**Qué hacer**:
+1. Snapshot de parámetros antes de cada ajuste:
+```python
+# src/safety/parameter_snapshot.py
+class ParameterSnapshotManager:
+    def __init__(self):
+        self.snapshots = deque(maxlen=100)
+
+    def take_snapshot(self, component_name):
+        """Guarda estado actual de parámetros."""
+        snapshot = {
+            'timestamp': datetime.now(),
+            'component': component_name,
+            'parameters': get_current_parameters(component_name),
+            'performance_before': get_recent_sharpe(),
+        }
+        self.snapshots.append(snapshot)
+        logger.info(f"Snapshot taken: {component_name}")
+
+    def rollback_to_snapshot(self, snapshot_id):
+        """Revierte a snapshot anterior."""
+        snapshot = self.snapshots[snapshot_id]
+        apply_parameters(snapshot['component'], snapshot['parameters'])
+        logger.warning(f"Rolled back to snapshot {snapshot_id}")
+```
+
+2. Detector de degradación:
+```python
+# src/safety/degradation_detector.py
+def detect_brain_degradation():
+    """Detecta si ajustes del brain-layer causaron degradación."""
+    # Métricas últimas 24h vs 7 días previos
+    recent_sharpe = calculate_sharpe(hours=24)
+    baseline_sharpe = calculate_sharpe(days=7)
+
+    if recent_sharpe < baseline_sharpe * 0.70:  # -30% degradación
+        logger.critical("DEGRADATION DETECTED: Sharpe dropped 30%")
+        # Rollback automático
+        snapshot_manager.rollback_to_last_good_snapshot()
+        send_alert("Brain-layer rolled back due to degradation")
+```
+
+**Impacto**: **Alto** – Recuperación rápida ante problemas.
+
+**Prioridad**: **P0 – INMEDIATA**
+
+---
+
+#### **Acción M3-004: Prevenir data leakage con time-series split estricto**
+
+**Qué hacer**:
+1. Crear `docs/DATA_GOVERNANCE_ML.md`:
+
+```markdown
+# DATA GOVERNANCE FOR ML
+
+## Reglas Estrictas
+
+### 1. Time-Series Split
+- Training data: hasta timestamp T.
+- Validation data: (T, T+30 días].
+- Test data: (T+30, T+60 días].
+- **NUNCA** usar datos futuros para entrenar.
+
+### 2. Feature Engineering
+- Solo usar features disponibles en el momento de decisión.
+- Prohibido:
+  - ❌ Usar PnL de trade antes de cerrar.
+  - ❌ Usar régimen futuro.
+  - ❌ Lookahead bias en indicadores.
+
+### 3. Validación
+- Walk-forward testing obligatorio.
+- Re-entrenar modelo cada 30 días con datos nuevos.
+```
+
+2. Implementar en código:
+```python
+# tools/ml_training.py
+def train_model_with_strict_split(data, target_variable):
+    """Entrena modelo con split temporal estricto."""
+    # Ordenar por timestamp
+    data = data.sort_values('timestamp')
+
+    # Split: 70% train, 15% validation, 15% test
+    n = len(data)
+    train_end = int(n * 0.70)
+    val_end = int(n * 0.85)
+
+    train_data = data.iloc[:train_end]
+    val_data = data.iloc[train_end:val_end]
+    test_data = data.iloc[val_end:]
+
+    # Verificar no overlap
+    assert train_data['timestamp'].max() < val_data['timestamp'].min()
+    assert val_data['timestamp'].max() < test_data['timestamp'].min()
+
+    # Entrenar
+    model = RandomForestClassifier()
+    model.fit(train_data.drop(columns=['timestamp', target_variable]),
+              train_data[target_variable])
+
+    # Validar
+    val_accuracy = model.score(val_data.drop(columns=['timestamp', target_variable]),
+                                val_data[target_variable])
+
+    logger.info(f"Validation accuracy: {val_accuracy:.3f}")
+
+    return model
+```
+
+**Impacto**: **Muy alto** – Previene overfitting falso.
+
+**Prioridad**: **P0 – INMEDIATA**
+
+---
+
+#### **Acción M3-005: Calibrar pesos del SignalArbitrator empíricamente**
+
+**Qué hacer**:
+1. Grid search para encontrar pesos óptimos:
+```python
+# tools/calibrate_arbitrator_weights.py
+def calibrate_arbitrator_weights(historical_signals, outcomes):
+    """
+    Encuentra pesos óptimos del arbitrator via grid search.
+
+    Args:
+        historical_signals: Señales pasadas con scores de cada componente
+        outcomes: PnL real de cada señal
+
+    Returns:
+        Pesos óptimos que maximizan Sharpe
+    """
+    best_sharpe = -np.inf
+    best_weights = None
+
+    # Grid search
+    for w_quality in np.arange(0.30, 0.50, 0.05):
+        for w_perf in np.arange(0.15, 0.35, 0.05):
+            for w_regime in np.arange(0.10, 0.30, 0.05):
+                for w_rr in np.arange(0.05, 0.20, 0.05):
+                    w_timing = 1.0 - (w_quality + w_perf + w_regime + w_rr)
+
+                    if w_timing < 0 or w_timing > 0.15:
+                        continue
+
+                    weights = {
+                        'quality': w_quality,
+                        'performance': w_perf,
+                        'regime': w_regime,
+                        'risk_reward': w_rr,
+                        'timing': w_timing,
+                    }
+
+                    # Simular selección con estos pesos
+                    sharpe = simulate_arbitrator_with_weights(historical_signals, outcomes, weights)
+
+                    if sharpe > best_sharpe:
+                        best_sharpe = sharpe
+                        best_weights = weights
+
+    logger.info(f"Best weights: {best_weights} (Sharpe: {best_sharpe:.3f})")
+    return best_weights
+```
+
+2. Documentar en `docs/ARBITRATOR_WEIGHT_CALIBRATION.md`:
+```markdown
+## Calibración Histórica
+
+Período: 2023-01-01 a 2024-12-31
+Pesos óptimos encontrados:
+- Quality: 38%
+- Performance: 28%
+- Regime: 18%
+- Risk-Reward: 11%
+- Timing: 5%
+
+Sharpe resultante: 1.82 (vs 1.54 con pesos anteriores).
+
+Próxima recalibración: 2025-04-01.
+```
+
+**Impacto**: **Medio-Alto** – Pesos derivados empíricamente.
+
+**Prioridad**: **P1 – ALTA**
+
+---
+
+#### **Acción M3-006: Implementar actualización dinámica de fit_matrix**
+
+**Qué hacer**:
+1. Recalibrar fit_matrix cada 30 días basado en performance real:
+```python
+# tools/calibrate_regime_fit.py
+def recalibrate_regime_fit_matrix(trade_history):
+    """
+    Recalibra fit_matrix basado en performance real de estrategias por régimen.
+
+    Args:
+        trade_history: Historial de trades con régimen y estrategia
+
+    Returns:
+        Matriz actualizada
+    """
+    # Agrupar por (régimen, estrategia)
+    grouped = trade_history.groupby(['regime', 'strategy']).agg({
+        'pnl_r': 'mean',
+        'win_rate': 'mean',
+        'sharpe': 'mean',
+    })
+
+    # Normalizar scores por régimen
+    fit_matrix = {}
+
+    for regime in grouped.index.get_level_values('regime').unique():
+        regime_data = grouped.loc[regime]
+
+        # Normalizar sharpe a [0, 1]
+        max_sharpe = regime_data['sharpe'].max()
+        min_sharpe = regime_data['sharpe'].min()
+
+        fit_scores = {}
+        for strategy in regime_data.index:
+            sharpe = regime_data.loc[strategy, 'sharpe']
+            normalized = (sharpe - min_sharpe) / (max_sharpe - min_sharpe + 1e-6)
+            fit_scores[strategy] = normalized
+
+        fit_matrix[regime] = fit_scores
+
+    return fit_matrix
+```
+
+2. Actualizar fit_matrix automáticamente:
+```python
+# Ejecutar mensualmente
+new_fit_matrix = recalibrate_regime_fit_matrix(trade_history_last_12_months)
+
+# Validar cambios no son demasiado abruptos
+validate_fit_matrix_changes(old_fit_matrix, new_fit_matrix, max_delta=0.15)
+
+# Aplicar
+update_brain_fit_matrix(new_fit_matrix)
+```
+
+**Impacto**: **Medio** – Fit matrix se adapta a realidad de mercado.
+
+**Prioridad**: **P1 – MEDIA**
+
+---
+
+#### **Acción M3-007: Monitoreo continuo de modelos ML**
+
+**Qué hacer**:
+1. Implementar `src/monitoring/ml_model_monitor.py`:
+```python
+class MLModelMonitor:
+    def __init__(self, model):
+        self.model = model
+        self.metrics_history = deque(maxlen=1000)
+
+    def track_prediction(self, features, prediction, actual_outcome):
+        """Registra predicción y outcome real."""
+        self.metrics_history.append({
+            'timestamp': datetime.now(),
+            'prediction': prediction,
+            'actual': actual_outcome,
+            'correct': (prediction > 0.5) == (actual_outcome > 0),
+        })
+
+    def get_rolling_accuracy(self, window=100):
+        """Accuracy en últimas N predicciones."""
+        recent = list(self.metrics_history)[-window:]
+        correct = sum(1 for m in recent if m['correct'])
+        return correct / len(recent) if recent else 0.0
+
+    def detect_degradation(self, baseline_accuracy=0.65, threshold=0.10):
+        """Detecta si modelo se ha degradado."""
+        current = self.get_rolling_accuracy()
+
+        if current < baseline_accuracy * (1 - threshold):
+            logger.critical(f"MODEL DEGRADATION: Accuracy {current:.3f} < {baseline_accuracy * (1 - threshold):.3f}")
+            return True
+
+        return False
+```
+
+2. Dashboard de métricas:
+   - Panel Grafana con:
+     - Accuracy rolling 100 predicciones.
+     - Precision/Recall.
+     - Calibration plot.
+
+**Impacto**: **Medio** – Detección temprana de degradación.
+
+**Prioridad**: **P1 – MEDIA**
+
+---
+
+#### **Acción M3-008: Separar research/production en ML pipeline**
+
+**Qué hacer**:
+1. Estructura de directorios:
+```
+models/
+  research/
+    experiments/
+      exp_001_randomforest/
+        config.yaml
+        model.pkl
+        metrics.json
+      exp_002_gradientboosting/
+        ...
+  validation/
+    validated_models/
+      v1.0_randomforest/
+        model.pkl
+        validation_report.md
+  production/
+    v1.2_randomforest/
+      model.pkl
+      deployment_date.txt
+      performance_live.json
+```
+
+2. Proceso de promoción:
+```
+RESEARCH → VALIDATION → PRODUCTION
+
+1. Research: Experimentar con modelos.
+2. Validation: Backtest riguroso + out-of-sample.
+3. Production: Deploy solo si pasa validación.
+```
+
+3. Implementar versionado:
+```python
+# src/ml/model_registry.py
+class ModelRegistry:
+    def register_model(self, model, version, stage):
+        """
+        Registra modelo en registry.
+
+        Args:
+            model: Modelo entrenado
+            version: e.g., 'v1.3'
+            stage: 'RESEARCH', 'VALIDATION', 'PRODUCTION'
+        """
+        path = f"models/{stage.lower()}/{version}_model.pkl"
+        pickle.dump(model, open(path, 'wb'))
+
+        logger.info(f"Model {version} registered in stage {stage}")
+
+    def promote_model(self, version, from_stage, to_stage):
+        """Promociona modelo de stage a stage."""
+        # Validar que cumple criterios
+        if to_stage == 'PRODUCTION':
+            assert self.validate_production_readiness(version)
+
+        # Copiar modelo
+        shutil.copy(f"models/{from_stage.lower()}/{version}_model.pkl",
+                    f"models/{to_stage.lower()}/{version}_model.pkl")
+
+        logger.info(f"Model {version} promoted: {from_stage} → {to_stage}")
+```
+
+**Impacto**: **Medio** – Previene modelos experimentales en producción.
+
+**Prioridad**: **P1 – MEDIA**
+
+---
+
+#### **Acción M3-009: Implementar circuit breaker para brain-layer**
+
+**Qué hacer**:
+1. Detectores de comportamiento anómalo:
+```python
+# src/safety/brain_circuit_breaker.py
+class BrainCircuitBreaker:
+    def check_rejection_rate(self, window_minutes=60):
+        """Detecta si brain-layer rechaza demasiadas señales."""
+        recent_signals = get_signals_last_n_minutes(window_minutes)
+
+        if not recent_signals:
+            return True
+
+        rejection_rate = sum(1 for s in recent_signals if not s['approved']) / len(recent_signals)
+
+        if rejection_rate > 0.90:
+            logger.critical(f"CIRCUIT BREAKER: Rejection rate {rejection_rate:.1%} > 90%")
+            self.trigger_circuit_breaker("high_rejection_rate")
+            return False
+
+        return True
+
+    def check_low_quality_approvals(self):
+        """Detecta si brain-layer aprueba señales de muy baja calidad."""
+        recent_approvals = get_approved_signals_last_hour()
+
+        low_quality_count = sum(1 for s in recent_approvals if s['quality_score'] < 0.30)
+
+        if low_quality_count > 5:
+            logger.critical(f"CIRCUIT BREAKER: {low_quality_count} low-quality signals approved")
+            self.trigger_circuit_breaker("low_quality_approvals")
+            return False
+
+        return True
+
+    def trigger_circuit_breaker(self, reason):
+        """Activa circuit breaker y pasa a modo manual."""
+        logger.critical(f"🚨 CIRCUIT BREAKER TRIGGERED: {reason}")
+
+        # Desactivar brain-layer
+        set_brain_mode('MANUAL')
+
+        # Enviar alerta
+        send_alert(f"Brain-layer circuit breaker: {reason}")
+
+        # Usar último snapshot bueno
+        rollback_to_last_good_snapshot()
+```
+
+2. Ejecutar checks cada 5 minutos:
+```python
+# En main loop
+if not brain_circuit_breaker.check_rejection_rate():
+    # Brain-layer desactivado, usar configuración manual
+```
+
+**Impacto**: **Medio-Alto** – Previene daños por comportamiento anómalo.
+
+**Prioridad**: **P1 – ALTA**
+
+---
+
+#### **Acción M3-010: Limpiar comentarios y añadir docstrings**
+
+**Qué hacer**:
+1. Eliminar tono defensivo:
+```python
+# ANTES
+"""
+This is NOT a simple signal combiner. This is an advanced orchestration layer
+that thinks at the PORTFOLIO level, not individual trade level.
+"""
+
+# DESPUÉS
+"""
+Brain-layer: Orchestrates signal selection and parameter optimization.
+
+Implements institutional decision framework considering:
+- Portfolio-level risk management
+- Multi-timeframe coherence
+- Regime-aware strategy selection
+- ML-based continuous learning
+
+Based on: Lo & MacKinlay (1997), López de Prado (2018).
+"""
+```
+
+2. Añadir docstrings completos:
+```python
+def _score_signal(self, signal: Dict, market_context: Dict, regime: str) -> float:
+    """
+    Calcula score de señal usando modelo multi-factor institucional.
+
+    Args:
+        signal: Señal candidata con metadata y features
+        market_context: Contexto de mercado actual (VPIN, OFI, depth, etc.)
+        regime: Régimen de mercado identificado
+
+    Returns:
+        Score [0.0, 1.0] donde 1.0 = señal de máxima calidad
+
+    Raises:
+        ValueError: Si signal no contiene campos requeridos
+    """
+```
+
+**Impacto**: **Bajo** – Mejora profesionalismo.
+
+**Prioridad**: **P2 – BAJA**
+
+---
+
+### PLAN DE ACCIÓN PRIORIZADO – MANDATO 3
+
+**Fase inmediata (Semana 1)**:
+1. **M3-001**: Crear `BRAIN_LAYER_GOVERNANCE.md` con áreas prohibidas.
+2. **M3-002**: Implementar challenger model y validación rigurosa.
+3. **M3-003**: Rollback mechanism automático.
+4. **M3-004**: Prevenir data leakage con time-series split estricto.
+
+**Fase corto plazo (Semana 2-3)**:
+5. **M3-005**: Calibrar pesos del arbitrator empíricamente.
+6. **M3-006**: Actualización dinámica de fit_matrix.
+7. **M3-009**: Circuit breaker para brain-layer.
+
+**Fase medio plazo (Mes 1)**:
+8. **M3-007**: Monitoreo continuo de modelos ML.
+9. **M3-008**: Separar research/production en ML pipeline.
+10. **M3-010**: Limpiar comentarios y docstrings.
+
+---
+
+### VEREDICTO FINAL – MANDATO 3
+
+**Estado**: ⚠️ **CAJA NEGRA PELIGROSA SIN GOVERNANCE – NO APTO PARA PRODUCCIÓN**
+
+**Logros**:
+- ✅ SignalArbitrator implementado con scoring multi-factor.
+- ✅ ML Adaptive Engine con learning loop.
+- ✅ Intento de formalización institucional.
+
+**Fallas institucionales**:
+- ❌ **Sin límites claros** → brain-layer puede anular risk caps.
+- ❌ **Sin challenger model** → modelo ML no validado.
+- ❌ **Sin rollback mechanism** → ajustes malos son irreversibles.
+- ❌ **Riesgo de data leakage** → overfitting falso.
+- ❌ **Pesos hardcoded sin justificación** → subóptimos.
+
+**Recomendación**:
+**NO ACTIVAR BRAIN-LAYER EN PRODUCCIÓN** hasta completar:
+- M3-001 (Governance estricta).
+- M3-002 (Challenger model).
+- M3-003 (Rollback mechanism).
+- M3-004 (Prevenir data leakage).
+- M3-009 (Circuit breaker).
+
+**Modo de operación recomendado**:
+- **Fase 1**: Brain-layer en **modo de observación** (sugiere pero NO ejecuta).
+- **Fase 2**: Brain-layer en **paper trading** (ejecuta en demo, NO en real).
+- **Fase 3**: Brain-layer en **producción limitada** (solo arbitration, NO parameter tuning).
+- **Fase 4**: Brain-layer en **producción completa** (tras 6 meses de validación).
+
+**Alternativa conservadora**:
+- Usar brain-layer SOLO para signal arbitration (seleccionar entre conflictos).
+- **Desactivar** ML Adaptive Engine hasta validación completa.
+- Ajustes de parámetros 100% manuales con aprobación humana.
+
+---
+
+**FIN AUDITORÍA MANDATO 3**
