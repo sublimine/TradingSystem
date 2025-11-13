@@ -189,6 +189,9 @@ class PortfolioManagerLayer:
     def _assert_no_duplicate_directions(self, executions: List):
         seen = set()
         for sig in executions:
+            # P1-023: Validar signal no es None antes de acceder atributos
+            if sig is None:
+                raise ValueError("Invalid signal (None) in executions")
             key = (sig.instrument, sig.horizon)
             if key in seen:
                 raise RuntimeError(f"NO_HEDGE_INVARIANT_BROKEN: {key}")

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading  # P1-012: Agregar threading para locks
 import uuid
 from typing import Dict, Optional, Tuple
 from datetime import datetime
@@ -17,7 +18,10 @@ class DecisionLedger:
       - write(uid, payload)               # compat anterior
       - write(uid, ulid_temporal, payload)  # versión extendida
     """
-    def __init__(self, max_size: int = 10000):
+    # P1-025: Aumentar max_size a 100k para evitar memory leak en producción HF
+    def __init__(self, max_size: int = 100000):
+        # P1-012: Lock para thread-safety
+        self.lock = threading.RLock()
         self.decisions: OrderedDict[str, Dict] = OrderedDict()
         self.max_size = max_size
         self.stats = {"total_decisions": 0, "duplicates_prevented": 0}
@@ -42,24 +46,26 @@ class DecisionLedger:
         if not isinstance(payload, dict):
             raise TypeError("payload debe ser dict serializable")
 
-        if self.exists(decision_uid):
-            logger.warning(f"DUPLICATE_DECISION: {decision_uid} ya existe")
-            self.stats["duplicates_prevented"] += 1
-            return False
+        # P1-012: Proteger acceso con lock
+        with self.lock:
+            if self.exists(decision_uid):
+                logger.warning(f"DUPLICATE_DECISION: {decision_uid} ya existe")
+                self.stats["duplicates_prevented"] += 1
+                return False
 
-        record = {
-            "timestamp": datetime.now().isoformat(),
-            "ulid_temporal": ulid_temporal,
-            "payload": payload
-        }
-        self.decisions[decision_uid] = record
+            record = {
+                "timestamp": datetime.now().isoformat(),
+                "ulid_temporal": ulid_temporal,
+                "payload": payload
+            }
+            self.decisions[decision_uid] = record
 
-        if len(self.decisions) > self.max_size:
-            self.decisions.popitem(last=False)
+            if len(self.decisions) > self.max_size:
+                self.decisions.popitem(last=False)
 
-        self.stats["total_decisions"] += 1
-        logger.debug(f"LEDGER_WRITE: {decision_uid}")
-        return True
+            self.stats["total_decisions"] += 1
+            logger.debug(f"LEDGER_WRITE: {decision_uid}")
+            return True
 
     def get(self, decision_uid: str) -> Optional[Dict]:
         return self.decisions.get(decision_uid)

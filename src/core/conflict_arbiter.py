@@ -20,9 +20,9 @@ MEJORAS IMPLEMENTADAS:
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Deque
 from datetime import datetime
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass, asdict
 import threading
 import logging
@@ -204,7 +204,8 @@ class ConflictArbiter:
         )
         
         # Historial de decisiones
-        self.decision_history: List[ConflictResolution] = []
+        # P1-027: Usar deque(maxlen) para evitar memory leak en long-running systems
+        self.decision_history: Deque[ConflictResolution] = deque(maxlen=10000)
         
         # MÃ©tricas
         self.stats = {
