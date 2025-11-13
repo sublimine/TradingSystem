@@ -1,0 +1,185 @@
+================================================================================
+          AUDITORÍA EXHAUSTIVA - SRC/FEATURES/ - TRADING SYSTEM
+================================================================================
+
+FECHA DE AUDITORÍA: 2025-11-13
+RAMA ANALIZADA: main
+MÓDULOS ANALIZADOS: 12
+FUNCIONES REVISADAS: 92+
+LÍNEAS DE CÓDIGO ANALIZADAS: ~2400
+
+================================================================================
+HALLAZGOS CRÍTICOS (BLOQUEA PRODUCCIÓN)
+================================================================================
+
+┌─ ID C1: technical_indicators.py - detect_divergence() ─────────────────────┐
+│ LÍNEA: 340                                                                  │
+│ PROBLEMA: Función incompleta - siempre retorna Series con ceros            │
+│ CÓDIGO: define swing points pero nunca los usa                             │
+│ IMPACTO: Feature completamente no funcional                                 │
+│ SEVERIDAD: CRÍTICO ⚠️⚠️⚠️                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ ID C2-C4: statistical_models.py - TRES FUNCIONES DUPLICADAS ──────────────┐
+│ LÍNEA: 683,875 (calculate_spread_zscore)                                    │
+│ LÍNEA: 816,902 (detect_spread_divergence)                                   │
+│ LÍNEA: 793,852 (calculate_spread / calculate_spread_from_prices)            │
+│ PROBLEMA: Definidas MÚLTIPLES VECES con implementaciones diferentes        │
+│ IMPACTO: Última definición sobrescribe anteriores - código inestable        │
+│ SEVERIDAD: CRÍTICO ⚠️⚠️⚠️                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ ID C5-C7: TRES MÓDULOS CON STUBS INCOMPLETOS ───────────────────────────┐
+│ mtf.py (línea 9):  project_htf_to_ltf() → TODO, retorna []               │
+│ gaps.py (línea 9): detect_fvg() → TODO, retorna []                        │
+│ tns.py (línea 8):  parse_time_sales() → TODO, retorna DataFrame()         │
+│ PROBLEMA: Funciones que prometen features pero solo retornan vacío       │
+│ IMPACTO: Features completamente no funcionales                             │
+│ SEVERIDAD: CRÍTICO ⚠️⚠️⚠️                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+HALLAZGOS IMPORTANTES (DEBE ARREGLARSE)
+================================================================================
+
+CATEGORÍA: DIVISIÓN POR CERO (4 casos)
+├─ technical_indicators.py:156  calculate_stochastic() 
+├─ technical_indicators.py:293  calculate_williams_r()
+├─ technical_indicators.py:317  calculate_cci()
+└─ order_flow.py:329            calculate_amihud_illiquidity()
+
+CATEGORÍA: VALIDACIÓN DE ENTRADA (4 casos)
+├─ microstructure.py:11         calculate_microprice() - sin validación bid/ask
+├─ delta_volume.py:196          identify_idp_pattern() - index sin validación
+├─ orderbook_l2.py:141          detect_iceberg_signature() - acceso timestamp
+└─ technical_indicators.py:*    Múltiples funciones sin chequear None/vacío
+
+CATEGORÍA: COMPARACIÓN DE FLOATS (2 casos)
+├─ technical_indicators.py:128  identify_swing_points() usa ==
+└─ orderbook_l2.py:161          hardcoded 0.00001 no escalable
+
+CATEGORÍA: INCONSISTENCIAS (3 casos)
+├─ order_flow.py:299            np.cov() con tipos inconsistentes
+├─ delta_volume.py:46           np.where retorna float, docstring dice int
+└─ order_flow.py:333-451        OFI definida dos veces en mismo archivo
+
+================================================================================
+HALLAZGOS MENORES (NICE-TO-HAVE)
+================================================================================
+
+├─ ofi.py:46                    Hardcoded 1e-10 en lugar de constante EPSILON
+├─ ofi.py:*                     Sin type hints en todo el módulo
+├─ derived_features.py:159      Parámetro volatility_regime sin documentación
+├─ orderbook_l2.py:161          Precisión hardcoded no escalable
+└─ derived_features.py:56       pct_change() NaN behavior no documentado
+
+================================================================================
+RESUMEN DE FEATURES DUPLICADAS
+================================================================================
+
+PAREJA 1: Spread Calculations
+├─ microstructure.calculate_spread(bid, ask)           [ask - bid]
+└─ statistical_models.calculate_spread(price_y, price_x, beta)  [price_y - beta*price_x]
+   → MISMO NOMBRE, COMPORTAMIENTO DIFERENTE ✗
+
+PAREJA 2: Z-Score Spread  
+├─ statistical_models (línea 683): raise ValueError si std <= 0
+└─ statistical_models (línea 875): retorna 0.0 si std < 1e-10
+   → DUPLICADA CON MANEJO DIFERENTE ✗
+
+PAREJA 3: Signal Detection
+├─ statistical_models (línea 816):  requiere KalmanPairsFilter object
+└─ statistical_models (línea 902):  requiere z_score float
+   → DUPLICADA CON SIGNATURES DISTINTAS ✗
+
+PAREJA 4: Trade Classification
+├─ delta_volume.classify_trades()
+└─ ofi.classify_trades_lee_ready()
+   → MISMO CONCEPTO, MÓDULOS DISTINTOS ✗
+
+================================================================================
+IMPACTO OPERACIONAL
+================================================================================
+
+FUNCIONALIDAD COMPROMETIDA:
+  ❌ detect_divergence() - 100% NO FUNCIONA
+  ❌ project_htf_to_ltf() - 100% NO FUNCIONA  
+  ❌ detect_fvg() - 100% NO FUNCIONA
+  ❌ parse_time_sales() - 100% NO FUNCIONA
+  ⚠️  detect_spread_divergence() - INESTABLE (duplicada)
+  ⚠️  calculate_spread_zscore() - INESTABLE (duplicada)
+
+RIESGO DE RUNTIME:
+  ⚠️  Division by zero en 4 funciones → RuntimeWarning, inf/nan values
+  ⚠️  Float comparison con == → Pérdida de datos
+  ⚠️  Index access sin validación → Potential IndexError
+  ⚠️  No validación de inputs None → AttributeError
+
+PERFORMANCE CONCERNS:
+  ⚠️  np.cov() dentro de loop en calculate_kyle_lambda()
+  ⚠️  Múltiples operaciones sin vectorización
+
+================================================================================
+MATRIZ DE CRITICIDAD
+================================================================================
+
+NIVEL          │ CANTIDAD │ ACCIÓN REQUERIDA
+───────────────┼──────────┼──────────────────────────────────────────────
+CRÍTICO        │    7     │ 🔴 BLOQUEA - Arreglar antes de producción
+IMPORTANTE     │   11     │ 🟠 SHOULD-FIX - Próxima iteración de dev
+MENOR          │    6     │ 🟡 NICE-TO-HAVE - Refactor futuro
+
+TOTAL HALLAZGOS: 24
+
+================================================================================
+ARCHIVOS AFECTADOS
+================================================================================
+
+🔴 CRÍTICO:
+   ├─ src/features/technical_indicators.py     [1 función incompleta]
+   ├─ src/features/statistical_models.py       [3 funciones duplicadas]
+   ├─ src/features/mtf.py                      [1 función incompleta]
+   ├─ src/features/gaps.py                     [1 función incompleta]
+   └─ src/features/tns.py                      [1 función incompleta]
+
+🟠 IMPORTANTE:
+   ├─ src/features/technical_indicators.py     [5 problemas más]
+   ├─ src/features/microstructure.py           [2 problemas]
+   ├─ src/features/order_flow.py               [2 problemas]
+   ├─ src/features/orderbook_l2.py             [2 problemas]
+   └─ src/features/delta_volume.py             [3 problemas]
+
+🟡 MENOR:
+   ├─ src/features/ofi.py                      [2 problemas]
+   └─ src/features/derived_features.py         [2 problemas]
+
+================================================================================
+PRÓXIMOS PASOS RECOMENDADOS
+================================================================================
+
+PRIORIDAD 1 (INMEDIATO):
+  1. Consolidar funciones duplicadas en statistical_models.py
+     - Resolver conflictos de signature en detect_spread_divergence()
+     - Unificar calculate_spread_zscore() implementations
+  
+  2. Completar implementaciones incompletas
+     - technical_indicators.detect_divergence()
+     - mtf.project_htf_to_ltf()
+     - gaps.detect_fvg()
+     - tns.parse_time_sales()
+
+PRIORIDAD 2 (PRÓXIMA ITERACIÓN):
+  3. Arreglar división por cero en 4 funciones
+  4. Cambiar comparaciones de float == por np.isclose()
+  5. Agregar validación de inputs en todas las funciones
+  6. Validar accesos a índices sin chequeos
+
+PRIORIDAD 3 (REFACTOR):
+  7. Consolidar trade classification en un módulo único
+  8. Agregar type hints consistentes
+  9. Usar constantes globales (EPSILON) en lugar de hardcoding
+  10. Documentar parámetros enum (volatility_regime)
+
+================================================================================
+FIN DEL REPORTE
+================================================================================

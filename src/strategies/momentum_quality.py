@@ -222,15 +222,22 @@ class MomentumQuality(StrategyBase):
         swing_high = None
         swing_low = None
 
-        if len(highs) >= 5:
-            for i in range(len(highs) - 3, 1, -1):
+        # CR5 FIX: Hacer bounds más explícitos y defensivos
+        # Necesitamos i-2, i-1, i, i+1, i+2 → requiere len >= 5 Y i >= 2 Y i <= len-3
+        LOOKBACK = 2  # Cuántos elementos atrás miramos (i-2, i-1)
+        LOOKAHEAD = 2  # Cuántos elementos adelante miramos (i+1, i+2)
+        MIN_LENGTH = LOOKBACK + 1 + LOOKAHEAD  # 2 + 1 + 2 = 5
+
+        if len(highs) >= MIN_LENGTH:
+            # Loop desde len-3 (para dejar espacio para i+2) hasta 2 (para dejar espacio para i-2)
+            for i in range(len(highs) - LOOKAHEAD - 1, LOOKBACK - 1, -1):
                 if highs[i] > highs[i-1] and highs[i] > highs[i-2] and \
                    highs[i] > highs[i+1] and highs[i] > highs[i+2]:
                     swing_high = highs[i]
                     break
 
-        if len(lows) >= 5:
-            for i in range(len(lows) - 3, 1, -1):
+        if len(lows) >= MIN_LENGTH:
+            for i in range(len(lows) - LOOKAHEAD - 1, LOOKBACK - 1, -1):
                 if lows[i] < lows[i-1] and lows[i] < lows[i-2] and \
                    lows[i] < lows[i+1] and lows[i] < lows[i+2]:
                     swing_low = lows[i]

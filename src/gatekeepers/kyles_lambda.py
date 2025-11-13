@@ -41,41 +41,52 @@ class KylesLambdaEstimator:
     - Actualización recursiva cada K trades (default: 10)
     """
     
-    def __init__(self, 
+    def __init__(self,
                  estimation_window: int = 100,
                  update_frequency: int = 10,
-                 historical_window: int = 1000):
+                 historical_window: int = 1000,
+                 warm_up_threshold: int = 100,
+                 warm_up_absolute_lambda: float = 0.05):
         """
         Inicializa el estimador.
-        
+
         Args:
             estimation_window: Número de trades para regresión (default: 100)
             update_frequency: Cada cuántos trades actualizar (default: 10)
             historical_window: Ventana para estadísticas históricas (default: 1000)
+            warm_up_threshold: Mínimo de trades antes de usar ratios (default: 100)
+            warm_up_absolute_lambda: Threshold absoluto durante warm-up (default: 0.05)
         """
         self.estimation_window = estimation_window
         self.update_frequency = update_frequency
         self.historical_window = historical_window
-        
+
+        # CR12 FIX: Agregar warm-up phase para prevenir false negatives
+        self.warm_up_threshold = warm_up_threshold
+        self.warm_up_absolute_lambda = warm_up_absolute_lambda
+        self.trades_observed = 0
+
         # Buffers para datos
         self.price_changes = deque(maxlen=estimation_window)
         self.signed_volumes = deque(maxlen=estimation_window)
-        
+
         # Historia de lambdas estimados
         self.lambda_history = deque(maxlen=historical_window)
-        
+
         # Lambda actual
         self.current_lambda = None
         self.lambda_stderr = None
-        
+
         # Contador de trades desde última actualización
         self.trades_since_update = 0
-        
+
         self.logger = logging.getLogger(self.__class__.__name__)
-        
+
         self.logger.info(
             f"Kyle's Lambda Estimator inicializado: "
-            f"window={estimation_window}, update_freq={update_frequency}"
+            f"window={estimation_window}, update_freq={update_frequency}, "
+            f"warm_up_threshold={warm_up_threshold}, "
+            f"warm_up_absolute_lambda={warm_up_absolute_lambda}"
         )
     
     def classify_trade_direction(self, 
@@ -130,10 +141,12 @@ class KylesLambdaEstimator:
         # Agregar a buffers
         self.price_changes.append(price_change)
         self.signed_volumes.append(signed_volume)
-        
-        # Incrementar contador
+
+        # Incrementar contadores
         self.trades_since_update += 1
-        
+        # CR12 FIX: Incrementar contador para warm-up phase
+        self.trades_observed += 1
+
         # Re-estimar lambda si es momento de actualizar
         if self.trades_since_update >= self.update_frequency:
             self._estimate_lambda()
@@ -166,10 +179,11 @@ class KylesLambdaEstimator:
         # Calcular lambda = Cov(ΔP, SV) / Var(SV)
         covariance = np.cov(delta_prices, signed_vols)[0, 1]
         variance_sv = np.var(signed_vols)
-        
-        if variance_sv > 1e-10:  # Evitar división por valores muy pequeños
+
+        # P1-019: Aumentar threshold a 1e-6 para evitar lambda spike artificial
+        if variance_sv > 1e-6:
             lambda_estimate = covariance / variance_sv
-            
+
             # Calcular error estándar
             residuals = delta_prices - lambda_estimate * signed_vols
             mse = np.mean(residuals ** 2)
@@ -245,52 +259,97 @@ class KylesLambdaEstimator:
     def should_halt_trading(self, halt_threshold: float = 3.0) -> bool:
         """
         Determina si se debe detener el trading basándose en lambda.
-        
+
         Args:
             halt_threshold: Ratio sobre media histórica que dispara halt (default: 3.0)
-            
+
         Returns:
             True si lambda indica que se debe detener trading
         """
+        # CR12 FIX: Durante warm-up, usar threshold absoluto en lugar de ratio
+        if self.trades_observed < self.warm_up_threshold:
+            if self.current_lambda is None:
+                # Sin datos → conservador: halt trading
+                self.logger.warning(
+                    f"HALT WARM-UP: Sin datos de lambda (trades={self.trades_observed}/{self.warm_up_threshold}). "
+                    f"Conservador: bloquear trading hasta warm-up completo."
+                )
+                return True
+
+            # Usar threshold absoluto durante warm-up
+            should_halt = self.current_lambda > self.warm_up_absolute_lambda
+
+            if should_halt:
+                self.logger.warning(
+                    f"HALT WARM-UP: Lambda = {self.current_lambda:.4f} > "
+                    f"{self.warm_up_absolute_lambda:.4f} (threshold absoluto). "
+                    f"Trades observados: {self.trades_observed}/{self.warm_up_threshold}."
+                )
+
+            return should_halt
+
+        # Post-warm-up: usar ratio sobre media histórica
         ratio = self.get_lambda_ratio()
-        
+
         if ratio is None:
-            # Sin datos suficientes, ser conservador
-            return False
-        
+            # CR12 FIX: Si no hay datos post-warm-up, ser conservador
+            self.logger.warning("HALT: Sin datos válidos para calcular ratio de lambda. Conservador: bloquear trading.")
+            return True
+
         should_halt = ratio > halt_threshold
-        
+
         if should_halt:
             self.logger.warning(
                 f"HALT RECOMENDADO: Lambda ratio = {ratio:.2f}x (threshold: {halt_threshold}x). "
                 f"Liquidez críticamente degradada."
             )
-        
+
         return should_halt
     
     def should_reduce_sizing(self, reduce_threshold: float = 2.0) -> bool:
         """
         Determina si se debe reducir sizing basándose en lambda.
-        
+
         Args:
             reduce_threshold: Ratio que dispara reducción de sizing (default: 2.0)
-            
+
         Returns:
             True si lambda indica que se debe reducir sizing
         """
+        # CR12 FIX: Durante warm-up, usar threshold absoluto más conservador
+        if self.trades_observed < self.warm_up_threshold:
+            if self.current_lambda is None:
+                # Sin datos → conservador: reducir sizing
+                return True
+
+            # Usar threshold absoluto más bajo para reducción (60% del halt threshold)
+            reduce_absolute_threshold = self.warm_up_absolute_lambda * 0.6
+            should_reduce = self.current_lambda > reduce_absolute_threshold
+
+            if should_reduce:
+                self.logger.info(
+                    f"REDUCIR SIZING WARM-UP: Lambda = {self.current_lambda:.4f} > "
+                    f"{reduce_absolute_threshold:.4f} (threshold absoluto). "
+                    f"Trades observados: {self.trades_observed}/{self.warm_up_threshold}."
+                )
+
+            return should_reduce
+
+        # Post-warm-up: usar ratio sobre media histórica
         ratio = self.get_lambda_ratio()
-        
+
         if ratio is None:
-            return False
-        
+            # CR12 FIX: Si no hay datos post-warm-up, conservador: reducir sizing
+            return True
+
         should_reduce = ratio > reduce_threshold
-        
+
         if should_reduce:
             self.logger.info(
                 f"REDUCIR SIZING: Lambda ratio = {ratio:.2f}x (threshold: {reduce_threshold}x). "
                 f"Liquidez degradada."
             )
-        
+
         return should_reduce
     
     def get_sizing_multiplier(self, 

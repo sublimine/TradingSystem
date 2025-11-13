@@ -680,28 +680,7 @@ def calculate_realized_volatility(returns: Union[List[float], np.ndarray, pd.Ser
         return volatility
 
 
-def calculate_spread_zscore(spread: float, mean: float, std: float) -> float:
-    """
-    Calculate z-score of spread for normalized signal generation.
-    
-    Z-score indicates how many standard deviations the spread is from its mean,
-    useful for identifying trading signals in pairs trading.
-    
-    Args:
-        spread: Current spread value
-        mean: Estimated mean of spread
-        std: Standard deviation of spread
-        
-    Returns:
-        float: Z-score of spread
-        
-    Raises:
-        ValueError: If standard deviation is non-positive
-    """
-    if std <= 0:
-        raise ValueError("Standard deviation must be positive")
-    
-    return (spread - mean) / std
+# CR4 FIX: Función duplicada eliminada - ver línea 875 para versión superior con edge case handling
 
 
 def estimate_hedge_ratio(prices_x: Union[List[float], np.ndarray, pd.Series],
@@ -813,41 +792,7 @@ def calculate_spread_from_prices(prices_x: Union[List[float], np.ndarray],
     return y - hedge_ratio * x
 
 
-def detect_spread_divergence(spread: float, 
-                            kalman_filter: KalmanPairsFilter,
-                            entry_threshold: float = 2.0,
-                            exit_threshold: float = 0.5) -> str:
-    """
-    Detect trading signals based on spread divergence from Kalman-estimated mean.
-    
-    Args:
-        spread: Current spread value
-        kalman_filter: Fitted Kalman filter with spread history
-        entry_threshold: Z-score threshold for entry signal
-        exit_threshold: Z-score threshold for exit signal
-        
-    Returns:
-        str: Signal type ('LONG', 'SHORT', 'EXIT', 'HOLD')
-    """
-    if not kalman_filter.initialized:
-        return 'HOLD'
-    
-    mean = kalman_filter.get_estimated_mean()
-    std = np.sqrt(kalman_filter.state_covariance)
-    
-    if std < EPSILON:
-        return 'HOLD'
-    
-    z_score = calculate_spread_zscore(spread, mean, std)
-    
-    if z_score > entry_threshold:
-        return 'SHORT'  # Spread too high, expect reversion down
-    elif z_score < -entry_threshold:
-        return 'LONG'   # Spread too low, expect reversion up
-    elif abs(z_score) <= exit_threshold:
-        return 'EXIT'   # Close to mean, close position
-    else:
-        return 'HOLD'
+# CR4 FIX: Función duplicada eliminada - ver línea 902 para versión desacoplada y superior
 
 def calculate_spread(price_y: float, price_x: float, beta: float) -> float:
     """

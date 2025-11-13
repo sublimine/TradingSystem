@@ -101,8 +101,9 @@ class OrderFlowToxicityStrategy(StrategyBase):
 
         # State tracking
         # FIX BUG #14-15: Use deque with maxlen to prevent memory leak
-        self.vpin_history = deque(maxlen=5000)
-        self.ofi_history = deque(maxlen=5000)
+        # CR7 FIX: Ajustar maxlen a 10 (límite real usado en código)
+        self.vpin_history = deque(maxlen=10)
+        self.ofi_history = deque(maxlen=10)
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info(f"🏆 INSTITUTIONAL Order Flow Toxicity initialized")
@@ -140,9 +141,7 @@ class OrderFlowToxicityStrategy(StrategyBase):
         # Track VPIN and OFI history
         self.vpin_history.append(vpin)
         self.ofi_history.append(ofi)
-        if len(self.vpin_history) > 10:
-            self.vpin_history.pop(0)
-            self.ofi_history.pop(0)
+        # CR7 FIX: Eliminado pop(0) redundante - deque con maxlen=10 lo hace automáticamente
 
         # Get symbol and current price
         symbol = market_data.attrs.get('symbol', 'UNKNOWN')
