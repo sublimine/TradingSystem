@@ -5,6 +5,7 @@ Rastrea correlación entre estrategias basada en retornos reales de señales.
 
 import numpy as np
 import pandas as pd
+import threading  # P1-013: Agregar threading para locks
 from typing import Dict, List, Tuple
 from collections import deque, defaultdict
 from datetime import datetime, timedelta
@@ -16,29 +17,32 @@ logger = logging.getLogger(__name__)
 class CorrelationTracker:
     """
     Mantiene matriz EWMA de correlación entre estrategias.
-    
+
     La correlación se calcula sobre retornos de señales (PnL normalizado),
     no sobre precios de mercado. Esto captura si dos estrategias generan
     alphas correlacionados versus independientes.
     """
-    
+
     def __init__(self, decay_halflife_days: int = 30):
         """
         Args:
             decay_halflife_days: Half-life para decay exponencial
         """
+        # P1-013: Lock para acceso thread-safe
+        self.lock = threading.RLock()
+
         # Retornos históricos por estrategia
         self.strategy_returns: Dict[str, deque] = defaultdict(lambda: deque(maxlen=500))
-        
+
         # Matriz de correlación EWMA
         self.correlation_matrix: Dict[Tuple[str, str], float] = {}
-        
+
         # Configuración
         self.decay_alpha = np.exp(-np.log(2) / decay_halflife_days)
-        
+
         # Timestamp de última actualización
         self.last_update: Dict[Tuple[str, str], datetime] = {}
-        
+
         # Métricas
         self.stats = {
             'total_updates': 0,
@@ -48,37 +52,45 @@ class CorrelationTracker:
     def record_signal_outcome(self, strategy_id: str, pnl_r: float):
         """
         Registra outcome de una señal (PnL en unidades de R).
-        
+
         Args:
             strategy_id: ID de la estrategia
             pnl_r: PnL normalizado (1R = stop_distance)
         """
-        self.strategy_returns[strategy_id].append({
-            'timestamp': datetime.now(),
-            'pnl_r': pnl_r
-        })
-        
+        # P1-013: Proteger escritura con lock
+        with self.lock:
+            self.strategy_returns[strategy_id].append({
+                'timestamp': datetime.now(),
+                'pnl_r': pnl_r
+            })
+
         logger.debug(f"CORR_TRACKER: Recorded {strategy_id} pnl={pnl_r:.2f}R")
-    
+
     def update_correlation_matrix(self):
         """Recalcula matriz de correlación EWMA."""
-        strategies = list(self.strategy_returns.keys())
-        
+        # P1-013: Proteger lectura/escritura con lock
+        with self.lock:
+            # Snapshot de keys para evitar RuntimeError si dict cambia durante iteración
+            strategies = list(self.strategy_returns.keys())
+
         for i, strat1 in enumerate(strategies):
             for strat2 in strategies[i+1:]:
                 corr = self._calculate_pairwise_correlation(strat1, strat2)
-                
+
                 key = tuple(sorted([strat1, strat2]))
-                self.correlation_matrix[key] = corr
-                self.last_update[key] = datetime.now()
-                
+                with self.lock:
+                    self.correlation_matrix[key] = corr
+                    self.last_update[key] = datetime.now()
+
                 if abs(corr) > 0.85:
                     logger.info(
                         f"HIGH_CORRELATION: {strat1} ↔ {strat2} = {corr:.3f}"
                     )
-                    self.stats['high_correlations_detected'] += 1
-        
-        self.stats['total_updates'] += 1
+                    with self.lock:
+                        self.stats['high_correlations_detected'] += 1
+
+        with self.lock:
+            self.stats['total_updates'] += 1
     
     def get_correlation(self, strat1: str, strat2: str) -> float:
         """

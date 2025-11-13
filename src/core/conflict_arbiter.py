@@ -20,9 +20,9 @@ MEJORAS IMPLEMENTADAS:
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Deque
 from datetime import datetime
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass, asdict
 import threading
 import logging
@@ -204,7 +204,8 @@ class ConflictArbiter:
         )
         
         # Historial de decisiones
-        self.decision_history: List[ConflictResolution] = []
+        # P1-027: Usar deque(maxlen) para evitar memory leak en long-running systems
+        self.decision_history: Deque[ConflictResolution] = deque(maxlen=10000)
         
         # MÃ©tricas
         self.stats = {
@@ -688,10 +689,17 @@ class ConflictArbiter:
         - adv: k_adv Ã— (notional / ADV_daily)
         """
         base = self.ev_params['slippage_base_bp']
-        
+
         # Vol component
         returns = data['close'].pct_change().dropna()
-        vol_realized = returns.tail(20).std() if len(returns) >= 20 else returns.std()
+        # P1-016: Validar que tail(20) tenga >= 2 elementos antes de std()
+        tail_returns = returns.tail(20)
+        if len(tail_returns) >= 2:
+            vol_realized = tail_returns.std()
+        elif len(returns) >= 2:
+            vol_realized = returns.std()
+        else:
+            vol_realized = 0.0  # No hay suficientes datos para volatilidad
         vol_component = vol_realized * 10000 * self.ev_params['slippage_vol_multiplier']
         
         # Depth component

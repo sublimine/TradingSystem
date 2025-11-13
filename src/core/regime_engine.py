@@ -281,10 +281,11 @@ class RegimeEngine:
             
             # Log-returns en lugar de pct_change
             log_returns = np.log(close / close.shift(1)).dropna()
-            
-            if len(log_returns) < 2:
+
+            # P1-018: Necesitamos al menos 3 elementos para slicing seguro
+            if len(log_returns) < 3:
                 return 0.0
-            
+
             # Covariance de log-returns consecutivos
             cov = np.cov(log_returns.iloc[:-1], log_returns.iloc[1:])[0, 1]
             
@@ -316,11 +317,19 @@ class RegimeEngine:
         
         self.stats['hurst_cache_misses'] += 1
         hurst = self._calculate_hurst_exponent(
-            series, 
+            series,
             lags=self.global_thresholds['hurst_max_lags']
         )
-        
+
         self.hurst_cache[symbol] = (hurst, now)
+
+        # P1-026: Limitar cache size para evitar memory leak con 1000+ símbolos
+        if len(self.hurst_cache) > 500:
+            # Eliminar las 100 entradas más antiguas
+            sorted_items = sorted(self.hurst_cache.items(), key=lambda x: x[1][1])
+            for sym, _ in sorted_items[:100]:
+                del self.hurst_cache[sym]
+
         return hurst
     
     def _calculate_follow_through_no_leak(self, data: pd.DataFrame, symbol: str) -> float:
@@ -615,11 +624,13 @@ class RegimeEngine:
                 
                 if rs_chunk:
                     tau.append(lag)
-                    rs_values.append(np.mean(rs_chunk))
-            
+                    # P1-017: Asegurar rs_values > 0 antes de append para evitar log(-inf)
+                    rs_mean = np.mean(rs_chunk)
+                    rs_values.append(max(rs_mean, 1e-10))
+
             if len(tau) < 2:
                 return 0.5
-            
+
             hurst = np.polyfit(np.log(tau), np.log(rs_values), 1)[0]
             return np.clip(hurst, 0.3, 0.7)
         
