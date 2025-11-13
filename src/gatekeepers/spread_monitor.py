@@ -45,31 +45,42 @@ class SpreadMonitor:
     
     def __init__(self,
                  window_size: int = 100,
-                 historical_window: int = 1000):
+                 historical_window: int = 1000,
+                 warm_up_threshold: int = 50,
+                 warm_up_absolute_spread_bp: float = 3.0):
         """
         Inicializa el monitor de spread.
-        
+
         Args:
             window_size: Ventana para calcular spread promedio (default: 100)
             historical_window: Ventana para estadísticas históricas (default: 1000)
+            warm_up_threshold: Mínimo de observaciones antes de usar ratios (default: 50)
+            warm_up_absolute_spread_bp: Threshold absoluto durante warm-up en bp (default: 3.0)
         """
         self.window_size = window_size
         self.historical_window = historical_window
-        
+
+        # CR11 FIX: Agregar warm-up phase para prevenir false negatives
+        self.warm_up_threshold = warm_up_threshold
+        self.warm_up_absolute_spread_bp = warm_up_absolute_spread_bp
+        self.trades_observed = 0
+
         # Buffer de spreads observados
         self.spreads = deque(maxlen=window_size)
-        
+
         # Historia de spreads para estadísticas
         self.spread_history = deque(maxlen=historical_window)
-        
+
         # Spread actual
         self.current_spread = None
-        
+
         self.logger = logging.getLogger(self.__class__.__name__)
-        
+
         self.logger.info(
             f"Spread Monitor inicializado: "
-            f"window={window_size}, historical={historical_window}"
+            f"window={window_size}, historical={historical_window}, "
+            f"warm_up_threshold={warm_up_threshold}, "
+            f"warm_up_absolute_threshold={warm_up_absolute_spread_bp}bp"
         )
     
     def calculate_quoted_spread(self,
@@ -126,18 +137,21 @@ class SpreadMonitor:
                      ask: float) -> None:
         """
         Actualiza monitor con quoted spread del libro.
-        
+
         Args:
             bid: Precio bid actual
             ask: Precio ask actual
         """
         mid = (bid + ask) / 2
         spread_bp = self.calculate_quoted_spread(bid, ask, mid)
-        
+
         self.spreads.append(spread_bp)
         self.spread_history.append(spread_bp)
         self.current_spread = spread_bp
-        
+
+        # CR11 FIX: Incrementar contador para warm-up phase
+        self.trades_observed += 1
+
         self.logger.debug(f"Quoted spread actualizado: {spread_bp:.2f} bp")
     
     def update_effective(self,
@@ -146,7 +160,7 @@ class SpreadMonitor:
                         direction: int) -> None:
         """
         Actualiza monitor con effective spread observado.
-        
+
         Args:
             trade_price: Precio de transacción
             mid_price: Mid price en ese momento
@@ -155,10 +169,13 @@ class SpreadMonitor:
         spread_bp = self.calculate_effective_spread(
             trade_price, mid_price, direction
         )
-        
+
         self.spreads.append(spread_bp)
         self.spread_history.append(spread_bp)
         self.current_spread = spread_bp
+
+        # CR11 FIX: Incrementar contador para warm-up phase
+        self.trades_observed += 1
         
         self.logger.debug(f"Effective spread actualizado: {spread_bp:.2f} bp")
     
@@ -235,20 +252,45 @@ class SpreadMonitor:
     def should_halt_trading(self, halt_threshold: float = 5.0) -> bool:
         """
         Determina si se debe detener trading basándose en spread.
-        
+
         Args:
             halt_threshold: Ratio sobre mediana que dispara halt (default: 5.0)
-            
+
         Returns:
             True si spread indica halt
         """
+        # CR11 FIX: Durante warm-up, usar threshold absoluto en lugar de ratio
+        if self.trades_observed < self.warm_up_threshold:
+            if self.current_spread is None:
+                # Sin datos → conservador: halt trading
+                self.logger.warning(
+                    f"HALT WARM-UP: Sin datos de spread (trades={self.trades_observed}/{self.warm_up_threshold}). "
+                    f"Conservador: bloquear trading hasta warm-up completo."
+                )
+                return True
+
+            # Usar threshold absoluto durante warm-up
+            should_halt = self.current_spread > self.warm_up_absolute_spread_bp
+
+            if should_halt:
+                self.logger.warning(
+                    f"HALT WARM-UP: Spread = {self.current_spread:.2f} bp > "
+                    f"{self.warm_up_absolute_spread_bp:.2f} bp (threshold absoluto). "
+                    f"Trades observados: {self.trades_observed}/{self.warm_up_threshold}."
+                )
+
+            return should_halt
+
+        # Post-warm-up: usar ratio sobre mediana histórica
         ratio = self.get_spread_ratio()
-        
+
         if ratio is None:
-            return False
-        
+            # CR11 FIX: Si no hay datos post-warm-up, ser conservador
+            self.logger.warning("HALT: Sin datos válidos para calcular ratio de spread. Conservador: bloquear trading.")
+            return True
+
         should_halt = ratio > halt_threshold
-        
+
         if should_halt:
             current = self.get_current_spread()
             median = self.get_median_spread()
@@ -258,26 +300,47 @@ class SpreadMonitor:
                 f"Threshold: {halt_threshold}x. "
                 f"Costos de transacción prohibitivos."
             )
-        
+
         return should_halt
     
     def should_reduce_sizing(self, reduce_threshold: float = 2.0) -> bool:
         """
         Determina si se debe reducir sizing basándose en spread.
-        
+
         Args:
             reduce_threshold: Ratio que dispara reducción (default: 2.0)
-            
+
         Returns:
             True si spread indica reducir sizing
         """
+        # CR11 FIX: Durante warm-up, usar threshold absoluto más conservador
+        if self.trades_observed < self.warm_up_threshold:
+            if self.current_spread is None:
+                # Sin datos → conservador: reducir sizing
+                return True
+
+            # Usar threshold absoluto más bajo para reducción (60% del halt threshold)
+            reduce_absolute_threshold = self.warm_up_absolute_spread_bp * 0.6
+            should_reduce = self.current_spread > reduce_absolute_threshold
+
+            if should_reduce:
+                self.logger.info(
+                    f"REDUCIR SIZING WARM-UP: Spread = {self.current_spread:.2f} bp > "
+                    f"{reduce_absolute_threshold:.2f} bp (threshold absoluto). "
+                    f"Trades observados: {self.trades_observed}/{self.warm_up_threshold}."
+                )
+
+            return should_reduce
+
+        # Post-warm-up: usar ratio sobre mediana histórica
         ratio = self.get_spread_ratio()
-        
+
         if ratio is None:
-            return False
-        
+            # CR11 FIX: Si no hay datos post-warm-up, conservador: reducir sizing
+            return True
+
         should_reduce = ratio > reduce_threshold
-        
+
         if should_reduce:
             current = self.get_current_spread()
             median = self.get_median_spread()
@@ -286,7 +349,7 @@ class SpreadMonitor:
                 f"({ratio:.2f}x mediana de {median:.2f} bp). "
                 f"Costos de transacción elevados."
             )
-        
+
         return should_reduce
     
     def get_sizing_multiplier(self,
