@@ -53,7 +53,8 @@ class VolatilityRegimeAdaptation(StrategyBase):
 
         self.hmm_model = None
         # FIX BUG #10: Use deque with maxlen to prevent memory leak
-        self.volatility_history = deque(maxlen=1000)
+        # CR6 FIX: Ajustar maxlen a 200 (límite real usado en código)
+        self.volatility_history = deque(maxlen=200)
         self.current_regime = None
         self.regime_confidence = 0.0
 
@@ -90,9 +91,7 @@ class VolatilityRegimeAdaptation(StrategyBase):
 
         current_volatility = self._calculate_current_volatility(market_data)
         self.volatility_history.append(current_volatility)
-
-        if len(self.volatility_history) > 200:
-            self.volatility_history.pop(0)
+        # CR6 FIX: Eliminado pop(0) redundante - deque con maxlen=200 lo hace automáticamente
 
         if len(self.volatility_history) >= 100 and not self.hmm_model.fitted:
             self._fit_regime_model()
