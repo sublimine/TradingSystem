@@ -53,7 +53,19 @@ class SignalArbitrator:
     """
 
     def __init__(self, config: Dict):
-        """Initialize signal arbitrator."""
+        """
+        Initialize signal arbitrator.
+
+        Args:
+            config: Configuration dictionary with the following parameters:
+                - min_arbitration_score (float): Minimum composite score for signal approval (default: 0.65)
+                    Score range 0.0-1.0 from weighted factors: quality (40%), performance (25%),
+                    regime fit (20%), risk-reward (10%), timing (5%)
+                - strategy_performance_window (int): Number of recent trades per strategy to track (default: 30)
+                - signal_history_size (int): Maximum signals to keep in history (default: 1000)
+
+        P2-012: SignalArbitrator config parameters documented
+        """
         self.config = config
 
         # Strategy performance tracking (last 30 trades per strategy)
@@ -94,6 +106,10 @@ class SignalArbitrator:
         # Check if best signal meets minimum threshold
         best = scored_signals[0]
 
+        # P2-001: min_arbitration_score threshold configurable
+        # Impacto: Score mínimo para ejecutar señal. 0.65 = balance conservador.
+        # Valores más altos (0.75+) reducen frequency pero aumentan precision.
+        # Valores más bajos (0.50-0.60) aumentan frequency pero reducen edge.
         min_score = self.config.get('min_arbitration_score', 0.65)
 
         if best['score'] >= min_score:
@@ -179,6 +195,16 @@ class SignalArbitrator:
         """Evaluate how well signal strategy fits current regime."""
         strategy_name = signal['strategy_name']
 
+        # P2-025: fit_matrix debería moverse a config JSON
+        # Este dict hardcoded de 40+ líneas dificulta mantenimiento y testing
+        # RECOMENDACIÓN: Mover a config/regime_strategy_fit_matrix.json y cargar en __init__
+        # Beneficios: (1) Hot-reload sin reiniciar, (2) Versionado independiente,
+        # (3) A/B testing de matrices, (4) Documentación centralizada
+        # TODO: Crear config/regime_strategy_fit_matrix.json con estructura:
+        # {
+        #   "TREND_STRONG_UP": {"momentum_quality": 1.0, "mean_reversion": 0.30, ...},
+        #   "RANGING_LOW_VOL": {"mean_reversion": 1.0, "momentum_quality": 0.40, ...}
+        # }
         # Regime-strategy fit matrix (institutional knowledge)
         fit_matrix = {
             'TREND_STRONG_UP': {
@@ -220,7 +246,18 @@ class SignalArbitrator:
         }
 
         regime_fits = fit_matrix.get(regime, {})
-        return regime_fits.get(strategy_name, 0.7)  # Default neutral
+        fit_score = regime_fits.get(strategy_name, None)
+
+        # P2-019: Logging cuando estrategia no está en fit_matrix (usar default)
+        if fit_score is None:
+            logger.warning(
+                f"REGIME_FIT_DEFAULT: Strategy '{strategy_name}' not in fit_matrix "
+                f"for regime '{regime}'. Using default 0.7. "
+                f"Consider adding to fit_matrix if strategy becomes permanent."
+            )
+            fit_score = 0.7  # Default neutral
+
+        return fit_score
 
     def _evaluate_risk_reward(self, signal: Dict) -> float:
         """Evaluate risk-reward profile of signal."""
@@ -262,7 +299,13 @@ class SignalArbitrator:
         - Clean order flow (low VPIN)
         - Not at session extremes (avoid reversals)
         """
-        # VPIN check
+        # P2-002: VPIN thresholds documentados
+        # Basado en Easley et al. (2012) - Volume-Synchronized Probability of Informed Trading
+        # 0.50 = threshold crítico de toxicity (institutional informed flow dominante)
+        # 0.30 = threshold de flow limpio (retail/uninformed dominante)
+        # Estos valores son conservadores para FX major pairs con ADV > $1B
+        # Para pares exóticos o menor liquidez, considerar thresholds más bajos (0.40/0.20)
+
         vpin = market_context.get('vpin', 0.4)
         if vpin > 0.50:
             timing_score = 0.3  # Poor timing - toxic flow
@@ -434,6 +477,12 @@ class PortfolioOrchestrator:
         # Count directional positions
         long_count = sum(1 for p in self.active_positions.values() if p['direction'] == 'LONG')
         short_count = sum(1 for p in self.active_positions.values() if p['direction'] == 'SHORT')
+
+        # P2-004: Directional imbalance ratio documentado
+        # Ratio 6:2 = 75% max exposición direccional, 25% min hedging
+        # Basado en risk management institucional: fuerza exposición al menos 25% en dirección contraria
+        # para proteger contra reversals extremos. Ratio conservador vs 80/20 típico retail.
+        # Para mayor agresividad: 7:1 (87.5%). Para mayor conservador: 5:3 (62.5%).
 
         # Check directional imbalance (max 6:2 ratio)
         if direction == 'LONG' and long_count >= 6 and short_count <= 2:

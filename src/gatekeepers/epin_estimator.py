@@ -59,6 +59,14 @@ class ePINEstimator:
             epin_window: Ventana para ePIN simple (default: 100)
             warm_up_threshold: Mínimo de trades antes de usar PIN dinámico (default: 100)
             warm_up_absolute_pin: Threshold absoluto durante warm-up (default: 0.75)
+
+        P2-010: ePIN warm-up values
+        warm_up_threshold=100 trades: Necesario para stabilizar imbalance ratio y VPIN
+          - ePIN simple (imbalance) estabiliza ~50 trades, VPIN requiere ~100 para buckets completos
+        warm_up_absolute_pin=0.75: Threshold conservador para informed trading detection
+          - PIN 0.75 = 75% flow es imbalance direccional, indica alta probabilidad informed traders
+          - Basado en Easley et al. (2012): PIN >0.7 correlaciona con eventos informacionales
+          - Más conservador que threshold típico 0.85 post warm-up (prevenir false negatives early)
         """
         self.volume_buckets = volume_buckets
         self.bucket_size = bucket_size
