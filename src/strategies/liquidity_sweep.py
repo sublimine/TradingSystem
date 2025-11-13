@@ -209,6 +209,10 @@ class LiquiditySweepStrategy(StrategyBase):
         Returns:
             (sweep_detected, sweep_info_dict)
         """
+        # CR9 FIX: Validar array bounds antes de iterar
+        if len(recent_bars) < 3:
+            return False, None  # Necesitamos al menos 3 barras para detectar sweep
+
         level_type = level_info['type']
 
         for i in range(len(recent_bars) - 3, len(recent_bars)):
@@ -315,7 +319,8 @@ class LiquiditySweepStrategy(StrategyBase):
         criteria['reversal_velocity'] = velocity_score
 
         # CRITERION 5: VOLUME SPIKE during sweep
-        if sweep_bar_idx < len(recent_bars):
+        # CR9 FIX: Validar array bounds antes de calcular avg_volume
+        if sweep_bar_idx < len(recent_bars) and len(recent_bars) >= 2:
             sweep_volume = recent_bars.iloc[sweep_bar_idx]['volume']
             avg_volume = recent_bars['volume'].iloc[:-1].mean()
 
@@ -399,6 +404,10 @@ class LiquiditySweepStrategy(StrategyBase):
 
     def _calculate_atr(self, market_data: pd.DataFrame, period: int = 14) -> float:
         """Calculate ATR for stop/target placement."""
+        # CR9 FIX: Validar array bounds antes de acceder
+        if len(market_data) < 1:
+            return 0.0001  # Fallback mínimo para evitar división por cero
+
         high = market_data['high']
         low = market_data['low']
         close = market_data['close'].shift(1)
