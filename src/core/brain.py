@@ -53,7 +53,19 @@ class SignalArbitrator:
     """
 
     def __init__(self, config: Dict):
-        """Initialize signal arbitrator."""
+        """
+        Initialize signal arbitrator.
+
+        Args:
+            config: Configuration dictionary with the following parameters:
+                - min_arbitration_score (float): Minimum composite score for signal approval (default: 0.65)
+                    Score range 0.0-1.0 from weighted factors: quality (40%), performance (25%),
+                    regime fit (20%), risk-reward (10%), timing (5%)
+                - strategy_performance_window (int): Number of recent trades per strategy to track (default: 30)
+                - signal_history_size (int): Maximum signals to keep in history (default: 1000)
+
+        P2-012: SignalArbitrator config parameters documented
+        """
         self.config = config
 
         # Strategy performance tracking (last 30 trades per strategy)
@@ -183,6 +195,16 @@ class SignalArbitrator:
         """Evaluate how well signal strategy fits current regime."""
         strategy_name = signal['strategy_name']
 
+        # P2-025: fit_matrix debería moverse a config JSON
+        # Este dict hardcoded de 40+ líneas dificulta mantenimiento y testing
+        # RECOMENDACIÓN: Mover a config/regime_strategy_fit_matrix.json y cargar en __init__
+        # Beneficios: (1) Hot-reload sin reiniciar, (2) Versionado independiente,
+        # (3) A/B testing de matrices, (4) Documentación centralizada
+        # TODO: Crear config/regime_strategy_fit_matrix.json con estructura:
+        # {
+        #   "TREND_STRONG_UP": {"momentum_quality": 1.0, "mean_reversion": 0.30, ...},
+        #   "RANGING_LOW_VOL": {"mean_reversion": 1.0, "momentum_quality": 0.40, ...}
+        # }
         # Regime-strategy fit matrix (institutional knowledge)
         fit_matrix = {
             'TREND_STRONG_UP': {
