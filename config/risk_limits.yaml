@@ -1,0 +1,48 @@
+# RISK LIMITS - MANDATO 6
+# Límites de cartera institucionales
+# Fecha: 2025-11-13
+# P0: Límites operativos para evitar blowups
+
+# === POSITION SIZING ===
+position_sizing:
+  base_risk_per_trade: 0.5              # Base: 0.5% por operación
+  min_risk_per_trade: 0.33              # Mínimo: 0.33% (señales calidad baja)
+  max_risk_per_trade: 1.0               # Máximo: 1.0% (señales calidad alta)
+
+# === EXPOSURE LIMITS ===
+exposure:
+  max_total_exposure: 6.0               # Máx riesgo abierto total: 6%
+  max_per_symbol_exposure: 2.0          # Máx riesgo por símbolo: 2%
+  max_per_strategy_exposure: 3.0        # Máx riesgo por estrategia: 3%
+  max_correlated_exposure: 5.0          # Máx riesgo correlacionado: 5%
+  max_concurrent_positions: 8           # Máx trades abiertos simultáneos
+
+# === DRAWDOWN LIMITS ===
+drawdown:
+  max_daily_loss: 3.0                   # Máx pérdida diaria: 3%
+  max_drawdown: 15.0                    # Máx drawdown desde peak: 15%
+  halt_trading_at_daily_loss: true      # Detener trading si se alcanza daily loss
+
+# === QUALITY THRESHOLDS ===
+quality:
+  min_quality_score: 0.60               # Calidad mínima para ejecutar: 0.60
+
+# === CIRCUIT BREAKER (Statistical) ===
+circuit_breaker:
+  z_score_threshold: 2.5                # Umbral Z-score: 2.5σ (99.4% confidence)
+  consecutive_loss_max_prob: 0.05       # Probabilidad máx de racha: 5%
+  lookback_trades: 30                   # Lookback para análisis: 30 trades
+  cooldown_minutes: 120                 # Cooldown después de activación: 120 min
+
+# === CORRELATION MATRIX ===
+# Correlaciones entre símbolos (FX institucional)
+correlations:
+  EURUSD.pro_GBPUSD.pro: 0.85
+  AUDUSD.pro_NZDUSD.pro: 0.92
+  EURJPY.pro_GBPJPY.pro: 0.88
+  USDCAD.pro_USDCHF.pro: 0.75
+  EURUSD.pro_USDCHF.pro: -0.90          # Inversa
+  XAUUSD.pro_USDJPY.pro: -0.65          # Gold vs JPY
+
+# === INITIAL BALANCE ===
+initial_balance: 100000                 # Balance inicial para simulaciones
