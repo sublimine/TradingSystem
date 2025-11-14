@@ -2,7 +2,7 @@
 Institutional Risk Manager - Advanced Implementation
 
 Statistical circuit breakers based on loss distribution analysis, NOT arbitrary thresholds.
-Dynamic position sizing (0.33%-1.0%) based on multi-factor quality scoring.
+Dynamic position sizing (0-2% maximum per idea) based on multi-factor quality scoring.
 
 MANDATO 13: Integrated with ExecutionEventLogger for rejection logging.
 
@@ -38,12 +38,14 @@ class QualityScorer:
     Multi-factor quality scoring system for signal evaluation.
 
     P2-013: QualityScorer complete documentation
+    MANDATO 15: Integrated with MicrostructureEngine and MultiFrameOrchestrator
 
     Evaluates signal quality through 5 institutional factors weighted by importance:
 
     1. Multi-timeframe confluence (40%): HTF/LTF alignment strength
        - Measured via correlated structure across M5/M15/H1/H4 timeframes
        - Higher weight reflects institutional focus on MTF confirmation
+       - MANDATO 15: Real MTF analysis via MultiFrameOrchestrator
 
     2. Market structure alignment (25%): Proximity and alignment to key levels
        - Order blocks, FVGs, swing points, liquidity zones
@@ -52,6 +54,7 @@ class QualityScorer:
     3. Order flow quality (20%): VPIN-based toxicity measurement
        - Low VPIN = clean uninformed flow (good)
        - High VPIN = toxic informed flow (bad)
+       - MANDATO 15: Real microstructure via MicrostructureEngine (VPIN, OFI, Depth, Spoofing)
 
     4. Volatility regime fit (10%): Strategy compatibility with current regime
        - Mean reversion thrives in low vol, momentum in high vol
@@ -59,19 +62,28 @@ class QualityScorer:
     5. Historical strategy performance (5%): Recent win rate and expectancy
        - Reduces exposure to underperforming strategies
 
-    Final score 0.0-1.0 drives dynamic position sizing (0.33%-1.0% risk)
+    Final score 0.0-1.0 drives dynamic position sizing (0-2% maximum risk per idea)
 
     Research basis:
     - López de Prado (2018): Meta-labeling for quality filtering
     - Easley et al. (2012): VPIN for order flow quality
     """
 
-    def __init__(self):
+    def __init__(self, microstructure_engine=None, multiframe_orchestrator=None):
         """
         Initialize quality scorer with institutional factor weights.
 
+        MANDATO 15: Optional integration with real microstructure and multiframe engines.
+
+        Args:
+            microstructure_engine: Optional MicrostructureEngine for real-time flow analysis
+            multiframe_orchestrator: Optional MultiFrameOrchestrator for MTF analysis
+
         Weights calibrated from backtesting 2000+ signals across regimes.
         """
+        self.microstructure_engine = microstructure_engine
+        self.multiframe_orchestrator = multiframe_orchestrator
+
         self.weights = {
             'mtf_confluence': 0.40,
             'structure_alignment': 0.25,
@@ -84,6 +96,9 @@ class QualityScorer:
         """
         Calculate composite quality score 0.0-1.0.
 
+        MANDATO 15: Integrated with real MicrostructureEngine and MultiFrameOrchestrator.
+        Falls back to signal metadata if engines not available (backward compatibility).
+
         Args:
             signal: Signal dictionary with metadata
             market_context: Current market state
@@ -92,9 +107,21 @@ class QualityScorer:
             Quality score 0.0-1.0
         """
         scores = {}
+        symbol = signal.get('symbol', '')
 
         # 1. Multi-timeframe confluence (40%)
-        mtf_confluence = signal.get('metadata', {}).get('mtf_confluence', 0.5)
+        # MANDATO 15: Use real MultiFrameOrchestrator if available
+        if self.multiframe_orchestrator:
+            mf_score = self.multiframe_orchestrator.get_multiframe_score(symbol)
+            if mf_score is not None:
+                mtf_confluence = mf_score
+            else:
+                # Fallback if no cached analysis
+                mtf_confluence = signal.get('metadata', {}).get('mtf_confluence', 0.5)
+        else:
+            # Legacy: read from signal metadata
+            mtf_confluence = signal.get('metadata', {}).get('mtf_confluence', 0.5)
+
         scores['mtf_confluence'] = self._normalize_score(mtf_confluence, 0.4, 1.0)
 
         # 2. Market structure alignment (25%)
@@ -102,9 +129,21 @@ class QualityScorer:
         scores['structure_alignment'] = structure_score
 
         # 3. Order flow quality (20%)
-        vpin = market_context.get('vpin', 0.4)
-        # Low VPIN = high quality (inverted)
-        flow_quality = 1.0 - min(vpin / 0.6, 1.0)
+        # MANDATO 15: Use real MicrostructureEngine if available
+        if self.microstructure_engine:
+            micro_score = self.microstructure_engine.get_microstructure_score(symbol)
+            if micro_score is not None:
+                flow_quality = micro_score
+            else:
+                # Fallback if no cached analysis
+                vpin = market_context.get('vpin', 0.4)
+                flow_quality = 1.0 - min(vpin / 0.6, 1.0)
+        else:
+            # Legacy: calculate from VPIN in market_context
+            vpin = market_context.get('vpin', 0.4)
+            # Low VPIN = high quality (inverted)
+            flow_quality = 1.0 - min(vpin / 0.6, 1.0)
+
         scores['order_flow'] = flow_quality
 
         # 4. Volatility regime fit (10%)
@@ -145,13 +184,16 @@ class QualityScorer:
         if 'structure_alignment' in metadata:
             return metadata['structure_alignment']
 
-        # Check order block proximity
-        if 'order_block_distance_atr' in metadata:
-            ob_distance = metadata['order_block_distance_atr']
-            if ob_distance < 0.5:
-                score += 0.3
-            elif ob_distance < 1.0:
-                score += 0.15
+        # Check order block proximity (NO-ATR structural distance)
+        # order_block_distance_normalized: distance / order_block_size
+        # Interpretation: 0-0.3 = very close, 0.3-0.7 = reasonable, >0.7 = far
+        if 'order_block_distance_normalized' in metadata:
+            ob_distance_norm = metadata['order_block_distance_normalized']
+            if ob_distance_norm < 0.3:
+                score += 0.3  # Very close to OB (optimal)
+            elif ob_distance_norm < 0.7:
+                score += 0.15  # Reasonable distance
+            # >0.7: no bonus (too far from structure)
 
         # Check FVG alignment
         if 'fvg_aligned' in metadata and metadata['fvg_aligned']:
@@ -373,14 +415,15 @@ class InstitutionalRiskManager:
     Features:
     1. Statistical circuit breakers (NOT arbitrary counts)
     2. Multi-factor quality scoring (0.0-1.0)
-    3. Dynamic position sizing based on quality (0.33%-1.0%)
+    3. Dynamic position sizing based on quality (0-2% maximum per idea)
     4. Correlation-based portfolio heat management
     5. Drawdown and loss limits
     6. Per-strategy exposure limits
     """
 
     def __init__(self, config: Dict = None, risk_limits_path: str = None,
-                 event_logger: Optional['ExecutionEventLogger'] = None):
+                 event_logger: Optional['ExecutionEventLogger'] = None,
+                 microstructure_engine=None, multiframe_orchestrator=None):
         """
         Initialize institutional risk manager.
 
@@ -388,6 +431,8 @@ class InstitutionalRiskManager:
             config: Risk configuration (optional, will load from YAML if not provided)
             risk_limits_path: Path to risk_limits.yaml (Mandato 6)
             event_logger: ExecutionEventLogger for rejection logging (MANDATO 13)
+            microstructure_engine: Optional MicrostructureEngine for real flow analysis (MANDATO 15)
+            multiframe_orchestrator: Optional MultiFrameOrchestrator for MTF analysis (MANDATO 15)
         """
         # MANDATO 6: Load limits from institutional YAML
         if risk_limits_path is None:
@@ -399,10 +444,11 @@ class InstitutionalRiskManager:
         self.config = config
         self.event_logger = event_logger
 
-        # Position sizing
-        self.base_risk_pct = config.get('base_risk_per_trade', 0.5)  # 0.5% base
-        self.min_risk_pct = config.get('min_risk_per_trade', 0.33)  # 0.33% minimum
-        self.max_risk_pct = config.get('max_risk_per_trade', 1.0)   # 1.0% maximum
+        # Position sizing (institutional range: 0-2% maximum per idea)
+        # Values loaded from config, defaults shown for reference
+        self.base_risk_pct = config.get('base_risk_per_trade', 0.5)  # Base risk (default: 0.5%)
+        self.min_risk_pct = config.get('min_risk_per_trade', 0.33)  # Min risk (default: 0.33%)
+        self.max_risk_pct = config.get('max_risk_per_trade', 1.0)   # Max risk (default: 1.0%, institutional cap: 2.0%)
 
         # Quality thresholds
         # P2-003: min_quality_score threshold documentado
@@ -424,7 +470,11 @@ class InstitutionalRiskManager:
         self.max_drawdown_pct = config.get('max_drawdown', 15.0)  # 15% max drawdown
 
         # Components
-        self.quality_scorer = QualityScorer()
+        # MANDATO 15: Pass microstructure and multiframe engines to QualityScorer
+        self.quality_scorer = QualityScorer(
+            microstructure_engine=microstructure_engine,
+            multiframe_orchestrator=multiframe_orchestrator
+        )
         self.circuit_breaker = StatisticalCircuitBreaker(config)
 
         # Portfolio tracking
@@ -680,15 +730,16 @@ class InstitutionalRiskManager:
         """
         Calculate dynamic position size based on quality score.
 
-        Institutional approach:
-        - Low quality (0.60-0.70): 0.33% risk
-        - Medium quality (0.70-0.85): 0.50% risk
-        - High quality (0.85-1.0): 0.75-1.0% risk
+        Institutional approach (0-2% maximum per idea):
+        - Maps quality score [min_quality_score, 1.0] → [min_risk_pct, max_risk_pct]
+        - Linear interpolation based on quality
+        - Example with defaults: quality 0.60→0.33%, 0.80→0.67%, 1.0→1.0%
+        - Institutional cap: 2.0% maximum per idea
 
         Further adjusted by:
-        - Volatility regime (high vol = reduce)
-        - VPIN (toxic flow = reduce)
-        - Recent performance
+        - Volatility regime (high vol = reduce 30%, low vol = increase 20%)
+        - Microstructure quality / VPIN (toxic flow = reduce up to 50%)
+        - Final risk clamped to [min_risk_pct, max_risk_pct] from config
         """
         # Base sizing from quality (linear interpolation)
         # P2-020: Robusto check división por zero usando epsilon

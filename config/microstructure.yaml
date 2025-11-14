@@ -1,0 +1,214 @@
+# ========================================
+# MICROSTRUCTURE & MULTIFRAME CONFIG
+# MANDATO 15: Institutional Market Microstructure & Multi-Timeframe Analysis
+# ========================================
+# Fecha: 2025-11-14
+# Versión: 1.0
+#
+# Configuración institucional para análisis de microestructura
+# (VPIN, OFI, Level2, Spoofing) y contexto multi-timeframe (HTF/MTF/LTF).
+#
+# Research basis:
+# - Easley, López de Prado, O'Hara (2012): Flow Toxicity and Liquidity
+# - Lee & Ready (1991): Inferring Trade Direction
+# - Cartea, Jaimungal, Penalva (2015): Algorithmic and HFT
+# ========================================
+
+# ========================================
+# MICROSTRUCTURE ENGINE
+# ========================================
+# Aggregates VPIN, OFI, Depth, and Spoofing into composite score [0-1]
+
+microstructure_engine:
+  # Aggregation weights (must sum to 1.0)
+  weights:
+    vpin: 0.40          # VPIN (Volume-Synchronized Probability of Informed Trading) - highest weight
+    ofi: 0.30           # Order Flow Imbalance
+    depth: 0.20         # Level 2 book depth quality
+    spoofing: 0.10      # Spoofing/manipulation detection
+
+  # Component-specific configurations
+
+  # VPIN Estimator (Easley, López de Prado, O'Hara 2012)
+  vpin:
+    bucket_size: 50000        # Volume per bucket (50k units typical for FX)
+    n_buckets: 50             # Number of buckets for VPIN calculation
+    vpin_threshold_low: 0.30  # VPIN < 0.30 = good flow quality (score = 1.0)
+    vpin_threshold_high: 0.50 # VPIN > 0.50 = toxic flow (score = 0.0)
+    # Score interpolated linearly between thresholds
+    # VPIN measures probability of informed trading (0-1):
+    # - <0.30: Clean uninformed flow (retail, market makers)
+    # - 0.30-0.50: Mixed flow
+    # - >0.50: High informed trading (institutional accumulation/distribution)
+
+  # Order Flow Analyzer
+  order_flow:
+    window_trades: 100              # Sliding window for OFI calculation (100 trades)
+    regime_threshold_sigma: 2.0     # Z-score threshold for regime change detection (2σ = 97.7%)
+    # OFI = (Σ buy_volume - Σ sell_volume) / Σ total_volume
+    # Normalized to [-1, +1]:
+    # - OFI near 0 = balanced (good) → score high
+    # - OFI near ±1 = extreme imbalance (risky) → score low
+
+  # Level 2 Depth Monitor
+  level2_depth:
+    depth_levels: 10                # Number of book levels to analyze (0-10)
+    imbalance_threshold: 0.65       # Bid/ask imbalance threshold (0.65 = 65% on one side)
+    liquidity_wall_threshold: 0.50  # Concentration threshold for liquidity walls (50% in one level)
+    # Depth score based on:
+    # - Bid/ask balance (closer to 0.5 = better)
+    # - Spread quality
+    # - Absence of liquidity walls
+
+  # Spoofing Detector
+  spoofing:
+    volume_threshold: 3.0           # Order size threshold (3x average volume)
+    cancel_time_threshold: 5.0      # Max seconds before cancel = spoofing (5 sec)
+    lookback_trades: 50             # Window for average volume calculation
+    spoof_memory_minutes: 15        # How long to remember spoof events (15 min)
+    # Spoofing detection:
+    # - Large orders (>3x avg) cancelled quickly (<5s) = manipulation
+    # - Score penalized by recent spoof event frequency
+
+
+# ========================================
+# MULTIFRAME ORCHESTRATOR
+# ========================================
+# Aggregates HTF, MTF, LTF analysis into unified multi-timeframe score [0-1]
+
+multiframe_orchestrator:
+  # Aggregation weights (must sum to 1.0)
+  weights:
+    htf: 0.50           # High Timeframe (H4/D1) - primary trend/structure
+    mtf: 0.30           # Medium Timeframe (M15/M5) - context validation
+    ltf: 0.20           # Low Timeframe (M1) - entry timing
+
+  # Timeframe-specific configurations
+
+  # HTF Structure Analyzer (H4/D1)
+  htf_structure:
+    swing_window: 20              # Lookback for swing high/low detection (20 candles)
+    ob_strength_min: 0.6          # Minimum order block strength [0-1] to be significant
+    key_level_proximity_atr: 1.5  # ATR multiplier for "near key level" (1.5 ATR)
+    # HTF identifies:
+    # - Trend (UPTREND, DOWNTREND, RANGING)
+    # - Swing highs/lows (HH, HL, LH, LL patterns)
+    # - Order blocks (institutional supply/demand zones)
+    # - Key levels (liquidity pools, round numbers)
+
+  # MTF Context Validator (M15/M5)
+  mtf_context:
+    zone_lookback: 20             # Candles to look back for supply/demand zones
+    wick_to_body_ratio: 1.5       # Min ratio for supply/demand zone detection (1.5:1)
+    # MTF validates:
+    # - Supply zones (bearish rejection areas)
+    # - Demand zones (bullish rejection areas)
+    # - Confluence with HTF trend
+    # - Strength of zones based on wick size
+
+  # LTF Timing Executor (M1)
+  ltf_timing:
+    fvg_lookback: 10              # Candles to scan for Fair Value Gaps
+    # LTF detects:
+    # - Fair Value Gaps (FVG) - price inefficiencies
+    # - BOS (Break of Structure) - trend confirmation
+    # - Mitigation zones - FVG fills
+    # Entry triggers when price enters FVG or breaks structure
+
+
+# ========================================
+# QUALITY SCORER INTEGRATION
+# ========================================
+# How microstructure_score and multiframe_score integrate with QualityScorer
+
+quality_scorer_integration:
+  # QualityScorer weights (from risk_manager.py):
+  # - mtf_confluence: 0.40 (40%) ← fed by multiframe_score
+  # - structure_alignment: 0.25 (25%)
+  # - order_flow: 0.20 (20%) ← fed by microstructure_score
+  # - regime_fit: 0.10 (10%)
+  # - strategy_performance: 0.05 (5%)
+
+  # Score normalization for mtf_confluence
+  mtf_normalization:
+    min_acceptable: 0.4           # Scores below 0.4 normalized to 0.0
+    max_value: 1.0                # Scores at 1.0 = perfect MTF alignment
+
+  # Score normalization for order_flow
+  # (already in [0-1] range from MicrostructureEngine, no normalization needed)
+
+
+# ========================================
+# RUNTIME BEHAVIOR
+# ========================================
+
+runtime:
+  # Cache behavior
+  cache_ttl_seconds: 60           # How long cached scores remain valid (60s)
+
+  # Fallback behavior when engines not available
+  use_fallback_when_no_cache: true  # Use signal metadata if no cached score
+
+  # Logging
+  log_score_components: true      # Log individual component scores (debug)
+  log_threshold: "INFO"           # Logging level: DEBUG, INFO, WARNING, ERROR
+
+
+# ========================================
+# THRESHOLDS FOR DECISION-MAKING
+# ========================================
+
+thresholds:
+  # Minimum scores for signal approval (used by strategies)
+  min_microstructure_score: 0.50  # Below 0.50 = reject (toxic flow)
+  min_multiframe_score: 0.60      # Below 0.60 = reject (poor MTF alignment)
+
+  # Warning levels (log but don't reject)
+  warn_microstructure_below: 0.60
+  warn_multiframe_below: 0.70
+
+
+# ========================================
+# SYMBOL-SPECIFIC OVERRIDES
+# ========================================
+# Optional: override config for specific symbols
+
+symbol_overrides:
+  # Example: Gold (XAUUSD) may need different VPIN thresholds
+  XAUUSD.pro:
+    microstructure_engine:
+      vpin:
+        bucket_size: 100000       # Larger bucket for higher volume
+        vpin_threshold_low: 0.35
+        vpin_threshold_high: 0.55
+
+  # Example: JPY pairs use different pip values
+  USDJPY.pro:
+    microstructure_engine:
+      vpin:
+        bucket_size: 60000
+
+
+# ========================================
+# RESEARCH NOTES
+# ========================================
+#
+# VPIN Interpretation (Easley et al. 2012):
+# - VPIN < 0.30: Market makers dominating, low informed trading
+# - VPIN 0.30-0.50: Mixed environment, moderate toxicity
+# - VPIN > 0.50: High informed trading, potential flash crash risk
+# - VPIN > 0.70: Critical toxicity, halt trading
+#
+# OFI Interpretation (Cont et al. 2014):
+# - OFI = 0: Perfectly balanced buy/sell pressure
+# - OFI > +0.5: Strong buy pressure (may signal exhaustion)
+# - OFI < -0.5: Strong sell pressure (may signal exhaustion)
+# - OFI near 0 with low VPIN = ideal entry conditions
+#
+# Multi-Timeframe Analysis (ICT methodology):
+# - HTF defines bias (only trade with HTF trend)
+# - MTF identifies zones (supply/demand, order blocks)
+# - LTF times entry (FVG fills, BOS confirmations)
+# - All three must align for high-quality setup
+#
+# ========================================
