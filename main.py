@@ -68,6 +68,11 @@ except ImportError:
 # Import strategy orchestrator
 from src.strategy_orchestrator import StrategyOrchestrator
 
+# MANDATO 21: Execution mode framework
+from src.execution.execution_mode import ExecutionMode, parse_execution_mode
+from src.execution.paper_execution_adapter import PaperExecutionAdapter
+from src.execution.live_execution_adapter import LiveExecutionAdapter
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -86,16 +91,26 @@ class EliteTradingSystem:
     Main trading system orchestrator with AUTO-ML initialization.
     """
 
-    def __init__(self, config_path: str = 'config/system_config.yaml', auto_ml: bool = True):
+    def __init__(
+        self,
+        config_path: str = 'config/system_config.yaml',
+        auto_ml: bool = True,
+        execution_mode: str = 'paper'
+    ):
         """
         Initialize trading system.
 
         Args:
             config_path: Path to configuration file
             auto_ml: Auto-initialize ML engine (default: True)
+            execution_mode: Execution mode ('paper', 'live', 'research')
         """
+        # MANDATO 21: Parse execution mode
+        self.execution_mode = parse_execution_mode(execution_mode)
+
         logger.info("=" * 80)
         logger.info("ELITE INSTITUTIONAL TRADING SYSTEM V2.0 - INITIALIZING")
+        logger.info(f"EXECUTION MODE: {self.execution_mode}")
         logger.info("=" * 80)
 
         # Load configuration
@@ -138,6 +153,11 @@ class EliteTradingSystem:
                 self.snapshot_scheduler = None
         else:
             logger.info("⚠️  Institutional reporting disabled in config")
+
+        # MANDATO 21: Initialize execution adapter based on mode
+        logger.info(f"Initializing execution adapter for mode: {self.execution_mode}")
+        self.execution_adapter = self._initialize_execution_adapter()
+        logger.info(f"✓ Execution adapter initialized: {self.execution_adapter.get_adapter_name()}")
 
         # 1. Risk Manager (MANDATO 13: with event_logger)
         self.risk_manager = RiskManager(
@@ -292,6 +312,46 @@ class EliteTradingSystem:
         logger.info(f"  Server: {account_info.server}")
 
         return True
+
+    def _initialize_execution_adapter(self):
+        """
+        Initialize execution adapter based on execution mode.
+
+        MANDATO 21: Creates appropriate adapter (Paper vs Live).
+
+        Returns:
+            ExecutionAdapter instance
+        """
+        if self.execution_mode == ExecutionMode.PAPER:
+            # Paper mode: Simulated execution, NO real orders
+            initial_balance = self.config.get('paper_initial_balance', 10000.0)
+            adapter = PaperExecutionAdapter(
+                config=self.config,
+                initial_balance=initial_balance,
+                use_venue_simulator=True
+            )
+            logger.warning(
+                "⚠️  PAPER MODE: All execution is SIMULATED - NO REAL BROKER ORDERS"
+            )
+            return adapter
+
+        elif self.execution_mode == ExecutionMode.LIVE:
+            # Live mode: Real broker execution
+            logger.critical("=" * 80)
+            logger.critical("⚠️  LIVE MODE - REAL MONEY AT RISK ⚠️")
+            logger.critical("=" * 80)
+
+            # LiveExecutionAdapter will raise NotImplementedError (MANDATO 23)
+            adapter = LiveExecutionAdapter(config=self.config)
+            return adapter
+
+        elif self.execution_mode == ExecutionMode.RESEARCH:
+            # Research mode: No execution adapter needed (backtest only)
+            logger.info("RESEARCH mode: No execution adapter required")
+            return None
+
+        else:
+            raise ValueError(f"Unknown execution mode: {self.execution_mode}")
 
     def run_paper_trading(self):
         """
@@ -567,10 +627,15 @@ def main():
 
     args = parser.parse_args()
 
+    # MANDATO 21: Map mode to execution_mode
+    # 'backtest' mode -> 'research' execution_mode
+    execution_mode = 'research' if args.mode == 'backtest' else args.mode
+
     # Initialize system
     system = EliteTradingSystem(
         config_path=args.config,
-        auto_ml=not args.no_ml  # ML enabled by default
+        auto_ml=not args.no_ml,  # ML enabled by default
+        execution_mode=execution_mode  # MANDATO 21
     )
 
     # Run in selected mode

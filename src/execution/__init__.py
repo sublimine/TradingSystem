@@ -13,6 +13,23 @@ from .circuit_breakers import CircuitBreakerManager, BreakerType, BreakerConfig
 from .venue_simulator import VenueSimulator
 from .capacity_model import CapacityModel
 
+# MANDATO 21: Execution mode framework
+from .execution_mode import (
+    ExecutionMode,
+    parse_execution_mode,
+    validate_execution_mode_config,
+    get_execution_mode_from_config,
+    DEFAULT_EXECUTION_MODE
+)
+from .execution_adapter import (
+    ExecutionAdapter,
+    ExecutionOrder,
+    Position,
+    AccountInfo
+)
+from .paper_execution_adapter import PaperExecutionAdapter
+from .live_execution_adapter import LiveExecutionAdapter
+
 __all__ = [
     'DataValidator', 'ValidationResult', 'ValidationSeverity',
     'MultiSourceDataManager', 'DataSource', 'PostgreSQLSource', 'MT5Source',
@@ -22,5 +39,17 @@ __all__ = [
     'TCAEngine', 'TCAPreTrade', 'TCAAtTrade', 'TCAPostTrade',
     'CircuitBreakerManager', 'BreakerType', 'BreakerConfig',
     'VenueSimulator',
-    'CapacityModel'
+    'CapacityModel',
+    # MANDATO 21: Execution modes and adapters
+    'ExecutionMode',
+    'parse_execution_mode',
+    'validate_execution_mode_config',
+    'get_execution_mode_from_config',
+    'DEFAULT_EXECUTION_MODE',
+    'ExecutionAdapter',
+    'ExecutionOrder',
+    'Position',
+    'AccountInfo',
+    'PaperExecutionAdapter',
+    'LiveExecutionAdapter'
 ]

@@ -1,0 +1,140 @@
+# MANDATO 21 - Paper Trading Runtime Profile
+#
+# Configuration for paper trading mode.
+# Use this profile when running system in PAPER mode (simulated execution).
+#
+# Author: SUBLIMINE Institutional Trading System
+# Date: 2025-11-14
+# Mandato: MANDATO 21 - Paper Trading Institucional
+
+# Execution mode (DO NOT CHANGE - this file is for PAPER mode only)
+execution_mode: paper
+
+# Paper trading settings
+paper_trading:
+  initial_balance: 10000.0          # Starting virtual balance
+  use_venue_simulator: true          # Use sophisticated venue simulator
+  simulated_commission_per_lot: 7.0  # Commission in $
+  simulated_slippage_pips: 0.3       # Average slippage
+
+  # Market data source
+  market_data_source: mt5_demo       # 'mt5_demo', 'mt5_live_feed', or 'simulated'
+
+  # Reporting
+  log_all_paper_trades: true         # Log every simulated trade
+  mark_as_paper: true                # Mark all events with execution_mode=PAPER
+
+# Active strategies (subset for paper trading)
+active_strategies:
+  # Core institutional strategies (MANDATO 14-17)
+  - liquidity_sweep
+  - vpin_reversal_extreme
+  - order_flow_toxicity
+
+# Active symbols (subset for initial paper trading)
+active_symbols:
+  - EURUSD
+  - XAUUSD
+  - US500
+
+# Timeframes
+timeframes:
+  primary: M15
+  confirmation: [M5, H1]
+  regime: H4
+  update_frequency: 60  # seconds
+
+# Risk limits (SAME as live - non-negotiable)
+risk:
+  max_risk_per_trade: 0.01      # 1% (0-2% institutional cap)
+  max_portfolio_risk: 0.06      # 6%
+  max_correlation: 0.7
+  max_concurrent_positions: 5
+  circuit_breaker_dd: 15.0      # Stop if DD > 15R
+
+# Trading hours (restrict to liquid hours for realistic simulation)
+trading_hours:
+  enabled: true
+  start_hour: 1                 # 01:00 UTC (London pre-open)
+  end_hour: 21                  # 21:00 UTC (NY close)
+  trading_days: [1, 2, 3, 4, 5] # Mon-Fri
+
+# Reporting (active for paper mode)
+reporting:
+  generate_daily: true
+  generate_weekly: true
+  generate_monthly: false       # Disable monthly for paper (short runs)
+  institutional_enabled: true   # Keep institutional reporting active
+  snapshot_interval_minutes: 15 # Position/risk snapshots
+
+# ML settings (enabled in paper mode for testing)
+ml:
+  enabled: true
+  learning_rate: 0.01
+  min_trades_for_learning: 20
+
+# ML Supervisor (enabled but conservative in paper)
+ml_supervisor:
+  enabled: true
+  auto_disable_threshold_r: -10.0
+  auto_adjust_params: true
+  min_trades_before_disable: 10
+
+# Logging
+logging:
+  level: INFO                   # INFO for paper mode
+  log_to_file: true
+  log_to_console: true
+  log_trades: true              # Log all paper trades
+  log_signals: true
+  log_ml: true
+
+# Session settings
+session:
+  max_runtime_hours: 24         # Max runtime for paper session (24h)
+  auto_shutdown_on_error: true  # Shutdown if critical error
+  generate_session_report: true # Generate report at end
+
+# Performance targets (same as live)
+targets:
+  min_sharpe: 1.0
+  min_win_rate: 0.55
+  min_profit_factor: 1.5
+  max_drawdown_r: 20.0
+  monthly_target_r: 10.0
+
+# Alerts (disabled for paper mode - no spam)
+alerts:
+  enabled: false
+  email: null
+
+# Backup (disabled for paper mode)
+backup:
+  enabled: false
+
+# Advanced settings
+advanced:
+  use_level2_data: false        # Disable L2 for paper (not needed)
+  prefetch_data: true
+  parallel_processing: false
+  cache_features: true
+  optimize_memory: true
+
+# Notes
+# =============================================================================
+# MANDATO 21 - Paper Trading
+#
+# This profile configures the system for PAPER MODE:
+# - Simulated execution (NO real broker orders)
+# - Subset of strategies/symbols for focused testing
+# - SAME risk management as LIVE (0-2% caps)
+# - Institutional reporting active (with execution_mode=PAPER tags)
+#
+# To run paper trading:
+#   python scripts/start_paper_trading.py
+#
+# Or directly:
+#   python main.py --mode paper --config config/runtime_profile_paper.yaml
+#
+# CRITICAL: This mode does NOT send real orders to broker.
+# =============================================================================
