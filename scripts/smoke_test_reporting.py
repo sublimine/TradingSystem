@@ -365,8 +365,11 @@ class SmokeTestReporting:
             logger.info(f"  Sortino ratio: {sortino:.2f}")
 
             # Test Max DD (must be calculated first for Calmar)
-            max_dd = metrics.calculate_max_drawdown(returns)
-            assert isinstance(max_dd, float)
+            # MANDATO 18R FIX: calculate_max_drawdown now returns Dict (MANDATO 17 bugfix)
+            max_dd_result = metrics.calculate_max_drawdown(returns)
+            assert isinstance(max_dd_result, dict)
+            assert 'max_dd_pct' in max_dd_result
+            max_dd = max_dd_result['max_dd_pct'] / 100.0  # Convert back to fraction for Calmar
             logger.info(f"  Max drawdown: {max_dd:.2f}R")
 
             # Test Calmar
