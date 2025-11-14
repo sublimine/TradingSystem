@@ -1,11 +1,16 @@
 """
-VPIN Reversal Extreme Strategy - Institutional Implementation
+VPIN Reversal Extreme Strategy - MANDATO 16 INTEGRATED
 
 Trades extreme VPIN reversals from toxic flow exhaustion.
 Based on Flash Crash 2010 analysis (Easley et al. 2011).
 
 VPIN 0.95 marked EXACT bottom of Flash Crash.
 This strategy captures similar extreme reversals.
+
+MANDATO 16 INTEGRATION:
+- Uses MicrostructureEngine for real-time VPIN tracking
+- Uses MultiFrameOrchestrator for HTF/MTF confirmation
+- Produces complete metadata for QualityScorer
 
 Research Basis:
 - Easley, López de Prado & O'Hara (2011): "Flow Toxicity and Liquidity"
@@ -19,6 +24,7 @@ from typing import List, Dict, Optional
 import logging
 from datetime import datetime
 from .strategy_base import StrategyBase, Signal
+from .metadata_builder import build_enriched_metadata
 
 
 class VPINReversalExtreme(StrategyBase):
@@ -48,6 +54,10 @@ class VPINReversalExtreme(StrategyBase):
             - price_extreme_sigma: Price extreme in σ (typically 3.2)
             - exhaustion_velocity_min: Parabolic move velocity (typically 30 pips/min)
             - reversal_velocity_min: Snap-back velocity (typically 30 pips/min)
+
+        MANDATO 16 new parameters:
+            - microstructure_engine: MicrostructureEngine instance (optional)
+            - multiframe_orchestrator: MultiFrameOrchestrator instance (optional)
         """
         super().__init__(config)
 
@@ -77,6 +87,10 @@ class VPINReversalExtreme(StrategyBase):
         self.stop_loss_beyond_extreme = config.get('stop_loss_beyond_extreme', 1.2)
         self.take_profit_r = config.get('take_profit_r', 4.5)
 
+        # MANDATO 16: Motores institucionales
+        self.microstructure_engine = config.get('microstructure_engine')
+        self.multiframe_orchestrator = config.get('multiframe_orchestrator')
+
         # State tracking
         self.vpin_peak = 0.0
         self.vpin_peak_bar = None
@@ -87,6 +101,11 @@ class VPINReversalExtreme(StrategyBase):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info(f"VPIN Reversal Extreme initialized: entry={self.vpin_reversal_entry}, "
                         f"peak={self.vpin_peak_required}")
+
+        if self.microstructure_engine:
+            self.logger.info("✓ MicrostructureEngine integrated")
+        if self.multiframe_orchestrator:
+            self.logger.info("✓ MultiFrameOrchestrator integrated")
 
     def evaluate(self, market_data: pd.DataFrame, features: Dict) -> List[Signal]:
         """
@@ -266,6 +285,8 @@ class VPINReversalExtreme(StrategyBase):
         """
         Create reversal signal with ELITE risk management.
 
+        MANDATO 16: Enriches metadata with microstructure + multiframe scores.
+
         Direction: OPPOSITE of extreme move
         Stop: Beyond extreme price + buffer
         Target: Large R-multiple (4.5R typical for these rare setups)
@@ -273,6 +294,7 @@ class VPINReversalExtreme(StrategyBase):
         # Determine signal direction (opposite of extreme)
         if self.extreme_direction == 'UP':
             direction = 'SHORT'
+            signal_direction = -1
             # Stop above extreme high
             atr = self._calculate_atr(market_data)
             stop_loss = self.extreme_price + (atr * self.stop_loss_beyond_extreme)
@@ -280,6 +302,7 @@ class VPINReversalExtreme(StrategyBase):
             take_profit = current_price - (risk * self.take_profit_r)
         else:
             direction = 'LONG'
+            signal_direction = 1
             # Stop below extreme low
             atr = self._calculate_atr(market_data)
             stop_loss = self.extreme_price - (atr * self.stop_loss_beyond_extreme)
@@ -291,6 +314,35 @@ class VPINReversalExtreme(StrategyBase):
 
         symbol = market_data.attrs.get('symbol', 'UNKNOWN')
 
+        # MANDATO 16: Build enriched metadata
+        base_metadata = {
+            'vpin_peak': float(self.vpin_peak),
+            'vpin_current': float(current_vpin),
+            'vpin_decay': float((self.vpin_peak - current_vpin) / self.vpin_peak),
+            'extreme_direction': self.extreme_direction,
+            'extreme_price': float(self.extreme_price),
+            'risk_reward_ratio': float(self.take_profit_r),
+            'setup_type': 'VPIN_EXTREME_REVERSAL',
+            'rarity': 'ULTRA_RARE',
+            'expected_win_rate': 0.72,
+            'rationale': f"VPIN extreme reversal from {self.vpin_peak:.3f} peak. "
+                        f"Flash Crash-style exhaustion pattern detected.",
+            'strategy_version': '2.0-MANDATO16'
+        }
+
+        metadata = build_enriched_metadata(
+            base_metadata=base_metadata,
+            symbol=symbol,
+            current_price=current_price,
+            signal_direction=signal_direction,
+            market_data=market_data,
+            microstructure_engine=self.microstructure_engine,
+            multiframe_orchestrator=self.multiframe_orchestrator,
+            signal_strength_value=0.9,  # ELITE setup = alta confianza
+            structure_reference_price=self.extreme_price,
+            structure_reference_size=atr * 2.0  # Tamaño del rango extremo
+        )
+
         signal = Signal(
             timestamp=current_time,
             symbol=symbol,
@@ -300,19 +352,7 @@ class VPINReversalExtreme(StrategyBase):
             stop_loss=stop_loss,
             take_profit=take_profit,
             sizing_level=sizing_level,
-            metadata={
-                'vpin_peak': float(self.vpin_peak),
-                'vpin_current': float(current_vpin),
-                'vpin_decay': float((self.vpin_peak - current_vpin) / self.vpin_peak),
-                'extreme_direction': self.extreme_direction,
-                'extreme_price': float(self.extreme_price),
-                'risk_reward_ratio': float(self.take_profit_r),
-                'setup_type': 'VPIN_EXTREME_REVERSAL',
-                'rarity': 'ULTRA_RARE',
-                'expected_win_rate': 0.72,
-                'rationale': f"VPIN extreme reversal from {self.vpin_peak:.3f} peak. "
-                            f"Flash Crash-style exhaustion pattern detected."
-            }
+            metadata=metadata
         )
 
         self.logger.warning(f"🚨 VPIN EXTREME REVERSAL SIGNAL: {direction} @ {current_price:.5f}, "

@@ -1,5 +1,5 @@
 """
-Breakout Volume Confirmation Strategy - TRULY INSTITUTIONAL GRADE
+Breakout Volume Confirmation Strategy - TRULY INSTITUTIONAL GRADE - MANDATO 16 INTEGRATED
 
 🏆 REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL BREAKOUT GARBAGE
 
@@ -41,6 +41,7 @@ from datetime import datetime
 import logging
 
 from .strategy_base import StrategyBase, Signal
+from .metadata_builder import build_enriched_metadata
 
 
 class BreakoutVolumeConfirmation(StrategyBase):
@@ -98,6 +99,10 @@ class BreakoutVolumeConfirmation(StrategyBase):
         self.stop_loss_atr = config.get('stop_loss_atr', 1.5)
         self.take_profit_r_multiple = config.get('take_profit_r_multiple', 3.0)
 
+        # MANDATO 16: Motores institucionales (opcionales para retrocompatibilidad)
+        self.microstructure_engine = config.get('microstructure_engine')
+        self.multiframe_orchestrator = config.get('multiframe_orchestrator')
+
         # State tracking
         self.last_breakout_time = None
         self.breakout_cooldown_bars = config.get('breakout_cooldown_bars', 20)
@@ -108,6 +113,11 @@ class BreakoutVolumeConfirmation(StrategyBase):
         self.logger.info(f"   OFI breakout threshold: {self.ofi_breakout_threshold}")
         self.logger.info(f"   CVD confirmation threshold: {self.cvd_confirmation_threshold}")
         self.logger.info(f"   VPIN threshold max: {self.vpin_threshold_max}")
+
+        if self.microstructure_engine:
+            self.logger.info("✓ MicrostructureEngine integrated")
+        if self.multiframe_orchestrator:
+            self.logger.info("✓ MultiFrameOrchestrator integrated")
 
         self.name = 'breakout_volume_confirmation'
 
@@ -356,25 +366,35 @@ class BreakoutVolumeConfirmation(StrategyBase):
                                 direction: str, range_info: Dict,
                                 confirmation_score: float, criteria: Dict,
                                 data: pd.DataFrame, features: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed institutional breakout."""
+        """
+        Generate signal for confirmed institutional breakout.
+
+        MANDATO 16: Enriches metadata with microstructure + multiframe scores.
+        """
 
         try:
             atr = features.get('atr')
             if atr is None or atr <= 0:
                 atr = self._calculate_atr(data)
 
+            # Determine signal direction
+            signal_direction = 1 if direction == 'LONG' else -1
+
+            # Identify structure reference (the breakout level)
             if direction == 'LONG':
                 entry_price = current_price
                 # Stop below range low
                 stop_loss = range_info['range_low'] - (self.stop_loss_atr * atr)
                 risk = entry_price - stop_loss
                 take_profit = entry_price + (risk * self.take_profit_r_multiple)
+                structure_reference_price = range_info['range_low']  # Level being broken
             else:  # SHORT
                 entry_price = current_price
                 # Stop above range high
                 stop_loss = range_info['range_high'] + (self.stop_loss_atr * atr)
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * self.take_profit_r_multiple)
+                structure_reference_price = range_info['range_high']  # Level being broken
 
             # Validate risk
             if risk <= 0 or risk > atr * 5.0:
@@ -395,6 +415,46 @@ class BreakoutVolumeConfirmation(StrategyBase):
             else:
                 sizing_level = 2
 
+            # MANDATO 16: Build enriched metadata
+            # Signal strength: derivar de confirmation_score (0-5 → 0-1)
+            signal_strength = confirmation_score / 5.0
+
+            base_metadata = {
+                'range_high': float(range_info['range_high']),
+                'range_low': float(range_info['range_low']),
+                'range_size_atr': float(range_info['range_size_atr']),
+                'range_bars': range_info['bars'],
+                'confirmation_score': float(confirmation_score),
+                'ofi_surge_score': float(criteria['ofi_surge']),
+                'cvd_score': float(criteria['cvd_confirmation']),
+                'vpin_score': float(criteria['vpin_clean']),
+                'volume_score': float(criteria['volume_quality']),
+                'displacement_score': float(criteria['displacement_follow_through']),
+                'risk_reward_ratio': float(rr_ratio),
+                'setup_type': 'INSTITUTIONAL_BREAKOUT',
+                'expected_win_rate': 0.68 + (confirmation_score / 25.0),  # 68-74% WR
+                'rationale': f"{direction} breakout from {range_info['bars']}-bar compression "
+                           f"with institutional order flow confirmation. "
+                           f"Range size: {range_info['range_size_atr']:.2f} ATR.",
+                # Partial exits
+                'partial_exit_1': {'r_level': 1.5, 'percent': 50},
+                'partial_exit_2': {'r_level': 2.5, 'percent': 30},
+                'strategy_version': '2.0-MANDATO16'
+            }
+
+            metadata = build_enriched_metadata(
+                base_metadata=base_metadata,
+                symbol=symbol,
+                current_price=current_price,
+                signal_direction=signal_direction,
+                market_data=data,
+                microstructure_engine=self.microstructure_engine,
+                multiframe_orchestrator=self.multiframe_orchestrator,
+                signal_strength_value=signal_strength,
+                structure_reference_price=structure_reference_price,
+                structure_reference_size=range_info['range_size']  # Use actual range size, NOT ATR
+            )
+
             signal = Signal(
                 timestamp=current_time,
                 symbol=symbol,
@@ -404,27 +464,7 @@ class BreakoutVolumeConfirmation(StrategyBase):
                 stop_loss=stop_loss,
                 take_profit=take_profit,
                 sizing_level=sizing_level,
-                metadata={
-                    'range_high': float(range_info['range_high']),
-                    'range_low': float(range_info['range_low']),
-                    'range_size_atr': float(range_info['range_size_atr']),
-                    'range_bars': range_info['bars'],
-                    'confirmation_score': float(confirmation_score),
-                    'ofi_surge_score': float(criteria['ofi_surge']),
-                    'cvd_score': float(criteria['cvd_confirmation']),
-                    'vpin_score': float(criteria['vpin_clean']),
-                    'volume_score': float(criteria['volume_quality']),
-                    'displacement_score': float(criteria['displacement_follow_through']),
-                    'risk_reward_ratio': float(rr_ratio),
-                    'setup_type': 'INSTITUTIONAL_BREAKOUT',
-                    'expected_win_rate': 0.68 + (confirmation_score / 25.0),  # 68-74% WR
-                    'rationale': f"{direction} breakout from {range_info['bars']}-bar compression "
-                               f"with institutional order flow confirmation. "
-                               f"Range size: {range_info['range_size_atr']:.2f} ATR.",
-                    # Partial exits
-                    'partial_exit_1': {'r_level': 1.5, 'percent': 50},
-                    'partial_exit_2': {'r_level': 2.5, 'percent': 30},
-                }
+                metadata=metadata
             )
 
             return signal

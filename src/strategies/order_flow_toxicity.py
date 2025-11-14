@@ -1,5 +1,5 @@
 """
-Order Flow Toxicity Strategy - TRULY INSTITUTIONAL GRADE
+Order Flow Toxicity Strategy - TRULY INSTITUTIONAL GRADE - MANDATO 16 INTEGRATED
 
 🏆 REAL INSTITUTIONAL IMPLEMENTATION - FADE TOXIC FLOW
 
@@ -45,6 +45,7 @@ from collections import deque
 import logging
 from datetime import datetime
 from .strategy_base import StrategyBase, Signal
+from .metadata_builder import build_enriched_metadata
 
 
 class OrderFlowToxicityStrategy(StrategyBase):
@@ -99,6 +100,10 @@ class OrderFlowToxicityStrategy(StrategyBase):
         self.stop_loss_atr_multiple = config.get('stop_loss_atr_multiple', 2.0)
         self.take_profit_r_multiple = config.get('take_profit_r_multiple', 3.0)
 
+        # MANDATO 16: Motores institucionales (opcionales para retrocompatibilidad)
+        self.microstructure_engine = config.get('microstructure_engine')
+        self.multiframe_orchestrator = config.get('multiframe_orchestrator')
+
         # State tracking
         # FIX BUG #14-15: Use deque with maxlen to prevent memory leak
         # CR7 FIX: Ajustar maxlen a 10 (límite real usado en código)
@@ -110,6 +115,11 @@ class OrderFlowToxicityStrategy(StrategyBase):
         self.logger.info(f"   VPIN toxic threshold: {self.vpin_toxic_threshold}")
         self.logger.info(f"   VPIN extreme threshold: {self.vpin_extreme_threshold}")
         self.logger.info(f"   Strategy: FADE TOXIC FLOW")
+
+        if self.microstructure_engine:
+            self.logger.info("✓ MicrostructureEngine integrated")
+        if self.multiframe_orchestrator:
+            self.logger.info("✓ MultiFrameOrchestrator integrated")
 
     def evaluate(self, market_data: pd.DataFrame, features: Dict) -> List[Signal]:
         """
@@ -347,11 +357,18 @@ class OrderFlowToxicityStrategy(StrategyBase):
                            fade_direction: str, toxic_flow_direction: int,
                            confirmation_score: float, criteria: Dict,
                            market_data: pd.DataFrame, features: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed toxic flow fade."""
+        """
+        Generate signal for confirmed toxic flow fade.
+
+        MANDATO 16: Enriches metadata with microstructure + multiframe scores.
+        """
 
         try:
             atr = features.get('atr')
             vpin = features.get('vpin', 0.5)
+
+            # Determine signal direction
+            signal_direction = 1 if fade_direction == 'LONG' else -1
 
             if fade_direction == 'LONG':
                 entry_price = current_price
@@ -383,6 +400,47 @@ class OrderFlowToxicityStrategy(StrategyBase):
             else:
                 sizing_level = 2
 
+            # MANDATO 16: Build enriched metadata
+            base_metadata = {
+                'vpin_current': float(vpin),
+                'vpin_toxic_threshold': float(self.vpin_toxic_threshold),
+                'toxic_flow_direction': int(toxic_flow_direction),
+                'fade_direction': fade_direction,
+                'confirmation_score': float(confirmation_score),
+                'vpin_toxicity_score': float(criteria['vpin_toxicity']),
+                'ofi_reversal_score': float(criteria['ofi_reversal']),
+                'cvd_divergence_score': float(criteria['cvd_divergence']),
+                'exhaustion_score': float(criteria['exhaustion_quality']),
+                'extension_score': float(criteria['price_extension']),
+                'consecutive_toxic_bars': len([v for v in self.vpin_history if v >= self.vpin_toxic_threshold]),
+                'risk_reward_ratio': float(rr_ratio),
+                'setup_type': 'INSTITUTIONAL_FADE_TOXIC_FLOW',
+                'expected_win_rate': 0.68 + (confirmation_score / 25.0),  # 68-74% WR
+                'rationale': f"Fading toxic flow: VPIN={vpin:.3f} (toxic), "
+                           f"institutions taking opposite side via order flow confirmation. "
+                           f"Toxic {('buying' if toxic_flow_direction > 0 else 'selling')} exhausting.",
+                # Partial exits
+                'partial_exit_1': {'r_level': 1.5, 'percent': 50},
+                'partial_exit_2': {'r_level': 2.5, 'percent': 30},
+                'strategy_version': '2.0-MANDATO16'
+            }
+
+            # Signal strength: derivar de confirmation_score (0-5 → 0-1)
+            signal_strength = confirmation_score / 5.0
+
+            metadata = build_enriched_metadata(
+                base_metadata=base_metadata,
+                symbol=symbol,
+                current_price=current_price,
+                signal_direction=signal_direction,
+                market_data=market_data,
+                microstructure_engine=self.microstructure_engine,
+                multiframe_orchestrator=self.multiframe_orchestrator,
+                signal_strength_value=signal_strength,
+                structure_reference_price=current_price,  # No hay nivel estructural claro
+                structure_reference_size=atr  # Usar ATR como proxy de tamaño
+            )
+
             signal = Signal(
                 timestamp=current_time,
                 symbol=symbol,
@@ -392,28 +450,7 @@ class OrderFlowToxicityStrategy(StrategyBase):
                 stop_loss=stop_loss,
                 take_profit=take_profit,
                 sizing_level=sizing_level,
-                metadata={
-                    'vpin_current': float(vpin),
-                    'vpin_toxic_threshold': float(self.vpin_toxic_threshold),
-                    'toxic_flow_direction': int(toxic_flow_direction),
-                    'fade_direction': fade_direction,
-                    'confirmation_score': float(confirmation_score),
-                    'vpin_toxicity_score': float(criteria['vpin_toxicity']),
-                    'ofi_reversal_score': float(criteria['ofi_reversal']),
-                    'cvd_divergence_score': float(criteria['cvd_divergence']),
-                    'exhaustion_score': float(criteria['exhaustion_quality']),
-                    'extension_score': float(criteria['price_extension']),
-                    'consecutive_toxic_bars': len([v for v in self.vpin_history if v >= self.vpin_toxic_threshold]),
-                    'risk_reward_ratio': float(rr_ratio),
-                    'setup_type': 'INSTITUTIONAL_FADE_TOXIC_FLOW',
-                    'expected_win_rate': 0.68 + (confirmation_score / 25.0),  # 68-74% WR
-                    'rationale': f"Fading toxic flow: VPIN={vpin:.3f} (toxic), "
-                               f"institutions taking opposite side via order flow confirmation. "
-                               f"Toxic {('buying' if toxic_flow_direction > 0 else 'selling')} exhausting.",
-                    # Partial exits
-                    'partial_exit_1': {'r_level': 1.5, 'percent': 50},
-                    'partial_exit_2': {'r_level': 2.5, 'percent': 30},
-                }
+                metadata=metadata
             )
 
             return signal
