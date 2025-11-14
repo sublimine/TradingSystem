@@ -38,17 +38,6 @@ class MomentumQuality(StrategyBase):
         super().__init__(config)
 
         self.momentum_period = config.get('momentum_period', 14)
-
-        # P2-006: Momentum quality thresholds
-        # price_threshold=0.30%: Mínimo cambio precio para considerar momentum válido
-        #   - Filtro de ruido en pares FX majors (spread típico 1-2 pips)
-        # volume_threshold=1.40x: Volumen debe superar 40% la media
-        #   - Confirma institucionales moviendo precio, no retail noise
-        # vpin_clean_max=0.30: Threshold de flow limpio (Easley 2012)
-        #   - <0.30 = uninformed flow dominante, seguro para momentum
-        # vpin_toxic_min=0.55: Threshold de flow tóxico
-        #   - >0.55 = informed traders dominantes, evitar momentum en toxicity
-        # Valores calibrados con backtesting en EURUSD/GBPUSD 2020-2024
         self.price_threshold = config.get('price_threshold', 0.30)
         self.volume_threshold = config.get('volume_threshold', 1.40)
         self.vpin_clean_max = config.get('vpin_clean_max', 0.30)

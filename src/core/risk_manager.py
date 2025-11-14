@@ -26,41 +26,15 @@ class QualityScorer:
     """
     Multi-factor quality scoring system for signal evaluation.
 
-    P2-013: QualityScorer complete documentation
-
-    Evaluates signal quality through 5 institutional factors weighted by importance:
-
-    1. Multi-timeframe confluence (40%): HTF/LTF alignment strength
-       - Measured via correlated structure across M5/M15/H1/H4 timeframes
-       - Higher weight reflects institutional focus on MTF confirmation
-
-    2. Market structure alignment (25%): Proximity and alignment to key levels
-       - Order blocks, FVGs, swing points, liquidity zones
-       - Ensures entry near institutional supply/demand
-
-    3. Order flow quality (20%): VPIN-based toxicity measurement
-       - Low VPIN = clean uninformed flow (good)
-       - High VPIN = toxic informed flow (bad)
-
-    4. Volatility regime fit (10%): Strategy compatibility with current regime
-       - Mean reversion thrives in low vol, momentum in high vol
-
-    5. Historical strategy performance (5%): Recent win rate and expectancy
-       - Reduces exposure to underperforming strategies
-
-    Final score 0.0-1.0 drives dynamic position sizing (0.33%-1.0% risk)
-
-    Research basis:
-    - López de Prado (2018): Meta-labeling for quality filtering
-    - Easley et al. (2012): VPIN for order flow quality
+    Factors (from institutional analysis):
+    1. Multi-timeframe confluence (40%)
+    2. Market structure alignment (25%)
+    3. Order flow quality (20%)
+    4. Volatility regime fit (10%)
+    5. Historical strategy performance (5%)
     """
 
     def __init__(self):
-        """
-        Initialize quality scorer with institutional factor weights.
-
-        Weights calibrated from backtesting 2000+ signals across regimes.
-        """
         self.weights = {
             'mtf_confluence': 0.40,
             'structure_alignment': 0.25,
@@ -359,11 +333,6 @@ class InstitutionalRiskManager:
         self.max_risk_pct = config.get('max_risk_per_trade', 1.0)   # 1.0% maximum
 
         # Quality thresholds
-        # P2-003: min_quality_score threshold documentado
-        # 0.60 = threshold conservador basado en backtesting interno
-        # Score integra 5 factores: regime fit, timing, RR, performance, colinealidad
-        # Threshold más bajo (0.50) aumenta frequency 30% pero reduce Sharpe 15%
-        # Threshold más alto (0.70) reduce frequency 40% pero aumenta Sharpe 10%
         self.min_quality_score = config.get('min_quality_score', 0.60)
 
         # Exposure limits
@@ -485,11 +454,9 @@ class InstitutionalRiskManager:
         - Recent performance
         """
         # Base sizing from quality (linear interpolation)
-        # P2-020: Robusto check división por zero usando epsilon
-        # Cambio de == 0 a < epsilon (1e-6) previene división por valores casi-cero
-        # que pueden causar position sizes extremos o NaN en floating point arithmetic
+        # FIX: Protect against division by zero if min_quality_score == 1.0
         denominator = (1.0 - self.min_quality_score)
-        if abs(denominator) < 1e-6:
+        if denominator == 0:
             base_size = self.max_risk_pct
         else:
             base_size = self.min_risk_pct + (quality_score - self.min_quality_score) * \

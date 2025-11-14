@@ -205,58 +205,15 @@ class OrderBlockInstitutional(StrategyBase):
         """
         INSTITUTIONAL order flow confirmation of order block retest.
 
-        P2-016: Detailed documentation of institutional confirmation criteria
-
-        This function is the CORE of institutional order block validation.
-        It goes beyond simple "price touched zone" retail logic to confirm
-        ACTUAL institutional activity defending the order block.
-
-        5 Criteria Evaluated (each scores 0.0-1.0 points, total 0-5):
-
-        1. OFI Absorption (Order Flow Imbalance) - Most Important
-           - BULLISH block: Requires positive OFI (buying pressure) at demand
-           - BEARISH block: Requires negative OFI (selling pressure) at supply
-           - Threshold: self.ofi_absorption_threshold
-           - Theory: Institutions defend their zones by absorbing opposite flow
-
-        2. CVD Confirmation (Cumulative Volume Delta)
-           - CVD must align with block type (positive for bullish, negative for bearish)
-           - Normalized by self.cvd_confirmation_threshold
-           - Theory: Net volume accumulation confirms directional bias
-
-        3. VPIN Clean (Volume-Synchronized PIN)
-           - Lower VPIN = cleaner, uninformed flow = better entry
-           - Score inverted: high VPIN (>threshold) = low score
-           - Theory: Avoid entries during toxic informed flow periods
-
-        4. Rejection Strength (Wick Analysis)
-           - Measures wick-to-body ratio at retest candle
-           - BULLISH: Strong lower wick (buyers stepping in)
-           - BEARISH: Strong upper wick (sellers pushing down)
-           - Score: min(wick_ratio / 2.0, 1.0) - needs 2:1 for full points
-
-        5. Volume Profile
-           - Volume during retest vs recent average
-           - High volume = institutional absorption occurring
-           - Score: (volume_ratio - 1.0) / 2.0, capped at 1.0
-
-        Args:
-            recent_data: Recent OHLCV bars including retest candle
-            block: OrderBlock being tested
-            ofi: Current Order Flow Imbalance
-            cvd: Current Cumulative Volume Delta
-            vpin: Current VPIN value
-            features: Additional market features
+        Evaluates 5 criteria (each worth 0-1.0 points):
+        1. OFI Absorption (institutions defending the block)
+        2. CVD Confirmation (buying at demand, selling at supply)
+        3. VPIN Clean (not toxic flow)
+        4. Rejection Strength (wick rejection quality)
+        5. Volume Profile (high volume at block = absorption)
 
         Returns:
-            (total_score: float 0-5, criteria_dict: Dict[str, float])
-
-        Signal generated only if total_score >= self.min_confirmation_score (typically 3.0/5.0)
-
-        Research basis:
-        - Cont, Stoikov, Talreja (2014): Order Flow Imbalance
-        - Easley et al. (2012): VPIN toxicity measurement
-        - Institutional order book dynamics analysis
+            (total_score, criteria_dict)
         """
         block_type = block.block_type
         criteria = {}

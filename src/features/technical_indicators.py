@@ -346,20 +346,9 @@ def detect_divergence(prices: pd.Series, indicator: pd.Series,
     Returns:
         Series with divergence signals (-1: bearish, 0: none, 1: bullish)
     """
-    # P2-024: Stub sin implementar - agregar NotImplementedError para evitar bugs silenciosos
-    raise NotImplementedError(
-        "Divergence detection not yet implemented. "
-        "Requires swing point comparison logic between price and indicator."
-    )
-
-    # TODO: Implementar lógica de divergencia:
-    # 1. Identificar swing highs/lows en price e indicator
-    # 2. Comparar direcciones (bullish div: price lower low + indicator higher low)
-    # 3. Retornar signals -1/0/1
-
     divergence = pd.Series(0, index=prices.index)
-
+    
     price_highs, price_lows = identify_swing_points(prices, order=lookback//2)
     ind_highs, ind_lows = identify_swing_points(indicator, order=lookback//2)
-
+    
     return divergence

@@ -288,60 +288,17 @@ class TradeMemoryDatabase:
 
 class PerformanceAttributionAnalyzer:
     """
-    Analyzes WHAT works and WHY through ML-based performance attribution.
+    Analyzes WHAT works and WHY.
 
-    P2-018: PerformanceAttributionAnalyzer complete documentation
-
-    PURPOSE:
-    This is the ANALYTICAL ENGINE of the learning system. It dissects historical
-    trades to identify patterns, relationships, and causal factors that drive
-    profitability. Unlike simple P&L tracking, it performs deep analysis of:
-
-    1. Feature Importance Analysis:
-       - Uses Random Forest to rank predictive power of 20+ features
-       - Identifies which technical/fundamental factors actually matter
-       - Drives feature selection and strategy parameter tuning
-
-    2. Regime Performance Analysis:
-       - Calculates win rate, expectancy, avg R per market regime
-       - Identifies which regimes are profitable vs unprofitable
-       - Enables regime-based strategy selection and risk adjustment
-
-    3. Quality Score Performance Analysis:
-       - Bins trades by quality score ranges (0.6-0.7, 0.7-0.8, 0.8-0.9, 0.9-1.0)
-       - Validates that higher quality scores → better outcomes
-       - Calibrates minimum quality threshold for signal approval
-
-    4. ML Outcome Prediction:
-       - Trains Gradient Boosting model to predict trade R-multiple
-       - Uses quality metrics + entry features as inputs
-       - Enables pre-trade filtering: reject if predicted R < threshold
-
-    5. Parameter Optimization Insights:
-       - Provides data to AdaptiveParameterOptimizer
-       - Identifies which parameter ranges correlate with wins
-       - Enables continuous strategy improvement
-
-    USAGE FLOW:
-    1. Trades recorded in TradeMemoryDatabase
-    2. Analyzer called every N hours (default: 6h)
-    3. Runs analysis on recent trade window
-    4. Outputs insights to optimizer and brain
-    5. System adapts parameters and strategy selection
-
-    Research basis:
-    - López de Prado (2018): Feature importance via MDI/MDA
-    - Reinforcement Learning: Reward attribution
-    - Institutional quant research: Trade analytics
+    Identifies:
+    - Which features predict winners vs losers
+    - Which regimes are most profitable
+    - Which quality score ranges perform best
+    - Which parameter combinations work
     """
 
     def __init__(self, memory_db: TradeMemoryDatabase):
-        """
-        Initialize performance attribution analyzer.
-
-        Args:
-            memory_db: TradeMemoryDatabase instance with historical trades
-        """
+        """Initialize performance attribution analyzer."""
         self.memory_db = memory_db
 
         # ML models for prediction
@@ -497,13 +454,6 @@ class PerformanceAttributionAnalyzer:
                 trade.regime_fit,
                 trade.risk_pct,
             ]
-            # P2-026: Slice [:10] arbitrario puede causar inconsistencia
-            # PROBLEMA: Si entry_features cambia orden o agregan nuevas features,
-            # slice puede capturar diferentes features entre trades → model drift
-            # RECOMENDACIÓN: Usar claves específicas para garantizar consistencia:
-            # feature_keys = ['vpin', 'cvd', 'ofi', 'atr', 'volume_profile', ...]
-            # features.extend([trade.entry_features.get(k, 0.0) for k in feature_keys])
-            # Esto garantiza mismo feature vector siempre, con 0.0 default si falta
             features.extend(list(trade.entry_features.values())[:10])  # Limit features
 
             X.append(features)
@@ -559,7 +509,6 @@ class PerformanceAttributionAnalyzer:
 
         # Add entry features (limit to 10)
         entry_features = signal_features.get('entry_features', {})
-        # P2-026: Slice [:10] - mismo issue que línea 457, usar claves específicas
         features.extend(list(entry_features.values())[:10])
 
         # Pad if necessary
@@ -726,11 +675,6 @@ class MLAdaptiveEngine:
 
         # Learning state
         self.last_analysis_time = datetime.now()
-        # P2-011: ML analysis interval configurable
-        # 6 horas = balance óptimo entre adaptación rápida y estabilidad estadística
-        # - Menor (2-4h): Sobre-optimización, parámetros inestables por sample pequeño
-        # - Mayor (12-24h): Lag excesivo, sistema no adapta a cambios régimen
-        # 6h captura ~50-100 trades en sesión activa, suficiente para significance estadístico
         self.analysis_interval_hours = 6  # Re-analyze every 6 hours
 
         # Performance tracking

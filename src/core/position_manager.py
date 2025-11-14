@@ -225,33 +225,6 @@ class MarketStructurePositionManager:
         Args:
             config: Position management configuration
             mtf_manager: Multi-timeframe data manager (for structure)
-
-        P2-015: PositionManager config parameters complete documentation
-
-        Config Parameters:
-            R-Multiple Thresholds:
-            - min_r_for_breakeven (float): R-multiple to move stop to breakeven (default: 1.5)
-                Protects capital while giving trade breathing room
-            - min_r_for_trailing (float): R-multiple to start trailing stop (default: 2.0)
-                Ensures minimum 1R profit if trailed stop hit
-            - min_r_for_partial (float): R-multiple for partial profit taking (default: 2.5)
-                Reduces risk while maintaining upside exposure
-            - partial_exit_pct (float): Percentage of position to exit (default: 0.50)
-                50% exit balances risk reduction with profit potential
-
-            Structure Detection:
-            - structure_proximity_atr (float): ATR multiplier for structure search (default: 0.5)
-                Maximum distance to consider structure level "near" price
-                0.5 ATR = tight proximity, ensures structure is relevant
-
-            Update Frequency:
-            - update_interval_bars (int): Bars between position updates (default: 1)
-                Update every bar for real-time management
-
-        These parameters implement institutional position management based on:
-        - Market structure (NOT arbitrary pips/percentages)
-        - MFE/MAE analysis from 500+ institutional trades
-        - Wyckoff supply/demand principles
         """
         self.config = config
         self.mtf_manager = mtf_manager
@@ -260,11 +233,6 @@ class MarketStructurePositionManager:
         self.active_positions: Dict[str, PositionTracker] = {}
 
         # Structure-based management settings
-        # P2-005: R-multiple thresholds for position management
-        # 1.5R breakeven: Balance entre proteger capital y dar espacio a trade
-        # 2.0R trailing: Asegurar mínimo 1R si stop alcanza entry tras 2R favorable
-        # 2.5R partial: Tomar profits parciales mantiene exposición upside pero reduce riesgo
-        # Valores basados en análisis MFE/MAE de 500+ trades institucionales
         self.min_r_for_breakeven = config.get('min_r_for_breakeven', 1.5)  # Move to BE after 1.5R
         self.min_r_for_trailing = config.get('min_r_for_trailing', 2.0)   # Start trailing after 2R
         self.min_r_for_partial = config.get('min_r_for_partial', 2.5)     # Partial exit after 2.5R
@@ -389,15 +357,7 @@ class MarketStructurePositionManager:
         timeframe = 'M15'  # Use M15 for intraday structure
         structure = self.mtf_manager.get_structure(symbol, timeframe)
 
-        # P2-021: Log cuando no se encuentra estructura para debugging
-        # Esto ayuda a identificar por qué stops pueden ser subóptimos
         if not structure:
-            logger.debug(
-                f"_find_structure_near_price: No structure found for {symbol} {timeframe}. "
-                f"Stop placement will use fallback (pure entry price). "
-                f"Possible causes: (1) MTF data not loaded, (2) No OBs/swings detected yet, "
-                f"(3) Structure outside proximity threshold."
-            )
             return None
 
         # FIX: Calculate proper ATR (True Range), not just close.diff()

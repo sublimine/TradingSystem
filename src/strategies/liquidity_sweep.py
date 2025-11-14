@@ -41,22 +41,12 @@ class LiquiditySweepStrategy(StrategyBase):
         
         self.lookback_periods = config.get('lookback_periods', [60, 120, 240])  # 1h, 2h, 4h
         self.proximity_threshold = config.get('proximity_threshold', 10)
-
-        # P2-007: Liquidity sweep detection thresholds
-        # penetration_min=3 pips: Suficiente para trigger stops retail sin ser falsa ruptura
-        # penetration_max=15 pips: Más allá indica breakout real, no sweep
-        #   - Rango 3-15 pips optimizado para FX majors basado en spread + slippage típico
-        # volume_threshold=1.3x: Volumen anómalo durante sweep indica absorción institucional
-        #   - 30% sobre media detecta clusters sin ser demasiado restrictivo
-        # reversal_velocity_min=3.5 pips/min: Velocidad mínima reversal post-sweep
-        #   - Confirma rechazo institucional fuerte, no drift lento
-        # Calibrado con 200+ sweeps históricos EURUSD/GBPUSD
         self.penetration_min = config.get('penetration_min', 3)
         self.penetration_max = config.get('penetration_max', 15)
-        self.volume_threshold = config.get('volume_threshold_multiplier', 1.3)  # Más sensible
+        self.volume_threshold = config.get('volume_threshold_multiplier', 1.3)  # MÃƒÆ’Ã‚Â¡s sensible
         self.reversal_velocity_min = config.get('reversal_velocity_min', 3.5)
         self.imbalance_threshold = config.get('imbalance_threshold', 0.3)
-        self.vpin_threshold = config.get('vpin_threshold', 0.45)  # MAX seguro, no mínimo
+        self.vpin_threshold = config.get('vpin_threshold', 0.45)  # MAX seguro, no mÃƒÆ’Ã‚Â­nimo
         self.min_confirmation_score = config.get('min_confirmation_score', 3)
         
         self.identified_levels = {}
@@ -117,17 +107,13 @@ class LiquiditySweepStrategy(StrategyBase):
                 continue
             
             period_data = market_data.tail(period_minutes).copy()
-
-            # P2-022: Validar bounds antes de swing detection para evitar IndexError
-            if len(period_data) < 5:
-                continue  # Necesitamos al menos 5 barras para window de ±2
-
+            
             highs = period_data['high'].values
             swing_high_indices = []
             for i in range(2, len(highs) - 2):
                 if highs[i] == max(highs[i-2:i+3]):
                     swing_high_indices.append(i)
-
+            
             lows = period_data['low'].values
             swing_low_indices = []
             for i in range(2, len(lows) - 2):

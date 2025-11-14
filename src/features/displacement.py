@@ -40,52 +40,7 @@ class OrderBlock:
 
 def detect_displacement(data: pd.DataFrame, atr: float, displacement_threshold: float = 2.0,
                        volume_sigma_threshold: float = 2.5, lookback_periods: int = 50) -> List[OrderBlock]:
-    """
-    Detect institutional displacement creating order blocks.
-
-    P2-017: Complete algorithm documentation for displacement detection
-
-    ALGORITHM:
-    Institutional order blocks form when large orders "displace" price rapidly with
-    anomalous volume, creating imbalance zones that act as future support/resistance.
-
-    Detection Process:
-    1. Calculate displacement ratio = body_size / ATR for each candle
-       - Body size measures directional price movement
-       - ATR normalization makes threshold instrument-agnostic
-
-    2. Calculate volume z-score over rolling window
-       - z = (volume - mean) / std over lookback_periods
-       - Identifies volume spikes above statistical norm
-
-    3. Order block detected when BOTH conditions met:
-       a) Displacement ratio >= displacement_threshold (default: 2.0)
-          - 2.0 = candle body is 2x normal ATR movement
-          - Indicates strong institutional push, not drift
-
-       b) Volume z-score >= volume_sigma_threshold (default: 2.5)
-          - 2.5σ = 98.8% confidence level
-          - Confirms institutional size, not retail accumulation
-
-    4. Order block zone = [candle_low, candle_high]
-       - Block type: BULLISH if close > open, BEARISH if close < open
-       - Zone represents price region where institution absorbed liquidity
-
-    Args:
-        data: OHLCV DataFrame with 'timestamp', 'open', 'high', 'low', 'close', 'tick_volume'
-        atr: Average True Range value for normalization
-        displacement_threshold: Minimum body/ATR ratio (default: 2.0)
-        volume_sigma_threshold: Minimum volume z-score (default: 2.5σ)
-        lookback_periods: Rolling window for volume statistics (default: 50)
-
-    Returns:
-        List[OrderBlock]: Detected order blocks with displacement magnitude and volume sigma
-
-    Research basis:
-    - Bouchaud et al. (2009): "How Markets Slowly Digest Changes in Supply and Demand"
-    - Lillo et al. (2003): "Master curve for price-impact function"
-    - ICT (Inner Circle Trader) order block concepts adapted to statistical rigor
-    """
+    """Detect institutional displacement creating order blocks."""
     try:
         if len(data) < lookback_periods:
             return []
