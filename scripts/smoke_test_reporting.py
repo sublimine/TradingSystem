@@ -348,10 +348,11 @@ class SmokeTestReporting:
         """Test 4: Validar cálculo de métricas."""
         try:
             import numpy as np
+            import pandas as pd
             from src.reporting import metrics
 
-            # Generate sample returns
-            returns = np.array([0.5, -0.3, 1.2, -0.8, 2.0, 0.3, -0.5, 1.5])
+            # Generate sample returns (as pandas Series for metrics)
+            returns = pd.Series([0.5, -0.3, 1.2, -0.8, 2.0, 0.3, -0.5, 1.5])
 
             # Test Sharpe
             sharpe = metrics.calculate_sharpe_ratio(returns)
@@ -363,15 +364,15 @@ class SmokeTestReporting:
             assert isinstance(sortino, float)
             logger.info(f"  Sortino ratio: {sortino:.2f}")
 
-            # Test Calmar
-            calmar = metrics.calculate_calmar_ratio(returns)
-            assert isinstance(calmar, float)
-            logger.info(f"  Calmar ratio: {calmar:.2f}")
-
-            # Test Max DD
+            # Test Max DD (must be calculated first for Calmar)
             max_dd = metrics.calculate_max_drawdown(returns)
             assert isinstance(max_dd, float)
             logger.info(f"  Max drawdown: {max_dd:.2f}R")
+
+            # Test Calmar
+            calmar = metrics.calculate_calmar_ratio(returns, abs(max_dd))
+            assert isinstance(calmar, float)
+            logger.info(f"  Calmar ratio: {calmar:.2f}")
 
             logger.info("✅ All metrics calculated successfully")
             logger.info("✅ TEST 4 PASSED: Metrics")
