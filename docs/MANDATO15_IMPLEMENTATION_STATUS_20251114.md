@@ -171,7 +171,7 @@ MANDATO 15 implementa análisis institucional de microestructura de mercado (VPI
 │  └────────────────────────────────────────────────────┘    │
 │                                                             │
 │  → Composite Score [0-1]                                   │
-│  → Position Size (0.33% - 1.0% based on quality)          │
+│  → Position Size (0-2% maximum per idea, based on quality)│
 └──────────────────────┬──────────────────────────────────────┘
                        │
                        ▼

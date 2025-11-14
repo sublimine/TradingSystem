@@ -2,7 +2,7 @@
 Institutional Risk Manager - Advanced Implementation
 
 Statistical circuit breakers based on loss distribution analysis, NOT arbitrary thresholds.
-Dynamic position sizing (0.33%-1.0%) based on multi-factor quality scoring.
+Dynamic position sizing (0-2% maximum per idea) based on multi-factor quality scoring.
 
 MANDATO 13: Integrated with ExecutionEventLogger for rejection logging.
 
@@ -62,7 +62,7 @@ class QualityScorer:
     5. Historical strategy performance (5%): Recent win rate and expectancy
        - Reduces exposure to underperforming strategies
 
-    Final score 0.0-1.0 drives dynamic position sizing (0.33%-1.0% risk)
+    Final score 0.0-1.0 drives dynamic position sizing (0-2% maximum risk per idea)
 
     Research basis:
     - López de Prado (2018): Meta-labeling for quality filtering
@@ -184,13 +184,16 @@ class QualityScorer:
         if 'structure_alignment' in metadata:
             return metadata['structure_alignment']
 
-        # Check order block proximity
-        if 'order_block_distance_atr' in metadata:
-            ob_distance = metadata['order_block_distance_atr']
-            if ob_distance < 0.5:
-                score += 0.3
-            elif ob_distance < 1.0:
-                score += 0.15
+        # Check order block proximity (NO-ATR structural distance)
+        # order_block_distance_normalized: distance / order_block_size
+        # Interpretation: 0-0.3 = very close, 0.3-0.7 = reasonable, >0.7 = far
+        if 'order_block_distance_normalized' in metadata:
+            ob_distance_norm = metadata['order_block_distance_normalized']
+            if ob_distance_norm < 0.3:
+                score += 0.3  # Very close to OB (optimal)
+            elif ob_distance_norm < 0.7:
+                score += 0.15  # Reasonable distance
+            # >0.7: no bonus (too far from structure)
 
         # Check FVG alignment
         if 'fvg_aligned' in metadata and metadata['fvg_aligned']:
@@ -412,7 +415,7 @@ class InstitutionalRiskManager:
     Features:
     1. Statistical circuit breakers (NOT arbitrary counts)
     2. Multi-factor quality scoring (0.0-1.0)
-    3. Dynamic position sizing based on quality (0.33%-1.0%)
+    3. Dynamic position sizing based on quality (0-2% maximum per idea)
     4. Correlation-based portfolio heat management
     5. Drawdown and loss limits
     6. Per-strategy exposure limits
@@ -441,10 +444,11 @@ class InstitutionalRiskManager:
         self.config = config
         self.event_logger = event_logger
 
-        # Position sizing
-        self.base_risk_pct = config.get('base_risk_per_trade', 0.5)  # 0.5% base
-        self.min_risk_pct = config.get('min_risk_per_trade', 0.33)  # 0.33% minimum
-        self.max_risk_pct = config.get('max_risk_per_trade', 1.0)   # 1.0% maximum
+        # Position sizing (institutional range: 0-2% maximum per idea)
+        # Values loaded from config, defaults shown for reference
+        self.base_risk_pct = config.get('base_risk_per_trade', 0.5)  # Base risk (default: 0.5%)
+        self.min_risk_pct = config.get('min_risk_per_trade', 0.33)  # Min risk (default: 0.33%)
+        self.max_risk_pct = config.get('max_risk_per_trade', 1.0)   # Max risk (default: 1.0%, institutional cap: 2.0%)
 
         # Quality thresholds
         # P2-003: min_quality_score threshold documentado
@@ -726,15 +730,16 @@ class InstitutionalRiskManager:
         """
         Calculate dynamic position size based on quality score.
 
-        Institutional approach:
-        - Low quality (0.60-0.70): 0.33% risk
-        - Medium quality (0.70-0.85): 0.50% risk
-        - High quality (0.85-1.0): 0.75-1.0% risk
+        Institutional approach (0-2% maximum per idea):
+        - Maps quality score [min_quality_score, 1.0] → [min_risk_pct, max_risk_pct]
+        - Linear interpolation based on quality
+        - Example with defaults: quality 0.60→0.33%, 0.80→0.67%, 1.0→1.0%
+        - Institutional cap: 2.0% maximum per idea
 
         Further adjusted by:
-        - Volatility regime (high vol = reduce)
-        - VPIN (toxic flow = reduce)
-        - Recent performance
+        - Volatility regime (high vol = reduce 30%, low vol = increase 20%)
+        - Microstructure quality / VPIN (toxic flow = reduce up to 50%)
+        - Final risk clamped to [min_risk_pct, max_risk_pct] from config
         """
         # Base sizing from quality (linear interpolation)
         # P2-020: Robusto check división por zero usando epsilon
