@@ -44,7 +44,34 @@ class RegimeDetector:
         Initialize regime detector.
 
         Args:
-            config: Regime detection configuration
+            config: Regime detection configuration with the following parameters:
+
+        P2-014: RegimeDetector config parameters documented
+
+        Detection Parameters:
+            - regime_lookback (int): Lookback period for regime analysis (default: 30 bars)
+                Sufficient for trend/ranging determination without lag
+            - min_regime_confidence (float): Minimum confidence to act on regime (default: 0.60)
+                Below this, regime classified as UNKNOWN, blocks trading
+
+        Trend Thresholds:
+            - trend_adx_threshold (float): Minimum ADX for trend regime (default: 25)
+                ADX <25 = ranging, >=25 = trending
+            - strong_trend_adx (float): ADX threshold for strong trend (default: 35)
+                ADX >=35 = strong momentum, optimal for breakout/momentum strategies
+            - ranging_adx_max (float): Maximum ADX for ranging regime (default: 20)
+                ADX <20 = confirmed ranging, optimal for mean reversion
+
+        Volatility Thresholds (percentile-based):
+            - low_vol_percentile (float): Percentile for low volatility (default: 30)
+                ATR below 30th percentile = low vol regime
+            - high_vol_percentile (float): Percentile for high volatility (default: 70)
+                ATR above 70th percentile = high vol regime
+
+        These thresholds are based on:
+        - Ang & Bekaert (2002) regime switching research
+        - Kritzman et al. (2012) regime shift detection
+        - Institutional trading desk empirical calibration
         """
         self.config = config
 
