@@ -1,25 +1,25 @@
 """
-Multi-Timeframe Context Engine
+Context package - Multi-timeframe context analysis.
 
-MANDATO 15: Implementación institucional de análisis multi-timeframe.
+Components:
+- HTFStructureAnalyzer: High timeframe structure (H4/D1)
+- MTFContextValidator: Medium timeframe validation (M15/M5)
+- MultiFrameOrchestrator: Multi-timeframe synthesis
 
-Componentes:
-- HTFStructureAnalyzer: Análisis HTF (H4/D1) - estructura y key levels
-- MTFContextValidator: Validación MTF (M15/M5) - zones y BOS
-- LTFTimingExecutor: Timing LTF (M1) - entry triggers
-- MultiFrameOrchestrator: Orquestador principal
+Usage:
+    from src.context import MultiFrameOrchestrator
 
-Output: multiframe_score [0-1] y POIs para QualityScorer.
+    orchestrator = MultiFrameOrchestrator(config)
+    result = orchestrator.analyze_multiframe(symbol, htf_ohlcv, mtf_ohlcv, current_price)
+    multiframe_score = result['multiframe_score']
 """
 
-from .htf_structure import HTFStructureAnalyzer
-from .mtf_context import MTFContextValidator
-from .ltf_timing import LTFTimingExecutor
+from .htf_analyzer import HTFStructureAnalyzer
+from .mtf_validator import MTFContextValidator
 from .orchestrator import MultiFrameOrchestrator
 
 __all__ = [
     'HTFStructureAnalyzer',
     'MTFContextValidator',
-    'LTFTimingExecutor',
-    'MultiFrameOrchestrator'
+    'MultiFrameOrchestrator',
 ]
