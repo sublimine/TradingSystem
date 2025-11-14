@@ -20,6 +20,8 @@ NOW INTEGRATED WITH ML ADAPTIVE ENGINE:
 - All trades/signals recorded for continuous learning
 - Dynamic parameter adjustment from ML insights
 
+MANDATO 13: Integrated with ExecutionEventLogger for institutional reporting.
+
 This is what separates institutional algorithms from retail "signal combiners".
 
 Research basis:
@@ -31,10 +33,14 @@ Research basis:
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from datetime import datetime, timedelta
 from collections import defaultdict, deque
 import logging
+import uuid
+
+if TYPE_CHECKING:
+    from reporting.event_logger import ExecutionEventLogger
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +58,7 @@ class SignalArbitrator:
     - Execution probability
     """
 
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict, event_logger: Optional['ExecutionEventLogger'] = None):
         """
         Initialize signal arbitrator.
 
@@ -63,10 +69,12 @@ class SignalArbitrator:
                     regime fit (20%), risk-reward (10%), timing (5%)
                 - strategy_performance_window (int): Number of recent trades per strategy to track (default: 30)
                 - signal_history_size (int): Maximum signals to keep in history (default: 1000)
+            event_logger: ExecutionEventLogger for institutional reporting (MANDATO 13)
 
         P2-012: SignalArbitrator config parameters documented
         """
         self.config = config
+        self.event_logger = event_logger
 
         # Strategy performance tracking (last 30 trades per strategy)
         self.strategy_performance: Dict[str, deque] = defaultdict(lambda: deque(maxlen=30))
@@ -111,6 +119,33 @@ class SignalArbitrator:
         # Valores más altos (0.75+) reducen frequency pero aumentan precision.
         # Valores más bajos (0.50-0.60) aumentan frequency pero reducen edge.
         min_score = self.config.get('min_arbitration_score', 0.65)
+
+        # MANDATO 13: Log arbiter decision
+        if self.event_logger and len(signals) > 1:
+            # Multiple signals - log arbitration decision
+            candidates_summary = [
+                {
+                    'strategy_id': s['signal']['strategy_name'],
+                    'quality': s['signal'].get('metadata', {}).get('quality_score', 0.0),
+                    'score': s['score'],
+                    'symbol': s['signal']['symbol'],
+                }
+                for s in scored_signals[:3]  # Top 3 candidates
+            ]
+
+            arbiter_event = {
+                'event_type': 'ARBITER_DECISION',
+                'timestamp': datetime.now(),
+                'num_candidates': len(signals),
+                'candidates': candidates_summary,
+                'winner': best['signal']['strategy_name'] if best['score'] >= min_score else None,
+                'winner_score': best['score'],
+                'min_threshold': min_score,
+                'reason': 'QUALITY_HIGHER' if best['score'] >= min_score else 'BELOW_THRESHOLD',
+                'notes': f"Arbitrated {len(signals)} signals, winner: {best['signal']['strategy_name'] if best['score'] >= min_score else 'NONE'}"
+            }
+
+            self.event_logger._append_event(arbiter_event)
 
         if best['score'] >= min_score:
             logger.info(f"Signal arbitration: {best['signal']['strategy_name']} selected "
@@ -547,7 +582,7 @@ class InstitutionalBrain:
     """
 
     def __init__(self, config: Dict, risk_manager, position_manager,
-                 regime_detector, mtf_manager, ml_engine=None):
+                 regime_detector, mtf_manager, ml_engine=None, event_logger: Optional['ExecutionEventLogger'] = None):
         """
         Initialize institutional brain.
 
@@ -558,6 +593,7 @@ class InstitutionalBrain:
             regime_detector: Regime detector instance
             mtf_manager: Multi-timeframe manager instance
             ml_engine: ML Adaptive Engine instance (optional)
+            event_logger: Institutional reporting logger (MANDATO 13)
         """
         self.config = config
         self.risk_manager = risk_manager
@@ -565,9 +601,10 @@ class InstitutionalBrain:
         self.regime_detector = regime_detector
         self.mtf_manager = mtf_manager
         self.ml_engine = ml_engine  # ML ENGINE FOR CONTINUOUS LEARNING
+        self.event_logger = event_logger  # MANDATO 13
 
         # Components
-        self.arbitrator = SignalArbitrator(config)
+        self.arbitrator = SignalArbitrator(config, event_logger=event_logger)
         self.orchestrator = PortfolioOrchestrator(config, risk_manager)
 
         # Performance tracking
@@ -818,6 +855,11 @@ class InstitutionalBrain:
 
             # 8. Create execution order
             # FIX: Use adjusted_signal stops/targets (strategic placement), not original best_signal
+            # MANDATO 13: Enrich signal with execution metadata for entry logging
+            adjusted_signal['risk_pct'] = portfolio_eval['adjustments']['position_size_pct']
+            adjusted_signal['quality_score'] = portfolio_eval['adjustments']['quality_score']
+            adjusted_signal['regime'] = current_regime
+
             execution_order = {
                 'signal': adjusted_signal,
                 'symbol': symbol,
@@ -859,6 +901,30 @@ class InstitutionalBrain:
 
                 # Track for later linking
                 execution_order['signal_id_ml'] = signal_id
+
+            # MANDATO 13: Log pre-trade DECISION event
+            if self.event_logger:
+                decision_event = {
+                    'event_type': 'DECISION',
+                    'timestamp': datetime.now(),
+                    'decision_id': str(uuid.uuid4()),
+                    'strategy_id': best_signal['strategy_name'],
+                    'symbol': symbol,
+                    'direction': best_signal['direction'],
+                    'entry_price': best_signal['entry_price'],
+                    'stop_loss': adjusted_signal['stop_loss'],
+                    'take_profit': adjusted_signal['take_profit'],
+                    'lot_size': portfolio_eval['adjustments']['position_size_lots'],
+                    'risk_pct': portfolio_eval['adjustments']['position_size_pct'],
+                    'quality_score_total': portfolio_eval['adjustments']['quality_score'],
+                    'quality_breakdown': best_signal.get('metadata', {}).get('quality_breakdown', {}),
+                    'regime': current_regime,
+                    'regime_confidence': regime_confidence,
+                    'notes': f"Approved for execution - {best_signal['strategy_name']}"
+                }
+                execution_order['decision_id'] = decision_event['decision_id']  # Link to execution
+                adjusted_signal['decision_id'] = decision_event['decision_id']  # Link for entry logging
+                self.event_logger._append_event(decision_event)
 
             approved_orders.append(execution_order)
             self.total_signals_approved += 1

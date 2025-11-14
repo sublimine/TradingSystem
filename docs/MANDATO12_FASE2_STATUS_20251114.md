@@ -1,28 +1,30 @@
-# MANDATO 12 - FASE 2 STATUS
+# MANDATO 12 - FASE 2 + MANDATO 13 STATUS
 
 **Proyecto**: SUBLIMINE TradingSystem
-**Mandato**: MANDATO 12 - FASE 2 - Cierre Integración Reporting
+**Mandato**: MANDATO 13 - Cierre COMPLETO de Reporting Hooks
 **Fecha**: 2025-11-14
-**Branch**: `claude/mandato12-phase2-complete-integration-20251114-011kZAt34EBQTKQG8Zg7avM6`
+**Branch Original**: `claude/mandato12-phase2-complete-integration-20251114-011kZAt34EBQTKQG8Zg7avM6`
+**Branch MANDATO 13**: `claude/mandato13-complete-reporting-hooks-20251114-011kZAt34EBQTKQG8Zg7avM6`
 
 ---
 
 ## RESUMEN EJECUTIVO
 
-**MANDATO 12 - FASE 2** entrega:
+**MANDATO 13** completa TODAS las tareas pendientes de MANDATO 12 FASE 2:
 
-### ✅ COMPLETADO
+### ✅ COMPLETADO - MANDATO 12 FASE 2
 
 1. **Integración Central en `main.py`**
    - ExecutionEventLogger inicializado automáticamente
-   - Pasado a MarketStructurePositionManager
+   - Pasado a MarketStructurePositionManager + RiskManager + Brain
    - Flag de configuración: `reporting.institutional_enabled`
    - Graceful degradation si DB no disponible
 
 2. **Smoke Test Pipeline** (`scripts/smoke_test_reporting.py`)
    - Valida conexión a Postgres
-   - Inserta 10 trades sintéticos
+   - Inserta trades sintéticos
    - Valida aggregators, metrics, generators
+   - **MANDATO 13**: Agregados tests para DECISION, REJECTION, ARBITER_DECISION events
    - Reporta éxito/fallo con exit code
 
 3. **Backfill Historical Data** (`scripts/backfill_reporting_db.py`)
@@ -32,21 +34,42 @@
    - Filter por fechas
 
 4. **Documentación Completa**
-   - Status FASE 2 (este documento)
-   - Instrucciones para tareas pendientes
+   - Status FASE 2 + MANDATO 13 (este documento)
    - Comandos de uso
+   - Referencias a implementación
 
-### ⏳ PENDIENTE (Próxima Iteración)
+### ✅ COMPLETADO - MANDATO 13 (Cierre Completo)
 
-Las siguientes tareas requieren modificaciones profundas a componentes core que no están en scope de esta entrega:
+**TODAS las tareas pendientes ahora están COMPLETADAS**:
 
-1. **Entry Logging Completo** - Requiere hooks en Brain/DecisionLedger
-2. **RiskManager Hooks** - Requiere modificar evaluate_signal()
-3. **ExposureManager Hooks** - Requiere análisis de límites
-4. **Arbiter Hooks** - Requiere modificar arbitration logic
-5. **Snapshots Periódicos** - Requiere scheduler en trading loop
+1. **✅ Entry Logging Completo**
+   - Pre-trade DECISION logging en `Brain.process_signals()` (línea 905-927)
+   - Execution ENTRY logging en `PositionTracker.__init__()` (línea 94-114)
+   - Decision ID linkage entre decision → entry
+   - Signal enrichment con risk_pct, quality_score, regime, decision_id
 
-**Razón**: Estas tareas requieren entender en detalle la lógica de cada componente y pueden introducir bugs si se hacen apresuradamente. Se documentan en sección "TAREAS PENDIENTES" para completar en próxima sesión.
+2. **✅ RiskManager Rejection Hooks**
+   - Circuit breaker rejections → `log_rejection()`
+   - Quality score rejections → `log_rejection()`
+   - Exposure limit rejections → `log_rejection()`
+   - Drawdown limit rejections → `log_rejection()`
+   - Implementado en `InstitutionalRiskManager.evaluate_signal()`
+
+3. **✅ Arbiter Decision Hooks**
+   - Multi-signal conflict decisions logged
+   - Top 3 candidates + winner selection
+   - Score breakdown y threshold comparison
+   - Implementado en `SignalArbitrator.arbitrate_signals()`
+
+4. **✅ Snapshots Periódicos**
+   - Nuevo módulo: `src/reporting/snapshots.py`
+   - Position snapshots (posiciones activas + P&L unrealized)
+   - Risk snapshots (exposure, drawdown, circuit breaker, limits)
+   - Scheduler configurable (default: 15 minutos)
+   - Integrado en `main.py` trading loop (non-blocking)
+   - DB storage con fallback a JSONL
+
+**Status Final**: Sistema de reporting 100% completo. NO quedan tareas pendientes.
 
 ---
 
@@ -89,7 +112,7 @@ Las siguientes tareas requieren modificaciones profundas a componentes core que 
 
 ## FLUJO ACTUAL DE REPORTING
 
-### Eventos Capturados (FASE 1 + FASE 2)
+### Eventos Capturados (FASE 1 + FASE 2 + MANDATO 13)
 
 | Evento | Donde se Captura | Status |
 |--------|------------------|--------|
@@ -97,12 +120,15 @@ Las siguientes tareas requieren modificaciones profundas a componentes core que 
 | **Partial Exits** | `PositionTracker.partial_exit()` | ✅ FASE 1 |
 | **Full Exits (SL)** | `MarketStructurePositionManager._handle_stop_hit()` | ✅ FASE 1 |
 | **Full Exits (TP)** | `MarketStructurePositionManager._handle_target_hit()` | ✅ FASE 1 |
-| **Entries** | NO IMPLEMENTADO | ⏳ PENDIENTE |
-| **Risk Rejections** | NO IMPLEMENTADO | ⏳ PENDIENTE |
-| **Exposure Rejections** | NO IMPLEMENTADO | ⏳ PENDIENTE |
-| **Arbiter Decisions** | NO IMPLEMENTADO | ⏳ PENDIENTE |
-| **Position Snapshots** | NO IMPLEMENTADO | ⏳ PENDIENTE |
-| **Risk Snapshots** | NO IMPLEMENTADO | ⏳ PENDIENTE |
+| **Pre-Trade Decisions** | `InstitutionalBrain.process_signals()` | ✅ MANDATO 13 |
+| **Entries (Execution)** | `PositionTracker.__init__()` | ✅ MANDATO 13 |
+| **Rejections (Circuit Breaker)** | `InstitutionalRiskManager.evaluate_signal()` | ✅ MANDATO 13 |
+| **Rejections (Quality)** | `InstitutionalRiskManager.evaluate_signal()` | ✅ MANDATO 13 |
+| **Rejections (Exposure)** | `InstitutionalRiskManager.evaluate_signal()` | ✅ MANDATO 13 |
+| **Rejections (Drawdown)** | `InstitutionalRiskManager.evaluate_signal()` | ✅ MANDATO 13 |
+| **Arbiter Decisions** | `SignalArbitrator.arbitrate_signals()` | ✅ MANDATO 13 |
+| **Position Snapshots** | `main.py` loop (periodic) | ✅ MANDATO 13 |
+| **Risk Snapshots** | `main.py` loop (periodic) | ✅ MANDATO 13 |
 
 ---
 

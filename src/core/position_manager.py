@@ -91,6 +91,28 @@ class PositionTracker:
         # Reporting integration (MANDATO 12)
         self.event_logger = event_logger
 
+        # MANDATO 13: Log ENTRY event when position is opened
+        if self.event_logger:
+            entry_event = {
+                'event_type': 'ENTRY',
+                'timestamp': self.opened_at,
+                'trade_id': position_id,
+                'symbol': self.symbol,
+                'strategy_id': self.strategy,
+                'direction': self.direction,
+                'entry_price': self.entry_price,
+                'stop_loss': self.current_stop,
+                'take_profit': self.current_target,
+                'quantity': lot_size,
+                'risk_r': 1.0,  # Initial risk is always 1R
+                'risk_pct': signal.get('risk_pct', 0.0),
+                'quality_score': signal.get('quality_score', signal.get('metadata', {}).get('quality_score', 0.0)),
+                'regime': signal.get('regime', 'UNKNOWN'),
+                'decision_id': signal.get('decision_id'),  # Link to decision event
+                'notes': f"Position opened - {self.strategy}"
+            }
+            self.event_logger.log_entry(**entry_event)
+
         logger.info(f"Position tracker created: {position_id} {self.symbol} {self.direction} "
                    f"{lot_size} lots @ {self.entry_price}")
 

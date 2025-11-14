@@ -4,6 +4,8 @@ Institutional Risk Manager - Advanced Implementation
 Statistical circuit breakers based on loss distribution analysis, NOT arbitrary thresholds.
 Dynamic position sizing (0.33%-1.0%) based on multi-factor quality scoring.
 
+MANDATO 13: Integrated with ExecutionEventLogger for rejection logging.
+
 Research basis:
 - Kelly Criterion (Kelly 1956) for optimal sizing
 - Tharp's Expectancy Model (Van Tharp 1998)
@@ -13,11 +15,14 @@ Research basis:
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from datetime import datetime, timedelta
 from collections import deque, defaultdict
 import logging
 from scipy import stats
+
+if TYPE_CHECKING:
+    from reporting.event_logger import ExecutionEventLogger
 
 logger = logging.getLogger(__name__)
 
@@ -344,14 +349,16 @@ class InstitutionalRiskManager:
     6. Per-strategy exposure limits
     """
 
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict, event_logger: Optional['ExecutionEventLogger'] = None):
         """
         Initialize institutional risk manager.
 
         Args:
             config: Risk configuration
+            event_logger: ExecutionEventLogger for rejection logging (MANDATO 13)
         """
         self.config = config
+        self.event_logger = event_logger
 
         # Position sizing
         self.base_risk_pct = config.get('base_risk_per_trade', 0.5)  # 0.5% base
@@ -412,6 +419,17 @@ class InstitutionalRiskManager:
         # 1. Circuit breaker check
         can_trade, cb_reason = self.circuit_breaker.check_should_trade()
         if not can_trade:
+            # MANDATO 13: Log circuit breaker rejection
+            if self.event_logger:
+                self.event_logger.log_rejection(
+                    timestamp=datetime.now(),
+                    strategy_id=signal.get('strategy_name', 'UNKNOWN'),
+                    symbol=signal.get('symbol', 'UNKNOWN'),
+                    reason=f'CIRCUIT_BREAKER: {cb_reason}',
+                    quality_score=0.0,
+                    risk_requested_pct=0.0
+                )
+
             return {
                 'approved': False,
                 'reason': cb_reason,
@@ -423,6 +441,17 @@ class InstitutionalRiskManager:
         quality_score = self.quality_scorer.calculate_quality(signal, market_context)
 
         if quality_score < self.min_quality_score:
+            # MANDATO 13: Log quality rejection
+            if self.event_logger:
+                self.event_logger.log_rejection(
+                    timestamp=datetime.now(),
+                    strategy_id=signal.get('strategy_name', 'UNKNOWN'),
+                    symbol=signal.get('symbol', 'UNKNOWN'),
+                    reason=f'QUALITY_LOW: {quality_score:.3f} < {self.min_quality_score}',
+                    quality_score=quality_score,
+                    risk_requested_pct=self.base_risk_pct
+                )
+
             return {
                 'approved': False,
                 'reason': f"Quality too low: {quality_score:.3f} < {self.min_quality_score}",
@@ -437,6 +466,17 @@ class InstitutionalRiskManager:
         # 4. Check exposure limits INCLUDING proposed position
         exposure_check = self._check_exposure_limits(signal, position_size_pct)
         if not exposure_check['approved']:
+            # MANDATO 13: Log exposure rejection
+            if self.event_logger:
+                self.event_logger.log_rejection(
+                    timestamp=datetime.now(),
+                    strategy_id=signal.get('strategy_name', 'UNKNOWN'),
+                    symbol=signal.get('symbol', 'UNKNOWN'),
+                    reason=f'EXPOSURE_LIMIT: {exposure_check["reason"]}',
+                    quality_score=quality_score,
+                    risk_requested_pct=position_size_pct
+                )
+
             return {
                 'approved': False,
                 'reason': exposure_check['reason'],
@@ -446,6 +486,17 @@ class InstitutionalRiskManager:
 
         # 5. Check drawdown limits
         if not self._check_drawdown_limits():
+            # MANDATO 13: Log drawdown rejection
+            if self.event_logger:
+                self.event_logger.log_rejection(
+                    timestamp=datetime.now(),
+                    strategy_id=signal.get('strategy_name', 'UNKNOWN'),
+                    symbol=signal.get('symbol', 'UNKNOWN'),
+                    reason=f'DRAWDOWN_LIMIT: {self._get_current_drawdown():.2f}% >= {self.max_drawdown_pct}%',
+                    quality_score=quality_score,
+                    risk_requested_pct=position_size_pct
+                )
+
             return {
                 'approved': False,
                 'reason': f"Drawdown limit exceeded: {self._get_current_drawdown():.2f}%",
