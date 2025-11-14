@@ -3,6 +3,23 @@
 **Fecha**: 2025-11-14
 **Sesión**: 011CV4uYEyVY6qd3UdpyS6FH
 **Propósito**: Mapa ejecutivo del estado de todos los mandatos para contexto rápido
+**Última actualización**: MANDATO 8 (PRs pendientes)
+
+---
+
+## PRs INSTITUCIONALES (MANDATO 8)
+
+**Tool bloqueado**: `gh pr create` requiere creación manual
+
+| # | Rama | Target | Mandato | Estado |
+|---|------|--------|---------|--------|
+| - | `mandato1-rescate-P2-20251114` | AIS | 1 | Pendiente creación |
+| - | `mandato5-rescate-auditoria-20251114` | AIS | 5 | Pendiente creación |
+| - | `mandato6-p0-testing-observability-risk-20251113` | AIS | 6 | Pendiente creación |
+| - | `mandato6-rescate-inventario-20251114` | AIS | 6 | Pendiente creación |
+| - | `mandato7-limpieza-normalizacion-20251114` | AIS | 7 | Pendiente creación |
+
+**Specs completas**: `docs/PR_SPECS_MANDATO8_20251114.md`
 
 ---
 
@@ -72,14 +89,21 @@ src/gatekeepers/vpin_estimator.py       # ✅ En AIS (warm-up phase)
 src/gatekeepers/kyles_lambda.py         # ✅ En AIS (warm-up phase)
 ```
 
+#### PRs asociados (MANDATO 8)
+
+- **Pendiente**: PR desde `mandato1-rescate-P2-20251114` → AIS
+  - Título: "MANDATO 1: Fase P2 – 26/26 bugs menores"
+  - Spec: `docs/PR_SPECS_MANDATO8_20251114.md` (PR #1)
+
 #### Qué falta
 
+- [ ] Crear PR rescate-P2 (manual en GitHub UI)
 - [ ] Merge de mandato1-rescate-P2 → AIS (21 bugs P2)
 - [ ] 5 bugs P2 adicionales (prioridad muy baja)
 
 #### Bloqueadores
 
-**NINGUNO**. Solo falta aprobación humana de PR rescate-P2.
+**NINGUNO**. Solo creación + aprobación humana de PR.
 
 ---
 
