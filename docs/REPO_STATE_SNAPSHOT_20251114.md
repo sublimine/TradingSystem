@@ -51,6 +51,35 @@ Estado: LEGACY - 17 commits detrás de AIS
 
 ---
 
+## PRs INSTITUCIONALES ACTIVOS (MANDATO 8)
+
+**Fecha actualización**: 2025-11-14 (MANDATO 8)
+**Tool bloqueado**: `gh pr create` (permisos)
+**Solución**: Creación manual en GitHub UI
+
+### PRs pendientes de creación
+
+| # | Rama origen | Target | Título | Mandato | Spec |
+|---|-------------|--------|--------|---------|------|
+| - | `mandato1-rescate-P2-20251114` | AIS | MANDATO 1: Fase P2 – 26/26 bugs menores | 1 | [Ver](#pr-1) |
+| - | `mandato5-rescate-auditoria-20251114` | AIS | MANDATO 5: Microestructura + Multiframe + AUDITORÍA MANDATOS 1–5 | 5 | [Ver](#pr-2) |
+| - | `mandato6-p0-testing-observability-risk-20251113` | AIS | MANDATO 6: Bloque 1 – Tests críticos, logging institucional y límites de riesgo | 6 | [Ver](#pr-3) |
+| - | `mandato6-rescate-inventario-20251114` | AIS | MANDATO 6: Inventario histórico de PRs (PR_HISTORICO_MANDATO6) | 6 | [Ver](#pr-4) |
+| - | `mandato7-limpieza-normalizacion-20251114` | AIS | MANDATO 7: Organización estructural del repositorio | 7 | [Ver](#pr-5) |
+
+**Especificaciones completas**: `docs/PR_SPECS_MANDATO8_20251114.md`
+
+**Instrucciones creación**:
+1. Ir a: https://github.com/sublimine/TradingSystem/compare
+2. Base: `ALGORITMO_INSTITUCIONAL_SUBLIMINE`
+3. Compare: rama origen (tabla arriba)
+4. Copiar título + body de PR_SPECS_MANDATO8_20251114.md
+5. Crear PR
+
+**Post-creación**: Actualizar esta tabla con PR IDs y links.
+
+---
+
 ## RAMAS ACTIVAS POR MANDATO
 
 ### MANDATO 1: Auditoría + Bugfixes
