@@ -9,3 +9,7 @@ logs/
 *.log
 logs/
 *.log
+
+# Runtime reports (JSONL fallback, DB dumps)
+reports/raw/
+reports/generated/

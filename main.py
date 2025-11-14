@@ -39,7 +39,7 @@ import MetaTrader5 as mt5
 from src.core.brain import InstitutionalBrain
 from src.core.ml_adaptive_engine import MLAdaptiveEngine
 from src.core.ml_supervisor import MLSupervisor
-from src.core.risk_manager import RiskManager
+from src.core.risk_manager import InstitutionalRiskManager as RiskManager
 from src.core.position_manager import MarketStructurePositionManager
 from src.core.regime_detector import RegimeDetector
 from src.core.mtf_manager import MultiTimeframeManager
@@ -47,15 +47,23 @@ from src.core.mtf_manager import MultiTimeframeManager
 # Import reporting
 from src.reporting.institutional_reports import InstitutionalReportingSystem
 
-# Import reporting (MANDATO 12)
+# Import reporting (MANDATO 12-13)
 try:
     from src.reporting.event_logger import ExecutionEventLogger
     from src.reporting.db import ReportingDatabase
+    from src.reporting.snapshots import (
+        SnapshotScheduler,
+        capture_position_snapshot,
+        capture_risk_snapshot,
+        save_position_snapshot_to_db,
+        save_risk_snapshot_to_db
+    )
     REPORTING_AVAILABLE = True
 except ImportError:
     REPORTING_AVAILABLE = False
     ExecutionEventLogger = None
     ReportingDatabase = None
+    SnapshotScheduler = None
 
 # Import strategy orchestrator
 from src.strategy_orchestrator import StrategyOrchestrator
@@ -103,31 +111,40 @@ class EliteTradingSystem:
         # Initialize core components
         logger.info("Initializing core components...")
 
-        # MANDATO 12: Initialize Institutional Reporting System (FASE 2)
+        # MANDATO 12-13: Initialize Institutional Reporting System
         self.event_logger = None
         self.reporting_db = None
+        self.snapshot_scheduler = None
         reporting_enabled = self.config.get('reporting', {}).get('institutional_enabled', True)
 
         if REPORTING_AVAILABLE and reporting_enabled:
             try:
-                logger.info("Initializing institutional reporting (MANDATO 12)...")
+                logger.info("Initializing institutional reporting (MANDATO 12-13)...")
                 self.reporting_db = ReportingDatabase(config_path='config/reporting_db.yaml')
                 self.event_logger = ExecutionEventLogger(
                     db=self.reporting_db,
                     buffer_size=100
                 )
+                # MANDATO 13: Snapshot scheduler (every 15 minutes)
+                snapshot_interval = self.config.get('reporting', {}).get('snapshot_interval_minutes', 15)
+                self.snapshot_scheduler = SnapshotScheduler(interval_minutes=snapshot_interval)
                 logger.info("✓✓ ExecutionEventLogger initialized (Postgres + fallback)")
+                logger.info(f"✓✓ SnapshotScheduler initialized ({snapshot_interval} min interval)")
             except Exception as e:
                 logger.warning(f"⚠️  Reporting system initialization failed: {e}")
                 logger.warning("⚠️  Continuing without institutional reporting")
                 self.event_logger = None
                 self.reporting_db = None
+                self.snapshot_scheduler = None
         else:
             logger.info("⚠️  Institutional reporting disabled in config")
 
-        # 1. Risk Manager
-        self.risk_manager = RiskManager(self.config)
-        logger.info("✓ Risk Manager initialized")
+        # 1. Risk Manager (MANDATO 13: with event_logger)
+        self.risk_manager = RiskManager(
+            self.config,
+            event_logger=self.event_logger
+        )
+        logger.info("✓ Risk Manager initialized (with institutional reporting)")
 
         # 2. Regime Detector
         self.regime_detector = RegimeDetector(self.config)
@@ -158,16 +175,17 @@ class EliteTradingSystem:
         else:
             logger.info("⚠️  ML Adaptive Engine DISABLED (manual mode)")
 
-        # 6. Institutional Brain
+        # 6. Institutional Brain (MANDATO 13: with event_logger)
         self.brain = InstitutionalBrain(
             config=self.config,
             risk_manager=self.risk_manager,
             position_manager=self.position_manager,
             regime_detector=self.regime_detector,
             mtf_manager=self.mtf_manager,
-            ml_engine=self.ml_engine  # Pass ML engine (can be None)
+            ml_engine=self.ml_engine,  # Pass ML engine (can be None)
+            event_logger=self.event_logger  # MANDATO 13
         )
-        logger.info("✓ Institutional Brain initialized")
+        logger.info("✓ Institutional Brain initialized (with institutional reporting)")
 
         # 7. Strategy Orchestrator
         self.strategy_orchestrator = StrategyOrchestrator(
@@ -329,7 +347,11 @@ class EliteTradingSystem:
                 if self._is_new_day():
                     self._generate_daily_report()
 
-                # 8. Sleep (adjust based on timeframe)
+                # 8. MANDATO 13: Capture periodic snapshots (non-blocking)
+                if self.snapshot_scheduler and self.snapshot_scheduler.should_capture():
+                    self._capture_snapshots()
+
+                # 9. Sleep (adjust based on timeframe)
                 import time
                 time.sleep(60)  # 1 minute between updates
 
@@ -422,6 +444,45 @@ class EliteTradingSystem:
         if trades:
             report = self.reporting.generate_daily_report(trades, datetime.now())
             logger.info(f"📊 Daily report generated: {report['total_pnl_r']:.2f}R")
+
+    def _capture_snapshots(self):
+        """
+        Capture periodic position and risk snapshots (MANDATO 13).
+
+        Non-blocking - uses try/except to ensure trading loop continues.
+        """
+        try:
+            # Get current market data for position snapshot
+            market_data = self.mtf_manager.get_current_data() if self.mtf_manager else {}
+
+            # Capture position snapshot
+            position_snapshot = capture_position_snapshot(
+                self.position_manager,
+                market_data
+            )
+
+            # Capture risk snapshot
+            risk_snapshot = capture_risk_snapshot(
+                self.risk_manager,
+                self.position_manager
+            )
+
+            # Save to database (with fallback)
+            if self.reporting_db:
+                save_position_snapshot_to_db(position_snapshot, self.reporting_db)
+                save_risk_snapshot_to_db(risk_snapshot, self.reporting_db)
+
+            # Mark snapshot as captured
+            self.snapshot_scheduler.mark_captured()
+
+            logger.debug(
+                f"📸 Snapshots captured: {position_snapshot['num_positions']} positions, "
+                f"DD={risk_snapshot.get('current_drawdown_pct', 0):.2f}%"
+            )
+
+        except Exception as e:
+            logger.error(f"Snapshot capture failed (non-critical): {e}")
+            # Don't re-raise - snapshots are non-critical
 
     def _print_backtest_results(self, results: dict, analysis: dict):
         """Print backtest results summary."""

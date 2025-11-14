@@ -64,16 +64,20 @@ class SmokeTestReporting:
             logger.info("\n[TEST 2] Testing event insertion...")
             self.test_event_insertion()
 
-            # 3. Test aggregators
-            logger.info("\n[TEST 3] Testing aggregators...")
+            # 3. Test MANDATO 13 events (new event types)
+            logger.info("\n[TEST 3] Testing MANDATO 13 event types...")
+            self.test_mandato13_events()
+
+            # 4. Test aggregators
+            logger.info("\n[TEST 4] Testing aggregators...")
             self.test_aggregators()
 
-            # 4. Test metrics
-            logger.info("\n[TEST 4] Testing metrics calculation...")
+            # 5. Test metrics
+            logger.info("\n[TEST 5] Testing metrics calculation...")
             self.test_metrics()
 
-            # 5. Test report generation
-            logger.info("\n[TEST 5] Testing report generation...")
+            # 6. Test report generation
+            logger.info("\n[TEST 6] Testing report generation...")
             self.test_report_generation()
 
             # 6. Cleanup (optional)
@@ -226,6 +230,100 @@ class SmokeTestReporting:
             logger.error(f"❌ TEST 2 FAILED: {e}", exc_info=True)
             self.test_passed = False
 
+    def test_mandato13_events(self):
+        """Test 3: Validar nuevos tipos de eventos (MANDATO 13)."""
+        try:
+            event_logger = ExecutionEventLogger(
+                config_path='config/reporting_db.yaml',
+                buffer_size=10
+            )
+
+            # Test 1: DECISION event
+            logger.info("Testing DECISION event...")
+            decision_event = {
+                'event_type': 'DECISION',
+                'timestamp': datetime.now(),
+                'decision_id': f"DECISION_TEST_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                'strategy_id': 'liquidity_sweep',
+                'symbol': 'EURUSD',
+                'direction': 'LONG',
+                'entry_price': 1.0850,
+                'stop_loss': 1.0830,
+                'take_profit': 1.0900,
+                'lot_size': 0.1,
+                'risk_pct': 1.0,
+                'quality_score_total': 0.85,
+                'quality_breakdown': {
+                    'pedigree': 0.90,
+                    'signal': 0.85,
+                    'microstructure': 0.80,
+                    'multiframe': 0.85
+                },
+                'regime': 'TRENDING_HIGH_VOL',
+                'regime_confidence': 0.75,
+                'notes': 'Smoke test decision event'
+            }
+            event_logger._append_event(decision_event)
+            logger.info("  ✓ DECISION event logged")
+
+            # Test 2: REJECTION event (via log_rejection)
+            logger.info("Testing REJECTION event...")
+            event_logger.log_rejection(
+                timestamp=datetime.now(),
+                strategy_id='order_block_institutional',
+                symbol='GBPUSD',
+                reason='QUALITY_LOW: 0.55 < 0.65',
+                quality_score=0.55,
+                risk_requested_pct=1.2
+            )
+            logger.info("  ✓ REJECTION event logged")
+
+            # Test 3: ARBITER_DECISION event
+            logger.info("Testing ARBITER_DECISION event...")
+            arbiter_event = {
+                'event_type': 'ARBITER_DECISION',
+                'timestamp': datetime.now(),
+                'num_candidates': 3,
+                'candidates': [
+                    {
+                        'strategy_id': 'breakout_volume_confirmation',
+                        'quality': 0.82,
+                        'score': 0.78,
+                        'symbol': 'EURUSD'
+                    },
+                    {
+                        'strategy_id': 'liquidity_sweep',
+                        'quality': 0.75,
+                        'score': 0.72,
+                        'symbol': 'EURUSD'
+                    },
+                    {
+                        'strategy_id': 'statistical_arbitrage_johansen',
+                        'quality': 0.68,
+                        'score': 0.65,
+                        'symbol': 'EURUSD'
+                    }
+                ],
+                'winner': 'breakout_volume_confirmation',
+                'winner_score': 0.78,
+                'min_threshold': 0.70,
+                'reason': 'QUALITY_HIGHER',
+                'notes': 'Arbitrated 3 signals - smoke test'
+            }
+            event_logger._append_event(arbiter_event)
+            logger.info("  ✓ ARBITER_DECISION event logged")
+
+            # Flush and close
+            event_logger.flush()
+            event_logger.close()
+
+            logger.info("✅ All MANDATO 13 event types validated")
+            logger.info("✅ TEST 3 PASSED: MANDATO 13 events")
+
+        except Exception as e:
+            logger.error(f"❌ TEST 3 FAILED: {e}", exc_info=True)
+            self.test_passed = False
+
     def test_aggregators(self):
         """Test 3: Validar aggregators."""
         try:
@@ -250,10 +348,11 @@ class SmokeTestReporting:
         """Test 4: Validar cálculo de métricas."""
         try:
             import numpy as np
+            import pandas as pd
             from src.reporting import metrics
 
-            # Generate sample returns
-            returns = np.array([0.5, -0.3, 1.2, -0.8, 2.0, 0.3, -0.5, 1.5])
+            # Generate sample returns (as pandas Series for metrics)
+            returns = pd.Series([0.5, -0.3, 1.2, -0.8, 2.0, 0.3, -0.5, 1.5])
 
             # Test Sharpe
             sharpe = metrics.calculate_sharpe_ratio(returns)
@@ -265,15 +364,15 @@ class SmokeTestReporting:
             assert isinstance(sortino, float)
             logger.info(f"  Sortino ratio: {sortino:.2f}")
 
-            # Test Calmar
-            calmar = metrics.calculate_calmar_ratio(returns)
-            assert isinstance(calmar, float)
-            logger.info(f"  Calmar ratio: {calmar:.2f}")
-
-            # Test Max DD
+            # Test Max DD (must be calculated first for Calmar)
             max_dd = metrics.calculate_max_drawdown(returns)
             assert isinstance(max_dd, float)
             logger.info(f"  Max drawdown: {max_dd:.2f}R")
+
+            # Test Calmar
+            calmar = metrics.calculate_calmar_ratio(returns, abs(max_dd))
+            assert isinstance(calmar, float)
+            logger.info(f"  Calmar ratio: {calmar:.2f}")
 
             logger.info("✅ All metrics calculated successfully")
             logger.info("✅ TEST 4 PASSED: Metrics")
