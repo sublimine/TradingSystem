@@ -62,7 +62,9 @@ class OrderFlowAnalyzer:
         if symbol not in self.trade_history:
             self.trade_history[symbol] = deque()
 
-        current_time = datetime.now()
+        # MANDATO 17: Use UTC timezone-aware datetime for backtest compatibility
+        from datetime import timezone
+        current_time = datetime.now(timezone.utc)
 
         for trade in trades:
             self.trade_history[symbol].append({

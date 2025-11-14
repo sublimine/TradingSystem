@@ -110,7 +110,12 @@ def calculate_drawdown(equity_curve: pd.Series) -> pd.Series:
 
 
 def calculate_max_drawdown(equity_curve: pd.Series) -> Dict:
-    """Max DD: profundidad, duración, recuperación."""
+    """
+    Max DD: profundidad, duración, recuperación.
+
+    MANDATO 17 FIX: Maneja correctamente índices DateTime y numéricos.
+    Corrige bug 'numpy.int64' object has no attribute 'days'.
+    """
     if equity_curve.empty:
         return {'max_dd_pct': 0, 'max_dd_duration_days': 0}
 
@@ -123,7 +128,14 @@ def calculate_max_drawdown(equity_curve: pd.Series) -> Dict:
         dd_start = dd_periods.idxmax()
         dd_end_mask = (equity_curve.index > dd_start) & (drawdown >= 0)
         dd_end = equity_curve.index[dd_end_mask][0] if dd_end_mask.any() else equity_curve.index[-1]
-        dd_duration = (dd_end - dd_start).days
+
+        # MANDATO 17 FIX: Calcular duración según tipo de índice
+        if isinstance(equity_curve.index, pd.DatetimeIndex):
+            # Index de timestamps → calcular días
+            dd_duration = (dd_end - dd_start).days
+        else:
+            # Index numérico (posiciones) → diferencia directa
+            dd_duration = int(dd_end - dd_start)
     else:
         dd_duration = 0
 
