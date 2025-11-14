@@ -1,4 +1,24 @@
 """
+⚠️⚠️⚠️ ESTRATEGIA RETIRED - MANDATO 9 FASE 2 (2025-11-14) ⚠️⚠️⚠️
+
+ESTADO: RETIRED
+RAZÓN: Overlap masivo con liquidity_sweep (S004) + order_block_institutional (S011)
+REEMPLAZO: Usar liquidity_sweep para stop hunts
+
+ANÁLISIS INSTITUCIONAL:
+- Fase 1 (Inducement) = liquidity_sweep (ya existe, mejor implementado)
+- Fase 2 (Distribution) = order_block_institutional (ya existe)
+- Fase 3 (Displacement) = breakout_volume_confirmation (ya existe)
+- Fraude conceptual SMC: Conceptos "inducement/distribution/displacement" son rebranding de estrategias existentes
+- Sin edge diferenciado cuantificable
+- Factor crowding crítico
+
+Ver: docs/strategies/DESIGN_idp_inducement_RETIRED_20251114.md
+
+---
+CÓDIGO ORIGINAL (DEPRECATED):
+---
+
 IDP (Inducement-Distribution-Displacement) Strategy - TRULY INSTITUTIONAL GRADE
 
 🏆 REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL PATTERN MATCHING GARBAGE
