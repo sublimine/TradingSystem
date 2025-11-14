@@ -1,0 +1,405 @@
+# ==============================================================================
+# MANDATO 18R - BACKTEST CALIBRATION CONFIG
+# Configuración Institucional de Calibración
+# ==============================================================================
+#
+# Fecha: 2025-11-14
+# Autor: SUBLIMINE Institutional Trading System
+# Mandato: MANDATO 18R - Rescate + FASE 4
+#
+# NON-NEGOTIABLES:
+# - Risk caps 0-2% INTACTOS (NO modificar risk_limits.yaml)
+# - NO ATR en risk/SL/TP/quality logic
+# - Solo ajustes de pesos/thresholds via config
+# - Motor de backtest REAL (MANDATO 17)
+
+---
+
+# ==============================================================================
+# PERÍODOS DE CALIBRACIÓN
+# ==============================================================================
+
+calibration:
+  # In-sample: 18 meses para calibración de parámetros
+  start_date: "2023-01-01"
+  end_date: "2024-06-30"
+
+  # Walk-forward windows
+  train_window_months: 3    # Rolling window de entrenamiento
+  test_window_months: 1     # Out-of-sample test después de cada train
+
+  # Warm-up period (datos previos para indicadores, NO usar para optimización)
+  warmup_months: 2
+
+validation:
+  # Hold-out: 6 meses para validación final (NUNCA visto durante calibración)
+  start_date: "2024-07-01"
+  end_date: "2024-12-31"
+
+
+# ==============================================================================
+# UNIVERSO DE SÍMBOLOS (Institucional)
+# ==============================================================================
+
+universe:
+  # FX Major Pairs (liquidez TIER_1)
+  fx_majors:
+    - symbol: "EURUSD.pro"
+      weight: 0.20
+      region: "EUR/USD"
+      liquidity: "TIER_1"
+      min_lot: 0.01
+
+    - symbol: "GBPUSD.pro"
+      weight: 0.18
+      region: "GBP/USD"
+      liquidity: "TIER_1"
+      min_lot: 0.01
+
+    - symbol: "USDJPY.pro"
+      weight: 0.18
+      region: "USD/JPY"
+      liquidity: "TIER_1"
+      min_lot: 0.01
+
+    - symbol: "AUDUSD.pro"
+      weight: 0.15
+      region: "AUD/USD"
+      liquidity: "TIER_1"
+      min_lot: 0.01
+
+    - symbol: "NZDUSD.pro"
+      weight: 0.10
+      region: "NZD/USD"
+      liquidity: "TIER_1"
+      min_lot: 0.01
+
+    - symbol: "USDCHF.pro"
+      weight: 0.10
+      region: "USD/CHF"
+      liquidity: "TIER_1"
+      min_lot: 0.01
+
+    - symbol: "USDCAD.pro"
+      weight: 0.09
+      region: "USD/CAD"
+      liquidity: "TIER_1"
+      min_lot: 0.01
+
+  # FX Cross Pairs (diversificación)
+  fx_crosses:
+    - symbol: "EURJPY.pro"
+      weight: 0.10
+      region: "EUR/JPY"
+      liquidity: "TIER_2"
+      min_lot: 0.01
+
+    - symbol: "GBPJPY.pro"
+      weight: 0.08
+      region: "GBP/JPY"
+      liquidity: "TIER_2"
+      min_lot: 0.01
+
+  # Indices (US + Europa)
+  indices:
+    - symbol: "US500.pro"
+      weight: 0.30
+      region: "US_EQUITIES"
+      liquidity: "TIER_1"
+      min_lot: 0.1
+
+    - symbol: "NAS100.pro"
+      weight: 0.35
+      region: "US_TECH"
+      liquidity: "TIER_1"
+      min_lot: 0.1
+
+    - symbol: "DE40.pro"
+      weight: 0.35
+      region: "EU_EQUITIES"
+      liquidity: "TIER_1"
+      min_lot: 0.1
+
+  # Commodities (metales + energía)
+  commodities:
+    - symbol: "XAUUSD.pro"
+      weight: 0.60
+      region: "GOLD"
+      liquidity: "TIER_1"
+      min_lot: 0.01
+
+    - symbol: "XTIUSD.pro"
+      weight: 0.40
+      region: "OIL_WTI"
+      liquidity: "TIER_2"
+      min_lot: 0.01
+
+  # Crypto (exposición limitada)
+  crypto:
+    - symbol: "BTCUSD.pro"
+      weight: 1.00
+      region: "CRYPTO"
+      liquidity: "TIER_2"
+      min_lot: 0.001
+
+
+# ==============================================================================
+# ESTRATEGIAS CORE (MANDATO 16 integradas)
+# ==============================================================================
+
+strategies:
+  # Las 5 estrategias core institucionales integradas en MANDATO 16
+
+  - id: "liquidity_sweep"
+    name: "Liquidity Sweep Strategy"
+    category: "ORDERFLOW"
+    enabled: true
+    state: "PRODUCTION"
+
+  - id: "vpin_reversal_extreme"
+    name: "VPIN Reversal Extreme"
+    category: "MICROSTRUCTURE"
+    enabled: true
+    state: "PRODUCTION"
+
+  - id: "order_flow_toxicity"
+    name: "Order Flow Toxicity"
+    category: "MICROSTRUCTURE"
+    enabled: true
+    state: "PRODUCTION"
+
+  - id: "ofi_refinement"
+    name: "OFI Refinement Strategy"
+    category: "MICROSTRUCTURE"
+    enabled: true
+    state: "PRODUCTION"
+
+  - id: "breakout_volume_confirmation"
+    name: "Breakout Volume Confirmation"
+    category: "MOMENTUM"
+    enabled: true
+    state: "PRODUCTION"
+
+
+# ==============================================================================
+# MÉTRICAS OBJETIVO (Institucionales)
+# ==============================================================================
+
+metrics_targets:
+  # Performance metrics (portfolio-level)
+  sharpe_ratio_min: 1.5           # Mínimo aceptable
+  sortino_ratio_min: 2.0
+  calmar_ratio_min: 2.0
+
+  # Risk metrics
+  max_drawdown_pct_max: 15.0      # Máximo DD aceptable (%)
+  max_consecutive_losses_max: 5
+
+  # Win Rate & Expectancy
+  win_rate_min: 0.45              # 45% mínimo
+  profit_factor_min: 1.8
+  expectancy_r_min: 0.30          # R-múltiple esperado > 0.3R
+
+  # Stability & Robustness
+  sharpe_stability_min: 0.70      # Sharpe ratio estable entre períodos
+  param_sensitivity_max: 0.30     # Cambios en params no degradan > 30%
+
+  # Trade activity
+  trades_per_month_min: 8         # Mínimo trades/mes para significancia
+  trades_per_month_max: 80        # Máximo para evitar overtrading
+
+  # Correlation (portfolio)
+  max_strategy_correlation: 0.60  # Correlación PnL entre estrategias < 60%
+
+
+# ==============================================================================
+# GRID SEARCH - PARÁMETROS POR ESTRATEGIA
+# ==============================================================================
+
+# Rangos institucionales conservadores (evitar overfitting)
+
+strategy_params:
+
+  # 1. Liquidity Sweep
+  liquidity_sweep:
+    lookback_bars: [20, 30, 50]                     # Lookback para liquidity pools
+    sweep_confirmation_bars: [2, 3, 5]              # Confirmación post-sweep
+    volume_spike_threshold: [1.8, 2.2, 2.5]         # Spike vs MA volume
+    min_pool_strength: [0.65, 0.75, 0.85]           # Fuerza mínima del pool
+
+  # 2. VPIN Reversal Extreme
+  vpin_reversal_extreme:
+    vpin_threshold_high: [0.65, 0.70, 0.75]         # VPIN alto para reversal
+    vpin_threshold_low: [0.25, 0.30, 0.35]          # VPIN bajo para salida
+    confirmation_bars: [2, 3, 5]                    # Confirmación de reversal
+    min_volume_percentile: [0.70, 0.80, 0.90]       # Percentil mínimo de volumen
+
+  # 3. Order Flow Toxicity
+  order_flow_toxicity:
+    toxicity_threshold: [0.60, 0.70, 0.80]          # Threshold de toxicidad
+    lookback_period: [20, 30, 50]                   # Período de análisis
+    ofi_weight: [0.40, 0.50, 0.60]                  # Peso de OFI en score
+    vpin_weight: [0.40, 0.50, 0.60]                 # Peso de VPIN en score
+
+  # 4. OFI Refinement
+  ofi_refinement:
+    ofi_threshold: [300, 500, 700]                  # Threshold absoluto OFI
+    ofi_percentile: [0.75, 0.85, 0.95]              # Percentil de OFI
+    confirmation_bars: [2, 3, 5]                    # Confirmación
+    min_imbalance_ratio: [0.60, 0.70, 0.80]         # Ratio mínimo de imbalance
+
+  # 5. Breakout Volume Confirmation
+  breakout_volume_confirmation:
+    volume_threshold_multiplier: [1.5, 2.0, 2.5]    # vs MA de volumen
+    breakout_strength_min: [0.003, 0.005, 0.007]    # % mínimo de breakout
+    consolidation_bars_min: [10, 15, 20]            # Barras de consolidación
+    confirmation_bars: [2, 3, 5]                    # Confirmación de breakout
+
+
+# ==============================================================================
+# QUALITY SCORER - CALIBRACIÓN
+# ==============================================================================
+
+quality_scorer_calibration:
+
+  # Pesos de factores (sum = 1.0)
+  # Se calibrarán basados en correlación con R-multiple
+  weights:
+    pedigree: [0.18, 0.20, 0.22]                    # Track record de estrategia
+    signal: [0.23, 0.25, 0.27]                      # Fuerza de señal
+    microstructure: [0.18, 0.20, 0.22]              # VPIN, OFI, spoofing
+    multiframe: [0.18, 0.20, 0.22]                  # HTF/MTF confluence
+    data_health: [0.08, 0.10, 0.12]                 # Calidad de datos
+    portfolio: [0.08, 0.10, 0.12]                   # Impacto en portfolio
+
+  # Thresholds de aceptación
+  thresholds:
+    min_quality_accept: [0.60, 0.65, 0.70]          # Score mínimo para aceptar
+    min_quality_priority: [0.75, 0.80, 0.85]        # Score para prioridad alta
+    max_quality_risk_scale: [0.85, 0.90, 0.95]      # Score para escalar riesgo
+
+  # Bandas VPIN (microstructure)
+  vpin_bands:
+    low_toxicity_max: [0.30, 0.35, 0.40]            # VPIN bajo = low toxicity
+    high_toxicity_min: [0.60, 0.65, 0.70]           # VPIN alto = high toxicity
+
+
+# ==============================================================================
+# BRAIN-LAYER CALIBRACIÓN
+# ==============================================================================
+
+brain_calibration:
+
+  # Signal Arbitrator
+  arbitrator:
+    max_signals_per_symbol: [1]                     # Institucional: 1 señal/símbolo
+    quality_diff_threshold: [0.05, 0.10, 0.15]      # Diferencia para priorizar
+    same_direction_merge: [false]                   # NO merge (evitar errors)
+
+  # Portfolio Orchestrator
+  portfolio:
+    max_open_positions: [8, 10, 12]                 # Máximo trades abiertos
+    max_correlation_threshold: [0.50, 0.60, 0.70]   # Correlación máxima
+    diversification_weight: [0.10, 0.15, 0.20]      # Bonus por diversificación
+
+  # Strategy State Management
+  strategy_states:
+    production_min_sharpe: [1.2, 1.5, 1.8]          # Sharpe para PRODUCTION
+    pilot_min_sharpe: [0.8, 1.0, 1.2]               # Sharpe para PILOT
+    degraded_max_dd_pct: [20.0, 25.0, 30.0]         # MaxDD para DEGRADED
+
+    # Rolling performance window
+    performance_window_trades: [30, 50, 100]        # Trades para evaluar state
+
+
+# ==============================================================================
+# OPTIMIZATION SETTINGS
+# ==============================================================================
+
+optimization:
+  # Objective function
+  objective_metric: "sharpe_calmar_product"         # Sharpe * Calmar
+  # Alternativas: "sharpe_ratio", "sortino_ratio", "calmar_ratio"
+
+  # Penalización por overfitting
+  stability_penalty_weight: 0.30                    # 30% peso a estabilidad
+  param_sensitivity_penalty: 0.15                   # 15% penalización sensibilidad
+
+  # Constraints
+  min_trades_required: 50                           # Mínimo trades para validez
+  max_optimization_time_hours: 24                   # Timeout por estrategia
+
+  # Cross-validation
+  cv_folds: 3                                       # Walk-forward folds
+  cv_embargo_days: 5                                # Gap train/test (evitar lookahead)
+
+
+# ==============================================================================
+# EXECUTION SETTINGS (Realismo Institucional)
+# ==============================================================================
+
+execution:
+  # Slippage modeling
+  slippage_model: "DYNAMIC_SPREAD"                  # vs fixed BPS
+  avg_spread_bps:
+    fx_tier1: 0.5                                   # EURUSD, GBPUSD, USDJPY
+    fx_tier2: 1.0                                   # NZDUSD, crosses
+    indices: 2.0
+    commodities: 3.0
+    crypto: 10.0
+
+  # Commission
+  commission_per_lot_usd: 7.0
+
+  # Execution delay (realismo)
+  signal_to_execution_seconds: [0, 1, 3]            # Latencia orden
+
+
+# ==============================================================================
+# OUTPUT & REPORTING
+# ==============================================================================
+
+output:
+  # Directorios
+  reports_dir: "reports/calibration/"
+  configs_output_dir: "config/calibrated/"
+
+  # Formatos
+  generate_html_reports: true
+  generate_json_exports: true
+  generate_csv_trades: true
+
+  # Visualizations
+  plot_equity_curves: true
+  plot_drawdown_charts: true
+  plot_param_sensitivity: true
+  plot_correlation_matrix: true
+
+
+# ==============================================================================
+# NOTAS & AUDIT TRAIL
+# ==============================================================================
+
+notes: |
+  MANDATO 18R - Calibración Institucional
+
+  NON-NEGOTIABLES:
+  - Risk caps 0-2% NO se modifican (config/risk_limits.yaml intacto)
+  - NO usar ATR como core logic (solo structure-based stops)
+  - Priorizar estabilidad sobre máximo Sharpe (evitar overfitting)
+  - Walk-forward validation obligatoria
+  - Hold-out final NUNCA visto durante calibración
+
+  Motor de backtest:
+  - Usar BacktestEngine/BacktestRunner REALES (MANDATO 17)
+  - NO re-implementar mini backtester
+  - Usar reporting metrics existentes
+
+  Audit trail:
+  - Todos los sweeps registrados en reports/calibration/
+  - Cada config incluye hash de reproducibilidad
+  - Métricas antes/después documentadas
+
+  Estrategias:
+  - 5 estrategias core de MANDATO 16 (integradas en motor)
+  - NO estrategias legacy sin microstructure/multiframe
