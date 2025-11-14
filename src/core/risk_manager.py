@@ -38,12 +38,14 @@ class QualityScorer:
     Multi-factor quality scoring system for signal evaluation.
 
     P2-013: QualityScorer complete documentation
+    MANDATO 15: Integrated with MicrostructureEngine and MultiFrameOrchestrator
 
     Evaluates signal quality through 5 institutional factors weighted by importance:
 
     1. Multi-timeframe confluence (40%): HTF/LTF alignment strength
        - Measured via correlated structure across M5/M15/H1/H4 timeframes
        - Higher weight reflects institutional focus on MTF confirmation
+       - MANDATO 15: Real MTF analysis via MultiFrameOrchestrator
 
     2. Market structure alignment (25%): Proximity and alignment to key levels
        - Order blocks, FVGs, swing points, liquidity zones
@@ -52,6 +54,7 @@ class QualityScorer:
     3. Order flow quality (20%): VPIN-based toxicity measurement
        - Low VPIN = clean uninformed flow (good)
        - High VPIN = toxic informed flow (bad)
+       - MANDATO 15: Real microstructure via MicrostructureEngine (VPIN, OFI, Depth, Spoofing)
 
     4. Volatility regime fit (10%): Strategy compatibility with current regime
        - Mean reversion thrives in low vol, momentum in high vol
@@ -66,12 +69,21 @@ class QualityScorer:
     - Easley et al. (2012): VPIN for order flow quality
     """
 
-    def __init__(self):
+    def __init__(self, microstructure_engine=None, multiframe_orchestrator=None):
         """
         Initialize quality scorer with institutional factor weights.
 
+        MANDATO 15: Optional integration with real microstructure and multiframe engines.
+
+        Args:
+            microstructure_engine: Optional MicrostructureEngine for real-time flow analysis
+            multiframe_orchestrator: Optional MultiFrameOrchestrator for MTF analysis
+
         Weights calibrated from backtesting 2000+ signals across regimes.
         """
+        self.microstructure_engine = microstructure_engine
+        self.multiframe_orchestrator = multiframe_orchestrator
+
         self.weights = {
             'mtf_confluence': 0.40,
             'structure_alignment': 0.25,
@@ -84,6 +96,9 @@ class QualityScorer:
         """
         Calculate composite quality score 0.0-1.0.
 
+        MANDATO 15: Integrated with real MicrostructureEngine and MultiFrameOrchestrator.
+        Falls back to signal metadata if engines not available (backward compatibility).
+
         Args:
             signal: Signal dictionary with metadata
             market_context: Current market state
@@ -92,9 +107,21 @@ class QualityScorer:
             Quality score 0.0-1.0
         """
         scores = {}
+        symbol = signal.get('symbol', '')
 
         # 1. Multi-timeframe confluence (40%)
-        mtf_confluence = signal.get('metadata', {}).get('mtf_confluence', 0.5)
+        # MANDATO 15: Use real MultiFrameOrchestrator if available
+        if self.multiframe_orchestrator:
+            mf_score = self.multiframe_orchestrator.get_multiframe_score(symbol)
+            if mf_score is not None:
+                mtf_confluence = mf_score
+            else:
+                # Fallback if no cached analysis
+                mtf_confluence = signal.get('metadata', {}).get('mtf_confluence', 0.5)
+        else:
+            # Legacy: read from signal metadata
+            mtf_confluence = signal.get('metadata', {}).get('mtf_confluence', 0.5)
+
         scores['mtf_confluence'] = self._normalize_score(mtf_confluence, 0.4, 1.0)
 
         # 2. Market structure alignment (25%)
@@ -102,9 +129,21 @@ class QualityScorer:
         scores['structure_alignment'] = structure_score
 
         # 3. Order flow quality (20%)
-        vpin = market_context.get('vpin', 0.4)
-        # Low VPIN = high quality (inverted)
-        flow_quality = 1.0 - min(vpin / 0.6, 1.0)
+        # MANDATO 15: Use real MicrostructureEngine if available
+        if self.microstructure_engine:
+            micro_score = self.microstructure_engine.get_microstructure_score(symbol)
+            if micro_score is not None:
+                flow_quality = micro_score
+            else:
+                # Fallback if no cached analysis
+                vpin = market_context.get('vpin', 0.4)
+                flow_quality = 1.0 - min(vpin / 0.6, 1.0)
+        else:
+            # Legacy: calculate from VPIN in market_context
+            vpin = market_context.get('vpin', 0.4)
+            # Low VPIN = high quality (inverted)
+            flow_quality = 1.0 - min(vpin / 0.6, 1.0)
+
         scores['order_flow'] = flow_quality
 
         # 4. Volatility regime fit (10%)
@@ -380,7 +419,8 @@ class InstitutionalRiskManager:
     """
 
     def __init__(self, config: Dict = None, risk_limits_path: str = None,
-                 event_logger: Optional['ExecutionEventLogger'] = None):
+                 event_logger: Optional['ExecutionEventLogger'] = None,
+                 microstructure_engine=None, multiframe_orchestrator=None):
         """
         Initialize institutional risk manager.
 
@@ -388,6 +428,8 @@ class InstitutionalRiskManager:
             config: Risk configuration (optional, will load from YAML if not provided)
             risk_limits_path: Path to risk_limits.yaml (Mandato 6)
             event_logger: ExecutionEventLogger for rejection logging (MANDATO 13)
+            microstructure_engine: Optional MicrostructureEngine for real flow analysis (MANDATO 15)
+            multiframe_orchestrator: Optional MultiFrameOrchestrator for MTF analysis (MANDATO 15)
         """
         # MANDATO 6: Load limits from institutional YAML
         if risk_limits_path is None:
@@ -424,7 +466,11 @@ class InstitutionalRiskManager:
         self.max_drawdown_pct = config.get('max_drawdown', 15.0)  # 15% max drawdown
 
         # Components
-        self.quality_scorer = QualityScorer()
+        # MANDATO 15: Pass microstructure and multiframe engines to QualityScorer
+        self.quality_scorer = QualityScorer(
+            microstructure_engine=microstructure_engine,
+            multiframe_orchestrator=multiframe_orchestrator
+        )
         self.circuit_breaker = StatisticalCircuitBreaker(config)
 
         # Portfolio tracking
