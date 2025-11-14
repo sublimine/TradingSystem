@@ -1,162 +1,200 @@
 """
-Microstructure Engine - Main Orchestrator
+Microstructure Engine - Composite Microstructure Scoring
 
-MANDATO 15: Motor principal de microestructura institucional.
+Agrega señales de microestructura (VPIN + OFI) en un score unificado [0-1].
+Este score alimenta la dimensión 'order_flow' del QualityScorer.
 
-Orquesta VPINEstimator, OrderFlowAnalyzer, Level2DepthMonitor, SpoofingDetector.
-Output: microstructure_score [0-1] para QualityScorer.
+Score alto → Condiciones microestructurales favorables (flujo limpio, balanceado)
+Score bajo → Condiciones adversas (flujo tóxico, desequilibrio extremo)
 """
 
+import numpy as np
+from typing import Dict, List, Optional
 import logging
-from typing import Dict, List, Optional, Tuple
+
 from .vpin import VPINEstimator
 from .order_flow import OrderFlowAnalyzer
-from .depth import Level2DepthMonitor
-from .spoofing import SpoofingDetector
 
 logger = logging.getLogger(__name__)
 
 
 class MicrostructureEngine:
     """
-    Motor institucional de análisis de microestructura.
+    Motor composite de microestructura.
 
-    Agrega scores de VPIN, OFI, Depth, Spoofing en microstructure_score [0-1].
+    Combina:
+    - VPIN (toxicidad de flujo)
+    - OFI (desequilibrio direccional)
+
+    Output: microstructure_score [0-1]
     """
 
     def __init__(self, config: Dict):
         """
-        Args:
-            config: Configuración completa de microestructura (ver config/microstructure.yaml)
-        """
-        self.config = config
-
-        # Inicializar componentes
-        self.vpin = VPINEstimator(config.get('vpin', {}))
-        self.order_flow = OrderFlowAnalyzer(config.get('order_flow', {}))
-        self.depth = Level2DepthMonitor(config.get('depth', {}))
-        self.spoofing = SpoofingDetector(config.get('spoofing', {}))
-
-        # Pesos de agregación (configurables por símbolo/clase)
-        default_weights = config.get('aggregation_weights', {})
-        self.weight_vpin = default_weights.get('vpin', 0.40)
-        self.weight_ofi = default_weights.get('order_flow', 0.30)
-        self.weight_depth = default_weights.get('depth', 0.20)
-        self.weight_spoofing = default_weights.get('spoofing', 0.10)
-
-        # Validar suma de pesos = 1.0
-        total_weight = self.weight_vpin + self.weight_ofi + self.weight_depth + self.weight_spoofing
-        if abs(total_weight - 1.0) > 0.01:
-            logger.warning(f"Aggregation weights sum to {total_weight}, not 1.0. Normalizing.")
-            self.weight_vpin /= total_weight
-            self.weight_ofi /= total_weight
-            self.weight_depth /= total_weight
-            self.weight_spoofing /= total_weight
-
-        logger.info(f"MicrostructureEngine init: weights (VPIN={self.weight_vpin:.2f}, "
-                   f"OFI={self.weight_ofi:.2f}, Depth={self.weight_depth:.2f}, "
-                   f"Spoofing={self.weight_spoofing:.2f})")
-
-    def update_tick(self, symbol: str, trade_price: float, trade_volume: float,
-                    bid_price: float, ask_price: float):
-        """
-        Actualizar con nuevo tick de trade.
+        Inicializar motor de microestructura.
 
         Args:
-            symbol: Símbolo
-            trade_price: Precio del trade
-            trade_volume: Volumen del trade
-            bid_price: Mejor bid
-            ask_price: Mejor ask
+            config: {
+                'vpin': {...},  # Config para VPINEstimator
+                'order_flow': {...},  # Config para OrderFlowAnalyzer
+                'weights': {  # Pesos de componentes
+                    'vpin_quality': float,  # default: 0.60
+                    'flow_balance': float   # default: 0.40
+                }
+            }
         """
-        # Actualizar VPIN
-        self.vpin.update(symbol, trade_price, trade_volume, bid_price, ask_price)
+        vpin_config = config.get('vpin', {
+            'bucket_volume': 100,
+            'window_buckets': 50
+        })
+        ofi_config = config.get('order_flow', {
+            'window_seconds': 60,
+            'min_trades': 5
+        })
 
-        # Actualizar Order Flow (clasificar trade primero)
-        mid_price = (bid_price + ask_price) / 2
-        side = 'BUY' if trade_price >= mid_price else 'SELL'
-        self.order_flow.update(symbol, side, trade_volume)
+        self.vpin_estimator = VPINEstimator(vpin_config)
+        self.order_flow_analyzer = OrderFlowAnalyzer(ofi_config)
 
-    def update_book(self, symbol: str, bids: List[Tuple[float, float]],
-                   asks: List[Tuple[float, float]]):
+        # Pesos institucionales calibrados
+        weights = config.get('weights', {})
+        self.weight_vpin = weights.get('vpin_quality', 0.60)
+        self.weight_ofi = weights.get('flow_balance', 0.40)
+
+        logger.info(f"MicrostructureEngine initialized: "
+                   f"vpin_weight={self.weight_vpin}, ofi_weight={self.weight_ofi}")
+
+    def update_trades(self, symbol: str, trades: List[Dict]):
         """
-        Actualizar con snapshot del order book.
+        Actualiza motores con nuevos trades.
 
         Args:
-            symbol: Símbolo
-            bids: Lista de (price, quantity) bids
-            asks: Lista de (price, quantity) asks
+            trades: Lista de trades con estructura:
+                   [{price, volume, bid, ask, timestamp, side}, ...]
+                   'side' puede ser opcional (VPIN lo clasifica)
         """
-        self.depth.update(symbol, bids, asks)
+        # Actualizar VPIN (clasifica automáticamente si no hay 'side')
+        vpin_trades = []
+        for trade in trades:
+            vpin_trades.append({
+                'price': trade['price'],
+                'volume': trade['volume'],
+                'bid': trade.get('bid'),
+                'ask': trade.get('ask'),
+                'timestamp': trade.get('timestamp')
+            })
+        self.vpin_estimator.update(symbol, vpin_trades)
 
-    def track_order_event(self, symbol: str, event_type: str, order_id: str,
-                         price: float = 0, quantity: float = 0, side: str = ''):
-        """
-        Track orden añadida/cancelada para spoofing detection.
+        # Actualizar OFI (necesita 'side' clasificado)
+        ofi_trades = []
+        for trade in trades:
+            side = trade.get('side')
+            if side is None:
+                # Clasificar con VPIN si no viene clasificado
+                side = self.vpin_estimator.classify_trade(
+                    symbol, trade['price'], trade['volume'],
+                    trade.get('bid'), trade.get('ask')
+                )
+            ofi_trades.append({
+                'timestamp': trade.get('timestamp'),
+                'side': side,
+                'volume': trade['volume']
+            })
+        self.order_flow_analyzer.update(symbol, ofi_trades)
 
-        Args:
-            event_type: 'ADD' o 'CANCEL'
-            order_id: ID único de la orden
+    def calculate_microstructure_score(self, symbol: str) -> Dict:
         """
-        if event_type == 'ADD':
-            self.spoofing.track_order_add(symbol, order_id, price, quantity, side)
-        elif event_type == 'CANCEL':
-            self.spoofing.track_order_cancel(symbol, order_id)
+        Calcula score composite de microestructura.
+
+        Lógica:
+        1. VPIN Quality (60%):
+           - VPIN bajo = score alto (inverted)
+           - VPIN < 0.30 → score 1.0
+           - VPIN > 0.50 → score 0.0
+           - Interpolación lineal entre 0.30-0.50
+
+        2. Flow Balance (40%):
+           - |OFI| bajo = score alto (flujo balanceado)
+           - |OFI| < 0.2 → score 1.0
+           - |OFI| > 0.6 → score 0.0
+           - Interpolación lineal
+
+        Returns:
+            {
+                'microstructure_score': float [0-1],
+                'vpin': float,
+                'vpin_quality': float [0-1],
+                'ofi': float,
+                'flow_balance': float [0-1],
+                'interpretation': str
+            }
+        """
+        vpin = self.vpin_estimator.get_vpin(symbol)
+        ofi = self.order_flow_analyzer.get_ofi(symbol)
+
+        # 1. VPIN Quality (invertido: bajo VPIN = alta calidad)
+        if vpin <= 0.30:
+            vpin_quality = 1.0
+        elif vpin >= 0.50:
+            vpin_quality = 0.0
+        else:
+            # Interpolación lineal 0.30-0.50 → 1.0-0.0
+            vpin_quality = 1.0 - ((vpin - 0.30) / 0.20)
+
+        # 2. Flow Balance (bajo desequilibrio = alto balance)
+        ofi_abs = abs(ofi)
+        if ofi_abs <= 0.2:
+            flow_balance = 1.0
+        elif ofi_abs >= 0.6:
+            flow_balance = 0.0
+        else:
+            # Interpolación lineal 0.2-0.6 → 1.0-0.0
+            flow_balance = 1.0 - ((ofi_abs - 0.2) / 0.4)
+
+        # Score composite
+        microstructure_score = (
+            self.weight_vpin * vpin_quality +
+            self.weight_ofi * flow_balance
+        )
+
+        # Interpretación
+        interpretation = self._interpret_score(microstructure_score, vpin, ofi)
+
+        return {
+            'microstructure_score': round(microstructure_score, 4),
+            'vpin': round(vpin, 4),
+            'vpin_quality': round(vpin_quality, 4),
+            'ofi': round(ofi, 4),
+            'flow_balance': round(flow_balance, 4),
+            'interpretation': interpretation
+        }
+
+    def _interpret_score(self, score: float, vpin: float, ofi: float) -> str:
+        """Interpreta score de microestructura para logging."""
+        vpin_status = self.vpin_estimator.interpret_vpin(vpin)
+        ofi_status = self.order_flow_analyzer.interpret_ofi(ofi)
+
+        if score >= 0.7:
+            return f"FAVORABLE ({vpin_status}, {ofi_status})"
+        elif score >= 0.4:
+            return f"MODERATE ({vpin_status}, {ofi_status})"
+        else:
+            return f"ADVERSE ({vpin_status}, {ofi_status})"
 
     def get_microstructure_score(self, symbol: str) -> float:
         """
-        Calcular microstructure_score agregado [0-1].
-
-        Score alto = buenas condiciones de microestructura (bajo VPIN, flow balanceado, etc).
+        Obtiene solo el score composite [0-1].
 
         Returns:
-            Score [0-1]
+            microstructure_score [0-1]
         """
-        # Obtener scores individuales
-        vpin_score = self.vpin.get_score(symbol)
-        ofi_score = self.order_flow.get_score(symbol)
-        depth_score = self.depth.get_score(symbol)
-        spoofing_score = self.spoofing.get_score(symbol)
+        result = self.calculate_microstructure_score(symbol)
+        return result['microstructure_score']
 
-        # Agregar con pesos
-        micro_score = (
-            self.weight_vpin * vpin_score +
-            self.weight_ofi * ofi_score +
-            self.weight_depth * depth_score +
-            self.weight_spoofing * spoofing_score
-        )
-
-        return max(0.0, min(1.0, micro_score))
-
-    def get_diagnostic_info(self, symbol: str) -> Dict:
+    def get_detailed_state(self, symbol: str) -> Dict:
         """
-        Obtener info de diagnóstico detallada.
+        Obtiene estado completo de microestructura para debugging/reporting.
 
         Returns:
-            Dict con todos los scores y métricas individuales
+            Diccionario con todos los componentes y scores
         """
-        return {
-            'microstructure_score': self.get_microstructure_score(symbol),
-            'vpin': {
-                'value': self.vpin.get_vpin(symbol),
-                'score': self.vpin.get_score(symbol),
-                'weight': self.weight_vpin
-            },
-            'order_flow': {
-                'ofi': self.order_flow.get_ofi(symbol),
-                'score': self.order_flow.get_score(symbol),
-                'regime_change': self.order_flow.detect_regime_change(symbol),
-                'weight': self.weight_ofi
-            },
-            'depth': {
-                'imbalance': self.depth.get_imbalance(symbol),
-                'liquidity_wall': self.depth.detect_liquidity_wall(symbol),
-                'score': self.depth.get_score(symbol),
-                'weight': self.weight_depth
-            },
-            'spoofing': {
-                'spoof_rate': self.spoofing.get_spoof_rate(symbol),
-                'score': self.spoofing.get_score(symbol),
-                'weight': self.weight_spoofing
-            }
-        }
+        return self.calculate_microstructure_score(symbol)

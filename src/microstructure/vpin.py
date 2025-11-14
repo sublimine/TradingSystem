@@ -1,21 +1,17 @@
 """
 VPIN Estimator - Volume-Synchronized Probability of Informed Trading
 
-MANDATO 15: Implementación institucional de VPIN.
+Implementación institucional basada en Easley, López de Prado, O'Hara (2012).
+Clasifica trades como agresivos (buy/sell) y calcula desequilibrio en buckets de volumen.
 
-Research basis:
-- Easley, López de Prado, O'Hara (2012): "Flow Toxicity and Liquidity in a High-Frequency World"
-- Lee & Ready (1991): "Inferring Trade Direction"
-
-VPIN [0-1]: probabilidad de informed trading.
-- < 0.30: mercado balanceado
-- 0.30-0.50: presencia moderada de informed traders
-- > 0.50: alto riesgo adverse selection → EVITAR
+VPIN alto → flujo tóxico, evitar ejecución.
+VPIN bajo → flujo balanceado, condiciones favorables.
 """
 
 import numpy as np
+import pandas as pd
+from typing import Dict, List, Optional, Tuple
 from collections import deque
-from typing import Dict, Optional, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,145 +19,162 @@ logger = logging.getLogger(__name__)
 
 class VPINEstimator:
     """
-    Volume-Synchronized Probability of Informed Trading (VPIN).
+    Estimador de VPIN en buckets de volumen constante.
 
-    Calcula VPIN en buckets de volumen constante (NO tiempo).
+    Calibración institucional:
+    - bucket_volume: Volumen fijo por bucket (ej: 50 lots para EURUSD)
+    - window_buckets: Ventana deslizante de buckets para VPIN (típicamente 50)
+    - Thresholds: <0.30 (clean), 0.30-0.50 (moderate), >0.50 (toxic)
     """
 
     def __init__(self, config: Dict):
         """
+        Inicializar estimador VPIN.
+
         Args:
             config: {
-                'bucket_volume': Volumen por bucket (ej. 10000 para FX major),
-                'num_buckets': Ventana de buckets para VPIN (típico 50),
-                'vpin_threshold_low': 0.30,
-                'vpin_threshold_high': 0.50
+                'bucket_volume': int - Volumen por bucket,
+                'window_buckets': int - Número de buckets en ventana,
+                'classify_method': str - 'tick' o 'quote' (default: tick)
             }
         """
-        self.bucket_volume = config.get('bucket_volume', 10000)
-        self.num_buckets = config.get('num_buckets', 50)
-        self.threshold_low = config.get('vpin_threshold_low', 0.30)
-        self.threshold_high = config.get('vpin_threshold_high', 0.50)
+        self.bucket_volume = config.get('bucket_volume', 100)
+        self.window_buckets = config.get('window_buckets', 50)
+        self.classify_method = config.get('classify_method', 'tick')
 
-        # Estado por símbolo
-        self.symbols_state: Dict[str, Dict] = {}
+        # Estado interno por símbolo
+        self.buckets = {}  # {symbol: deque of {buy_vol, sell_vol, total_vol}}
+        self.current_bucket = {}  # {symbol: {buy_vol, sell_vol, current_vol}}
+        self.last_price = {}  # Para tick classification
 
-        logger.info(f"VPINEstimator init: bucket_vol={self.bucket_volume}, "
-                   f"n_buckets={self.num_buckets}")
+        logger.info(f"VPINEstimator initialized: bucket_vol={self.bucket_volume}, "
+                   f"window={self.window_buckets}, method={self.classify_method}")
 
-    def update(self, symbol: str, trade_price: float, trade_volume: float,
-               bid_price: float, ask_price: float) -> Optional[float]:
+    def classify_trade(self, symbol: str, price: float, volume: float,
+                      bid: Optional[float] = None, ask: Optional[float] = None) -> str:
         """
-        Actualizar VPIN con nuevo trade.
+        Clasifica trade como BUY o SELL agresivo.
+
+        Lee-Ready algorithm:
+        - Si price > mid → BUY
+        - Si price < mid → SELL
+        - Si price == mid → usar tick test (comparar con precio previo)
 
         Args:
             symbol: Símbolo
-            trade_price: Precio del trade
-            trade_volume: Volumen del trade
-            bid_price: Mejor bid en el momento del trade
-            ask_price: Mejor ask en el momento del trade
-
-        Returns:
-            VPIN actual si hay suficiente historia, None si aún no
-        """
-        if symbol not in self.symbols_state:
-            self.symbols_state[symbol] = {
-                'current_bucket': {'buy': 0, 'sell': 0, 'total': 0},
-                'buckets': deque(maxlen=self.num_buckets),
-                'last_mid': (bid_price + ask_price) / 2
-            }
-
-        state = self.symbols_state[symbol]
-
-        # Clasificar trade (Lee-Ready simplificado)
-        mid_price = (bid_price + ask_price) / 2
-        side = self._classify_trade(trade_price, mid_price, state['last_mid'])
-        state['last_mid'] = mid_price
-
-        # Acumular en bucket actual
-        state['current_bucket']['total'] += trade_volume
-        if side == 'BUY':
-            state['current_bucket']['buy'] += trade_volume
-        else:
-            state['current_bucket']['sell'] += trade_volume
-
-        # Completar bucket si alcanza volumen target
-        if state['current_bucket']['total'] >= self.bucket_volume:
-            state['buckets'].append({
-                'buy': state['current_bucket']['buy'],
-                'sell': state['current_bucket']['sell'],
-                'total': state['current_bucket']['total']
-            })
-            state['current_bucket'] = {'buy': 0, 'sell': 0, 'total': 0}
-
-        # Calcular VPIN si hay suficientes buckets
-        if len(state['buckets']) >= self.num_buckets:
-            return self._calculate_vpin(state['buckets'])
-
-        return None
-
-    def _classify_trade(self, trade_price: float, mid_price: float,
-                       prev_mid: float) -> str:
-        """
-        Lee-Ready algorithm simplificado.
+            price: Precio del trade
+            volume: Volumen del trade
+            bid: Best bid (opcional)
+            ask: Best ask (opcional)
 
         Returns:
             'BUY' o 'SELL'
         """
-        # Tick test
-        if trade_price > mid_price:
+        if bid is not None and ask is not None and bid > 0 and ask > 0:
+            mid = (bid + ask) / 2.0
+            if price > mid:
+                self.last_price[symbol] = price
+                return 'BUY'
+            elif price < mid:
+                self.last_price[symbol] = price
+                return 'SELL'
+
+        # Tick test: comparar con precio previo
+        prev_price = self.last_price.get(symbol, price)
+        self.last_price[symbol] = price
+
+        if price > prev_price:
             return 'BUY'
-        elif trade_price < mid_price:
+        elif price < prev_price:
             return 'SELL'
         else:
-            # Zero-tick test
-            if trade_price > prev_mid:
-                return 'BUY'
-            elif trade_price < prev_mid:
-                return 'SELL'
-            else:
-                return 'BUY'  # Default en empate
+            # Si no hay movimiento, asumir distribución 50/50 (neutral)
+            return 'BUY' if np.random.rand() > 0.5 else 'SELL'
 
-    def _calculate_vpin(self, buckets: deque) -> float:
+    def update(self, symbol: str, trades: List[Dict]) -> Optional[float]:
         """
-        VPIN = Σ|V_buy - V_sell| / ΣV_total
-        """
-        imbalance_sum = sum(abs(b['buy'] - b['sell']) for b in buckets)
-        total_volume = sum(b['total'] for b in buckets)
+        Actualiza VPIN con nuevos trades.
 
-        if total_volume == 0:
-            return 0.0
-
-        vpin = imbalance_sum / total_volume
-        return min(vpin, 1.0)
-
-    def get_vpin(self, symbol: str) -> Optional[float]:
-        """Get VPIN actual de un símbolo."""
-        if symbol not in self.symbols_state:
-            return None
-
-        state = self.symbols_state[symbol]
-        if len(state['buckets']) < self.num_buckets:
-            return None
-
-        return self._calculate_vpin(state['buckets'])
-
-    def get_score(self, symbol: str) -> float:
-        """
-        Convertir VPIN a score [0-1] donde 1 = mejor (bajo VPIN).
+        Args:
+            trades: Lista de trades [{price, volume, bid, ask, timestamp}, ...]
 
         Returns:
-            1.0 si VPIN bajo (bueno), 0.0 si VPIN alto (malo)
+            VPIN actual [0-1] o None si no hay suficientes buckets
         """
-        vpin = self.get_vpin(symbol)
-        if vpin is None:
-            return 0.5  # Neutral sin datos
+        if symbol not in self.buckets:
+            self.buckets[symbol] = deque(maxlen=self.window_buckets)
+            self.current_bucket[symbol] = {'buy_vol': 0.0, 'sell_vol': 0.0, 'current_vol': 0.0}
 
-        # Invertir: VPIN alto → score bajo
-        if vpin < self.threshold_low:
-            return 1.0
-        elif vpin > self.threshold_high:
-            return 0.0
+        for trade in trades:
+            price = trade['price']
+            volume = trade['volume']
+            bid = trade.get('bid')
+            ask = trade.get('ask')
+
+            # Clasificar trade
+            side = self.classify_trade(symbol, price, volume, bid, ask)
+
+            # Acumular en bucket actual
+            bucket = self.current_bucket[symbol]
+            bucket['current_vol'] += volume
+            if side == 'BUY':
+                bucket['buy_vol'] += volume
+            else:
+                bucket['sell_vol'] += volume
+
+            # Si bucket lleno, cerrarlo y crear uno nuevo
+            if bucket['current_vol'] >= self.bucket_volume:
+                self.buckets[symbol].append({
+                    'buy_vol': bucket['buy_vol'],
+                    'sell_vol': bucket['sell_vol'],
+                    'total_vol': bucket['current_vol']
+                })
+                self.current_bucket[symbol] = {'buy_vol': 0.0, 'sell_vol': 0.0, 'current_vol': 0.0}
+
+        return self.calculate_vpin(symbol)
+
+    def calculate_vpin(self, symbol: str) -> Optional[float]:
+        """
+        Calcula VPIN actual en ventana deslizante.
+
+        VPIN = Σ|V_buy - V_sell| / ΣV_total
+
+        Returns:
+            VPIN [0-1] o None si no hay suficientes buckets
+        """
+        if symbol not in self.buckets or len(self.buckets[symbol]) < self.window_buckets:
+            return None
+
+        buckets_list = list(self.buckets[symbol])
+        total_imbalance = sum(abs(b['buy_vol'] - b['sell_vol']) for b in buckets_list)
+        total_volume = sum(b['total_vol'] for b in buckets_list)
+
+        if total_volume == 0:
+            return None
+
+        vpin = total_imbalance / total_volume
+        return min(vpin, 1.0)  # Cap en 1.0
+
+    def get_vpin(self, symbol: str) -> float:
+        """
+        Obtiene VPIN actual (o valor por defecto si no disponible).
+
+        Returns:
+            VPIN [0-1], default 0.4 si no hay datos suficientes
+        """
+        vpin = self.calculate_vpin(symbol)
+        return vpin if vpin is not None else 0.4  # Default neutral
+
+    def interpret_vpin(self, vpin: float) -> str:
+        """
+        Interpreta nivel de VPIN.
+
+        Returns:
+            'CLEAN' (<0.30), 'MODERATE' (0.30-0.50), 'TOXIC' (>0.50)
+        """
+        if vpin < 0.30:
+            return 'CLEAN'
+        elif vpin < 0.50:
+            return 'MODERATE'
         else:
-            # Interpolación lineal
-            return 1.0 - (vpin - self.threshold_low) / (self.threshold_high - self.threshold_low)
+            return 'TOXIC'

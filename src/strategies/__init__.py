@@ -14,7 +14,7 @@ from .correlation_divergence import CorrelationDivergence
 from .iceberg_detection import IcebergDetection
 from .htf_ltf_liquidity import HTFLTFLiquidity
 from .fvg_institutional import FVGInstitutional
-from .idp_inducement_distribution import IDPInducementDistribution
+from .idp_inducement_distribution import IDPInducement
 from .order_block_institutional import OrderBlockInstitutional
 from .ofi_refinement import OFIRefinement
 
@@ -47,7 +47,7 @@ __all__ = [
     'IcebergDetection',
     'HTFLTFLiquidity',
     'FVGInstitutional',
-    'IDPInducementDistribution',
+    'IDPInducement',
     'OrderBlockInstitutional',
     'OFIRefinement',
     # ELITE 2024-2025 strategies

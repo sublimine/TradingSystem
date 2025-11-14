@@ -1,31 +1,25 @@
 """
-Microstructure Engine - Institutional Market Microstructure Analysis
+Microstructure package - Volume-based market microstructure analysis.
 
-MANDATO 15: Implementación real de análisis de microestructura.
-
-Componentes:
+Components:
 - VPINEstimator: Volume-Synchronized Probability of Informed Trading
-- OrderFlowAnalyzer: Order Flow Imbalance (OFI) analysis
-- Level2DepthMonitor: Book depth and liquidity analysis
-- SpoofingDetector: Detection of manipulation patterns
-- MicrostructureEngine: Main orchestrator
+- OrderFlowAnalyzer: Order Flow Imbalance calculation
+- MicrostructureEngine: Composite microstructure scoring
 
-Research basis:
-- Easley, López de Prado, O'Hara (2012): Flow Toxicity and Liquidity
-- Lee & Ready (1991): Inferring Trade Direction
-- Cartea, Jaimungal, Penalva (2015): Algorithmic and HFT
+Usage:
+    from src.microstructure import MicrostructureEngine
+
+    engine = MicrostructureEngine(config)
+    engine.update_trades(symbol, trades)
+    score = engine.get_microstructure_score(symbol)
 """
 
 from .vpin import VPINEstimator
 from .order_flow import OrderFlowAnalyzer
-from .depth import Level2DepthMonitor
-from .spoofing import SpoofingDetector
 from .engine import MicrostructureEngine
 
 __all__ = [
     'VPINEstimator',
     'OrderFlowAnalyzer',
-    'Level2DepthMonitor',
-    'SpoofingDetector',
-    'MicrostructureEngine'
+    'MicrostructureEngine',
 ]

@@ -10,7 +10,12 @@ Architecture:
 - ml_adaptive_engine: Machine Learning adaptive engine for continuous learning
 """
 
-from .mtf_data_manager import MultiTimeframeDataManager
+# MTF Data Manager requires MT5 (optional dependency)
+try:
+    from .mtf_data_manager import MultiTimeframeDataManager
+except ImportError:
+    MultiTimeframeDataManager = None
+
 from .risk_manager import (
     InstitutionalRiskManager,
     QualityScorer,

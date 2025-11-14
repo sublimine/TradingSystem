@@ -1,159 +1,275 @@
 """
-MultiFrame Orchestrator - Main Coordinator
+MultiFrame Orchestrator - Multi-Timeframe Synthesis
 
-MANDATO 15: Orquestador de análisis multi-timeframe.
+Orquesta análisis HTF + MTF para producir:
+- multiframe_score [0-1]: Alineación temporal completa
+- mtf_confluence: Confluencia específica de timeframes
+- structure_alignment: Alineación estructural
 
-Combina HTF/MTF/LTF en multiframe_score [0-1].
+Score alto → HTF y MTF alineados, contexto favorable
+Score bajo → Conflicto temporal, evitar operación
 """
 
+import numpy as np
 import pandas as pd
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 import logging
-from .htf_structure import HTFStructureAnalyzer, Trend
-from .mtf_context import MTFContextValidator
-from .ltf_timing import LTFTimingExecutor
+
+from .htf_analyzer import HTFStructureAnalyzer
+from .mtf_validator import MTFContextValidator
 
 logger = logging.getLogger(__name__)
 
 
 class MultiFrameOrchestrator:
-    """Orquesta análisis HTF/MTF/LTF."""
+    """
+    Orquestador de análisis multi-temporal.
+
+    Combina:
+    - HTF trend direction y strength
+    - MTF context validation
+    - Structure alignment
+
+    Output: multiframe_score [0-1] para QualityScorer
+    """
 
     def __init__(self, config: Dict):
-        self.htf = HTFStructureAnalyzer(config.get('htf', {}))
-        self.mtf = MTFContextValidator(config.get('mtf', {}))
-        self.ltf = LTFTimingExecutor(config.get('ltf', {}))
-
-        # Pesos agregación
-        weights = config.get('aggregation_weights', {})
-        self.weight_htf = weights.get('htf', 0.50)
-        self.weight_mtf = weights.get('mtf', 0.30)
-        self.weight_ltf = weights.get('ltf', 0.20)
-
-        logger.info(f"MultiFrameOrchestrator init: weights HTF={self.weight_htf}, "
-                   f"MTF={self.weight_mtf}, LTF={self.weight_ltf}")
-
-    def analyze(self, symbol: str, data_by_tf: Dict[str, pd.DataFrame]) -> Dict:
         """
-        Analizar multi-timeframe.
+        Inicializar orchestrator.
+
+        Args:
+            config: {
+                'htf': {...},  # Config para HTFStructureAnalyzer
+                'mtf': {...},  # Config para MTFContextValidator
+                'weights': {
+                    'htf_trend': float,  # default: 0.50
+                    'mtf_alignment': float,  # default: 0.30
+                    'structure_alignment': float  # default: 0.20
+                }
+            }
+        """
+        htf_config = config.get('htf', {
+            'lookback_swings': 10,
+            'range_threshold': 0.3
+        })
+        mtf_config = config.get('mtf', {
+            'poi_lookback': 20,
+            'min_poi_size': 5
+        })
+
+        self.htf_analyzer = HTFStructureAnalyzer(htf_config)
+        self.mtf_validator = MTFContextValidator(mtf_config)
+
+        # Pesos institucionales
+        weights = config.get('weights', {})
+        self.weight_htf = weights.get('htf_trend', 0.50)
+        self.weight_mtf = weights.get('mtf_alignment', 0.30)
+        self.weight_structure = weights.get('structure_alignment', 0.20)
+
+        logger.info(f"MultiFrameOrchestrator initialized: "
+                   f"htf={self.weight_htf}, mtf={self.weight_mtf}, struct={self.weight_structure}")
+
+    def analyze_multiframe(self, symbol: str, htf_ohlcv: pd.DataFrame,
+                          mtf_ohlcv: pd.DataFrame, current_price: float,
+                          signal_direction: Optional[int] = None) -> Dict:
+        """
+        Analiza estructura multi-temporal completa.
 
         Args:
             symbol: Símbolo
-            data_by_tf: {
-                'H4': DataFrame,
-                'M15': DataFrame,
-                'M1': DataFrame
-            }
+            htf_ohlcv: OHLCV de HTF (H4 o D1)
+            mtf_ohlcv: OHLCV de MTF (M15 o M5)
+            current_price: Precio actual
+            signal_direction: Dirección de señal propuesta (1=long, -1=short, None=neutral)
 
         Returns:
             {
                 'multiframe_score': float [0-1],
-                'htf_analysis': Dict,
-                'mtf_analysis': Dict,
-                'ltf_analysis': Dict,
-                'pois': List[float]  # Points of Interest
+                'mtf_confluence': float [0-1],
+                'structure_alignment': float [0-1],
+                'htf_structure': Dict,
+                'mtf_context': Dict,
+                'conflicts': List[str],  # Conflictos detectados
+                'recommendation': str  # 'APPROVE', 'REJECT', 'CAUTION'
             }
         """
-        # Analizar HTF
-        htf_data = data_by_tf.get('H4')
-        if htf_data is None:
-            htf_data = data_by_tf.get('D1')
-        if htf_data is None or len(htf_data) < 20:
-            return self._empty_result()
+        # 1. Analizar HTF structure
+        htf_structure = self.htf_analyzer.analyze_structure(symbol, htf_ohlcv)
+        htf_bias = self.htf_analyzer.get_trend_bias(symbol)
 
-        htf_result = self.htf.analyze(symbol, htf_data)
-
-        # Analizar MTF
-        mtf_data = data_by_tf.get('M15')
-        if mtf_data is None:
-            mtf_data = data_by_tf.get('M5')
-        if mtf_data is not None and len(mtf_data) >= 20:
-            mtf_result = self.mtf.analyze(symbol, mtf_data, htf_result['trend'].value)
-        else:
-            mtf_result = {'supply_zones': [], 'demand_zones': [], 'confluence': 0.5}
-
-        # Analizar LTF
-        ltf_data = data_by_tf.get('M1')
-        if ltf_data is not None and len(ltf_data) >= 3:
-            ltf_result = self.ltf.analyze(symbol, ltf_data)
-        else:
-            ltf_result = {'fvgs': [], 'entry_triggers': [], 'timing_score': 0.5}
-
-        # Calcular multiframe_score
-        mf_score = self._calculate_multiframe_score(htf_result, mtf_result, ltf_result)
-
-        # Extraer POIs
-        pois = self._extract_pois(htf_result, mtf_result, ltf_result)
-
-        return {
-            'multiframe_score': mf_score,
-            'htf_analysis': htf_result,
-            'mtf_analysis': mtf_result,
-            'ltf_analysis': ltf_result,
-            'pois': pois
-        }
-
-    def _calculate_multiframe_score(self, htf: Dict, mtf: Dict, ltf: Dict) -> float:
-        """
-        Calcular score agregado.
-
-        HTF: trend_strength
-        MTF: confluence
-        LTF: timing_score
-        """
-        htf_score = htf['trend_strength']
-        mtf_score = mtf['confluence']
-        ltf_score = ltf['timing_score']
-
-        mf_score = (
-            self.weight_htf * htf_score +
-            self.weight_mtf * mtf_score +
-            self.weight_ltf * ltf_score
+        # 2. Validar MTF context
+        mtf_context = self.mtf_validator.validate_context(
+            symbol, mtf_ohlcv, htf_bias, current_price
         )
 
-        return max(0.0, min(1.0, mf_score))
+        # 3. Calcular scores componentes
+        htf_score = self._calculate_htf_score(htf_structure, signal_direction)
+        mtf_alignment = mtf_context['mtf_alignment']
+        structure_alignment = self._calculate_structure_alignment(
+            htf_structure, mtf_context, current_price
+        )
 
-    def _extract_pois(self, htf: Dict, mtf: Dict, ltf: Dict) -> list:
-        """Extract Points of Interest."""
-        pois = []
+        # 4. Score composite
+        multiframe_score = (
+            self.weight_htf * htf_score +
+            self.weight_mtf * mtf_alignment +
+            self.weight_structure * structure_alignment
+        )
 
-        # HTF key levels
-        pois.extend(htf['key_levels'])
+        # 5. Detectar conflictos
+        conflicts = self._detect_conflicts(htf_structure, mtf_context, signal_direction)
 
-        # MTF zones
-        for zone in mtf['supply_zones']:
-            pois.append((zone['high'] + zone['low']) / 2)
-        for zone in mtf['demand_zones']:
-            pois.append((zone['high'] + zone['low']) / 2)
+        # 6. Recomendación
+        recommendation = self._make_recommendation(multiframe_score, conflicts)
 
-        # Dedup y sort
-        if pois:
-            pois = sorted(list(set(pois)))
-
-        return pois[:10]  # Top 10 POIs
-
-    def _empty_result(self) -> Dict:
         return {
-            'multiframe_score': 0.5,
-            'htf_analysis': {},
-            'mtf_analysis': {},
-            'ltf_analysis': {},
-            'pois': []
+            'multiframe_score': round(multiframe_score, 4),
+            'mtf_confluence': round(mtf_alignment, 4),
+            'structure_alignment': round(structure_alignment, 4),
+            'htf_structure': htf_structure,
+            'mtf_context': mtf_context,
+            'conflicts': conflicts,
+            'recommendation': recommendation
         }
 
-    def get_multiframe_score(self, symbol: str) -> float:
+    def _calculate_htf_score(self, htf_structure: Dict,
+                            signal_direction: Optional[int]) -> float:
         """
-        Get multiframe_score de cache o recalcular.
+        Calcula score de HTF.
+
+        Score alto si:
+        - HTF trend strength alto
+        - Signal direction alineado con HTF (si se proporciona)
+        """
+        trend_strength = htf_structure['trend_strength']
+
+        # Si hay dirección de señal, verificar alineación
+        if signal_direction is not None:
+            trend_direction = htf_structure['trend_direction']
+            if trend_direction == 'BULLISH' and signal_direction == 1:
+                alignment_bonus = 0.3
+            elif trend_direction == 'BEARISH' and signal_direction == -1:
+                alignment_bonus = 0.3
+            elif trend_direction == 'RANGE':
+                alignment_bonus = 0.0
+            else:
+                # Conflicto: señal contra HTF
+                alignment_bonus = -0.5
+
+            htf_score = trend_strength + alignment_bonus
+        else:
+            htf_score = trend_strength
+
+        return np.clip(htf_score, 0.0, 1.0)
+
+    def _calculate_structure_alignment(self, htf_structure: Dict,
+                                       mtf_context: Dict, current_price: float) -> float:
+        """
+        Calcula alineación estructural (proximidad a niveles clave).
+
+        Score alto si:
+        - Cerca de POI MTF
+        - Cerca de swing level HTF
+        """
+        # Componente 1: Distancia a POI (MTF)
+        poi_distance = mtf_context.get('poi_distance_normalized', 0.5)
+        poi_score = 1.0 - poi_distance  # Invertir: cerca = score alto
+
+        # Componente 2: Distancia a swing level (HTF)
+        swing_score = 0.5  # Default neutral
+        swing_high = htf_structure.get('current_swing_high')
+        swing_low = htf_structure.get('current_swing_low')
+
+        if swing_high and swing_low:
+            swing_range = swing_high - swing_low
+            if swing_range > 0:
+                # Distancia al nivel más cercano
+                dist_to_high = abs(current_price - swing_high)
+                dist_to_low = abs(current_price - swing_low)
+                min_dist = min(dist_to_high, dist_to_low)
+
+                # Normalizar
+                dist_normalized = min_dist / swing_range
+                swing_score = 1.0 - min(dist_normalized, 1.0)
+
+        # Promediar componentes
+        structure_alignment = (poi_score * 0.6 + swing_score * 0.4)
+        return structure_alignment
+
+    def _detect_conflicts(self, htf_structure: Dict, mtf_context: Dict,
+                         signal_direction: Optional[int]) -> List[str]:
+        """
+        Detecta conflictos entre timeframes.
 
         Returns:
-            Score [0-1]
+            Lista de conflictos detectados
         """
-        # Intentar obtener de cache de HTF
-        htf_cached = self.htf.get_cached(symbol)
-        mtf_cached = self.mtf.get_cached(symbol)
-        ltf_cached = self.ltf.get_cached(symbol)
+        conflicts = []
 
-        if htf_cached and mtf_cached and ltf_cached:
-            return self._calculate_multiframe_score(htf_cached, mtf_cached, ltf_cached)
+        # Conflicto 1: MTF alignment bajo con HTF
+        if mtf_context['mtf_alignment'] < 0.3:
+            conflicts.append("MTF_HTF_MISALIGNMENT")
 
-        return 0.5  # Default sin datos
+        # Conflicto 2: Señal contra HTF trend
+        if signal_direction is not None:
+            trend = htf_structure['trend_direction']
+            if (trend == 'BULLISH' and signal_direction == -1) or \
+               (trend == 'BEARISH' and signal_direction == 1):
+                conflicts.append("SIGNAL_AGAINST_HTF_TREND")
+
+        # Conflicto 3: No hay POIs válidos en MTF
+        if not mtf_context.get('context_valid', False):
+            conflicts.append("MTF_CONTEXT_INVALID")
+
+        return conflicts
+
+    def _make_recommendation(self, multiframe_score: float,
+                            conflicts: List[str]) -> str:
+        """
+        Genera recomendación basada en score y conflictos.
+
+        Returns:
+            'APPROVE', 'CAUTION', 'REJECT'
+        """
+        # Rechazo automático si hay conflicto crítico
+        if "SIGNAL_AGAINST_HTF_TREND" in conflicts:
+            return 'REJECT'
+
+        # Por score
+        if multiframe_score >= 0.7:
+            return 'APPROVE'
+        elif multiframe_score >= 0.4:
+            return 'CAUTION'
+        else:
+            return 'REJECT'
+
+    def get_multiframe_score(self, symbol: str, htf_ohlcv: pd.DataFrame,
+                            mtf_ohlcv: pd.DataFrame, current_price: float) -> float:
+        """
+        Obtiene solo el score composite [0-1].
+
+        Returns:
+            multiframe_score [0-1]
+        """
+        result = self.analyze_multiframe(symbol, htf_ohlcv, mtf_ohlcv, current_price)
+        return result['multiframe_score']
+
+    def validate_signal_direction(self, symbol: str, signal_direction: int,
+                                  htf_ohlcv: pd.DataFrame) -> bool:
+        """
+        Valida rápidamente si dirección de señal es compatible con HTF.
+
+        Returns:
+            True si compatible, False si conflicto
+        """
+        htf_structure = self.htf_analyzer.analyze_structure(symbol, htf_ohlcv)
+        trend = htf_structure['trend_direction']
+
+        if trend == 'RANGE':
+            return True  # En rango, cualquier dirección es válida
+
+        if (trend == 'BULLISH' and signal_direction == 1) or \
+           (trend == 'BEARISH' and signal_direction == -1):
+            return True
+
+        return False

@@ -1,5 +1,5 @@
 """
-OFI Refinement Strategy - Institutional Implementation
+OFI Refinement Strategy - Institutional Implementation - MANDATO 16 INTEGRATED
 
 Order Flow Imbalance (OFI) strategy based on microstructure analysis
 of bid-ask volume dynamics to detect directional pressure.
@@ -27,6 +27,7 @@ from collections import deque
 from datetime import datetime, timedelta
 
 from .strategy_base import StrategyBase, Signal
+from .metadata_builder import build_enriched_metadata
 
 class OFIRefinement(StrategyBase):
     """
@@ -59,6 +60,10 @@ class OFIRefinement(StrategyBase):
         self.stop_loss_atr_multiplier = config.get('stop_loss_atr_multiplier', 2.5)
         self.take_profit_atr_multiplier = config.get('take_profit_atr_multiplier', 4.0)
         
+        # MANDATO 16: Motores institucionales (opcionales para retrocompatibilidad)
+        self.microstructure_engine = config.get('microstructure_engine')
+        self.multiframe_orchestrator = config.get('multiframe_orchestrator')
+
         # State tracking
         # FIX BUG #12: Use deque with maxlen to prevent memory leak
         self.ofi_history = deque(maxlen=5000)
@@ -69,6 +74,12 @@ class OFIRefinement(StrategyBase):
         self.logger.info(f"OFI Refinement initialized with threshold={self.z_entry_threshold}Ïƒ, "
                         f"window={self.window_ticks} ticks")
         self.name = 'ofi_refinement'
+
+
+        if self.microstructure_engine:
+            self.logger.info("✓ MicrostructureEngine integrated")
+        if self.multiframe_orchestrator:
+            self.logger.info("✓ MultiFrameOrchestrator integrated")
     
     def calculate_ofi(self, data: pd.DataFrame) -> pd.Series:
         """
@@ -271,19 +282,22 @@ class OFIRefinement(StrategyBase):
         # STEP 6: Generate signal
         current_price = data['close'].iloc[-1]
         atr = self.calculate_atr(data)
-        
+
+        # Determine signal direction
         if z_score > 0:
             direction = 'long'
+            signal_direction = 1
             stop_loss = current_price - (atr * self.stop_loss_atr_multiplier)
             take_profit = current_price + (atr * self.take_profit_atr_multiplier)
         else:
             direction = 'short'
+            signal_direction = -1
             stop_loss = current_price + (atr * self.stop_loss_atr_multiplier)
             take_profit = current_price - (atr * self.take_profit_atr_multiplier)
-        
+
         # Calculate confidence based on z-score magnitude
         confidence = min(0.95, 0.65 + (abs(z_score) - self.z_entry_threshold) * 0.15)
-        
+
         # Determine sizing level (1-5 based on signal strength)
         if abs(z_score) > 3.0:
             sizing_level = 5
@@ -293,7 +307,38 @@ class OFIRefinement(StrategyBase):
             sizing_level = 3
         else:
             sizing_level = 2
-        
+
+        # MANDATO 16: Build enriched metadata
+        # Signal strength: derivar de z_score normalizado
+        # z_score >= z_entry_threshold → signal_strength ∈ [0,1]
+        signal_strength = min((abs(z_score) - self.z_entry_threshold) / 2.0, 1.0)
+        signal_strength = max(signal_strength, 0.0)
+
+        symbol = data.attrs.get('symbol', 'UNKNOWN')
+
+        base_metadata = {
+            'ofi_value': float(current_ofi),
+            'ofi_z_score': float(z_score),
+            'vpin': float(vpin) if vpin else None,
+            'price_change_20p': float(price_change_pct),
+            'atr': float(atr),
+            'risk_reward_ratio': self.take_profit_atr_multiplier / self.stop_loss_atr_multiplier,
+            'strategy_version': '2.0-MANDATO16'
+        }
+
+        metadata = build_enriched_metadata(
+            base_metadata=base_metadata,
+            symbol=symbol,
+            current_price=current_price,
+            signal_direction=signal_direction,
+            market_data=data,
+            microstructure_engine=self.microstructure_engine,
+            multiframe_orchestrator=self.multiframe_orchestrator,
+            signal_strength_value=signal_strength,
+            structure_reference_price=current_price,  # No hay nivel estructural específico
+            structure_reference_size=atr  # Usar ATR como proxy de tamaño
+        )
+
         signal = Signal(
             strategy_name=self.name,
             direction=direction,
@@ -302,22 +347,15 @@ class OFIRefinement(StrategyBase):
             take_profit=take_profit,
             confidence=confidence,
             sizing_level=sizing_level,
-            metadata={
-                'ofi_value': float(current_ofi),
-                'ofi_z_score': float(z_score),
-                'vpin': float(vpin) if vpin else None,
-                'price_change_20p': float(price_change_pct),
-                'atr': float(atr),
-                'risk_reward_ratio': self.take_profit_atr_multiplier / self.stop_loss_atr_multiplier
-            }
+            metadata=metadata
         )
-        
+
         self.logger.info(f"Signal generated: {direction.upper()} @ {current_price:.5f}, "
                         f"SL={stop_loss:.5f}, TP={take_profit:.5f}, "
                         f"confidence={confidence:.2f}, size={sizing_level}")
-        
+
         # Update state
         self.last_signal_time = datetime.now()
         self.ofi_history.append({'timestamp': datetime.now(), 'ofi': current_ofi, 'z_score': z_score})
-        
+
         return signal

@@ -1,15 +1,18 @@
 """
-Order Flow Analyzer - OFI and Flow Intensity
+Order Flow Analyzer - Análisis de presión compradora/vendedora
 
-MANDATO 15: Análisis institucional de order flow.
+Calcula Order Flow Imbalance (OFI) en ventana deslizante temporal.
+OFI positivo → presión compradora neta.
+OFI negativo → presión vendedora neta.
 
-Mide presión compradora vs vendedora en ventana deslizante.
-OFI normalizado [-1, +1]: negativo = presión vendedora, positivo = presión compradora.
+Implementación basada en investigación de flujo de órdenes institucional.
 """
 
 import numpy as np
+import pandas as pd
+from typing import Dict, List, Optional
 from collections import deque
-from typing import Dict, Optional
+from datetime import datetime, timedelta
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,122 +20,145 @@ logger = logging.getLogger(__name__)
 
 class OrderFlowAnalyzer:
     """
-    Analiza Order Flow Imbalance (OFI) y cambios de régimen.
+    Analiza desequilibrio de flujo de órdenes en ventana temporal.
+
+    OFI (Order Flow Imbalance):
+    OFI_t = (V_buy - V_sell) / (V_buy + V_sell)
+
+    Valores:
+    - OFI ∈ [-1, 1]
+    - OFI > 0.3 → Presión compradora fuerte
+    - OFI < -0.3 → Presión vendedora fuerte
+    - -0.3 ≤ OFI ≤ 0.3 → Flujo balanceado
     """
 
     def __init__(self, config: Dict):
         """
+        Inicializar analizador de order flow.
+
         Args:
             config: {
-                'window_trades': Ventana de trades para OFI (típico 100),
-                'regime_threshold_sigma': Umbral en sigmas para cambio de régimen (típico 2.0)
+                'window_seconds': int - Ventana temporal para OFI (default: 60),
+                'min_trades': int - Mínimo de trades para cálculo válido (default: 5)
             }
         """
-        self.window_trades = config.get('window_trades', 100)
-        self.regime_threshold = config.get('regime_threshold_sigma', 2.0)
+        self.window_seconds = config.get('window_seconds', 60)
+        self.min_trades = config.get('min_trades', 5)
 
-        # Estado por símbolo
-        self.symbols_state: Dict[str, Dict] = {}
+        # Estado interno por símbolo
+        self.trade_history = {}  # {symbol: deque of {timestamp, side, volume}}
 
-        logger.info(f"OrderFlowAnalyzer init: window={self.window_trades}")
+        logger.info(f"OrderFlowAnalyzer initialized: window={self.window_seconds}s, "
+                   f"min_trades={self.min_trades}")
 
-    def update(self, symbol: str, side: str, volume: float):
+    def update(self, symbol: str, trades: List[Dict]):
         """
-        Actualizar con nuevo trade clasificado.
+        Actualiza historial de trades para OFI.
 
         Args:
-            symbol: Símbolo
-            side: 'BUY' o 'SELL'
-            volume: Volumen del trade
+            trades: Lista de trades [{timestamp, side, volume}, ...]
+                   side debe ser 'BUY' o 'SELL'
         """
-        if symbol not in self.symbols_state:
-            self.symbols_state[symbol] = {
-                'trades': deque(maxlen=self.window_trades),
-                'ofi_history': deque(maxlen=50)  # Para calcular mean/std
-            }
+        if symbol not in self.trade_history:
+            self.trade_history[symbol] = deque()
 
-        state = self.symbols_state[symbol]
+        # MANDATO 17: Use UTC timezone-aware datetime for backtest compatibility
+        from datetime import timezone
+        current_time = datetime.now(timezone.utc)
 
-        # Registrar trade con signo
-        signed_volume = volume if side == 'BUY' else -volume
-        state['trades'].append(signed_volume)
+        for trade in trades:
+            self.trade_history[symbol].append({
+                'timestamp': trade.get('timestamp', current_time),
+                'side': trade['side'],
+                'volume': trade['volume']
+            })
 
-        # Calcular OFI si hay suficiente historia
-        if len(state['trades']) >= self.window_trades:
-            ofi = self._calculate_ofi(state['trades'])
-            state['ofi_history'].append(ofi)
+        # Limpiar trades fuera de ventana
+        self._cleanup_old_trades(symbol, current_time)
 
-    def _calculate_ofi(self, trades: deque) -> float:
+    def _cleanup_old_trades(self, symbol: str, current_time: datetime):
+        """Elimina trades fuera de la ventana temporal."""
+        if symbol not in self.trade_history:
+            return
+
+        cutoff_time = current_time - timedelta(seconds=self.window_seconds)
+        history = self.trade_history[symbol]
+
+        while history and history[0]['timestamp'] < cutoff_time:
+            history.popleft()
+
+    def calculate_ofi(self, symbol: str) -> Optional[float]:
         """
-        OFI = (Σ buy_volume - Σ sell_volume) / Σ total_volume
+        Calcula Order Flow Imbalance actual.
+
+        OFI = (V_buy - V_sell) / (V_buy + V_sell)
 
         Returns:
-            OFI normalizado [-1, +1]
+            OFI ∈ [-1, 1] o None si no hay suficientes datos
         """
-        total_signed = sum(trades)
-        total_abs = sum(abs(t) for t in trades)
+        if symbol not in self.trade_history:
+            return None
 
-        if total_abs == 0:
+        history = list(self.trade_history[symbol])
+
+        if len(history) < self.min_trades:
+            return None
+
+        buy_volume = sum(t['volume'] for t in history if t['side'] == 'BUY')
+        sell_volume = sum(t['volume'] for t in history if t['side'] == 'SELL')
+
+        total_volume = buy_volume + sell_volume
+        if total_volume == 0:
             return 0.0
 
-        ofi = total_signed / total_abs
+        ofi = (buy_volume - sell_volume) / total_volume
         return np.clip(ofi, -1.0, 1.0)
 
-    def get_ofi(self, symbol: str) -> Optional[float]:
-        """Get OFI actual."""
-        if symbol not in self.symbols_state:
-            return None
-
-        state = self.symbols_state[symbol]
-        if len(state['trades']) < self.window_trades:
-            return None
-
-        return self._calculate_ofi(state['trades'])
-
-    def detect_regime_change(self, symbol: str) -> bool:
+    def get_ofi(self, symbol: str) -> float:
         """
-        Detectar cambio de régimen: OFI actual > threshold_sigma * std.
+        Obtiene OFI actual (o valor por defecto).
 
         Returns:
-            True si hay cambio significativo de régimen
+            OFI ∈ [-1, 1], default 0.0 si no hay datos
         """
-        if symbol not in self.symbols_state:
-            return False
+        ofi = self.calculate_ofi(symbol)
+        return ofi if ofi is not None else 0.0
 
-        state = self.symbols_state[symbol]
-        if len(state['ofi_history']) < 20:
-            return False
-
-        ofi_current = self.get_ofi(symbol)
-        if ofi_current is None:
-            return False
-
-        # Calcular desviación histórica
-        ofi_mean = np.mean(state['ofi_history'])
-        ofi_std = np.std(state['ofi_history'])
-
-        if ofi_std == 0:
-            return False
-
-        # Detectar si OFI actual está a >threshold sigmas de la media
-        z_score = abs(ofi_current - ofi_mean) / ofi_std
-        return z_score > self.regime_threshold
-
-    def get_score(self, symbol: str) -> float:
+    def interpret_ofi(self, ofi: float) -> str:
         """
-        Convertir OFI a score [0-1].
-
-        OFI balanceado (cerca de 0) → score alto (buena calidad).
-        OFI extremo (cerca de ±1) → score bajo (presión unilateral).
+        Interpreta nivel de OFI.
 
         Returns:
-            Score [0-1] donde 1 = mejor
+            'STRONG_BUY' (>0.3), 'BALANCED' (±0.3), 'STRONG_SELL' (<-0.3)
+        """
+        if ofi > 0.3:
+            return 'STRONG_BUY'
+        elif ofi < -0.3:
+            return 'STRONG_SELL'
+        else:
+            return 'BALANCED'
+
+    def get_flow_strength(self, symbol: str) -> float:
+        """
+        Obtiene magnitud de flujo (sin dirección).
+
+        Returns:
+            Strength [0-1]
         """
         ofi = self.get_ofi(symbol)
-        if ofi is None:
-            return 0.5
+        return abs(ofi)
 
-        # Invertir: OFI extremo → score bajo
-        # |OFI| = 0 → score = 1.0
-        # |OFI| = 1 → score = 0.0
-        return 1.0 - abs(ofi)
+    def get_flow_direction(self, symbol: str) -> int:
+        """
+        Obtiene dirección de flujo.
+
+        Returns:
+            1 (buy pressure), -1 (sell pressure), 0 (neutral)
+        """
+        ofi = self.get_ofi(symbol)
+        if ofi > 0.1:
+            return 1
+        elif ofi < -0.1:
+            return -1
+        else:
+            return 0
