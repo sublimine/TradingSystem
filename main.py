@@ -40,12 +40,22 @@ from src.core.brain import InstitutionalBrain
 from src.core.ml_adaptive_engine import MLAdaptiveEngine
 from src.core.ml_supervisor import MLSupervisor
 from src.core.risk_manager import RiskManager
-from src.core.position_manager import PositionManager
+from src.core.position_manager import MarketStructurePositionManager
 from src.core.regime_detector import RegimeDetector
 from src.core.mtf_manager import MultiTimeframeManager
 
 # Import reporting
 from src.reporting.institutional_reports import InstitutionalReportingSystem
+
+# Import reporting (MANDATO 12)
+try:
+    from src.reporting.event_logger import ExecutionEventLogger
+    from src.reporting.db import ReportingDatabase
+    REPORTING_AVAILABLE = True
+except ImportError:
+    REPORTING_AVAILABLE = False
+    ExecutionEventLogger = None
+    ReportingDatabase = None
 
 # Import strategy orchestrator
 from src.strategy_orchestrator import StrategyOrchestrator
@@ -93,21 +103,48 @@ class EliteTradingSystem:
         # Initialize core components
         logger.info("Initializing core components...")
 
+        # MANDATO 12: Initialize Institutional Reporting System (FASE 2)
+        self.event_logger = None
+        self.reporting_db = None
+        reporting_enabled = self.config.get('reporting', {}).get('institutional_enabled', True)
+
+        if REPORTING_AVAILABLE and reporting_enabled:
+            try:
+                logger.info("Initializing institutional reporting (MANDATO 12)...")
+                self.reporting_db = ReportingDatabase(config_path='config/reporting_db.yaml')
+                self.event_logger = ExecutionEventLogger(
+                    db=self.reporting_db,
+                    buffer_size=100
+                )
+                logger.info("✓✓ ExecutionEventLogger initialized (Postgres + fallback)")
+            except Exception as e:
+                logger.warning(f"⚠️  Reporting system initialization failed: {e}")
+                logger.warning("⚠️  Continuing without institutional reporting")
+                self.event_logger = None
+                self.reporting_db = None
+        else:
+            logger.info("⚠️  Institutional reporting disabled in config")
+
         # 1. Risk Manager
         self.risk_manager = RiskManager(self.config)
         logger.info("✓ Risk Manager initialized")
 
-        # 2. Position Manager
-        self.position_manager = PositionManager(self.config)
-        logger.info("✓ Position Manager initialized")
-
-        # 3. Regime Detector
+        # 2. Regime Detector
         self.regime_detector = RegimeDetector(self.config)
         logger.info("✓ Regime Detector initialized")
 
-        # 4. Multi-Timeframe Manager
+        # 3. Multi-Timeframe Manager
         self.mtf_manager = MultiTimeframeManager(self.config)
         logger.info("✓ Multi-Timeframe Manager initialized")
+
+        # 4. Position Manager (MANDATO 12: with event_logger)
+        position_config = self.config.get('position_management', {})
+        self.position_manager = MarketStructurePositionManager(
+            config=position_config,
+            mtf_manager=self.mtf_manager,
+            event_logger=self.event_logger  # MANDATO 12
+        )
+        logger.info("✓ Position Manager initialized (with institutional reporting)")
 
         # 5. ML Adaptive Engine (AUTO-INITIALIZED)
         self.ml_engine = None
