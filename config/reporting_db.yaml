@@ -1,0 +1,53 @@
+# Configuración de Base de Datos - Reporting Institucional
+# Proyecto: SUBLIMINE TradingSystem
+# Mandato: MANDATO 12
+# Fecha: 2025-11-14
+
+# IMPORTANTE: NO commitear credenciales reales
+# Usar variables de entorno en producción
+
+database:
+  # Host de Postgres
+  host: "${REPORTING_DB_HOST:-localhost}"
+
+  # Puerto
+  port: "${REPORTING_DB_PORT:-5432}"
+
+  # Nombre de base de datos
+  dbname: "${REPORTING_DB_NAME:-sublimine_reporting}"
+
+  # Usuario
+  user: "${REPORTING_DB_USER:-sublimine_user}"
+
+  # Password (DEBE venir de variable de entorno en producción)
+  password: "${REPORTING_DB_PASSWORD:-changeme}"
+
+  # Schema
+  schema: "public"
+
+  # Pool de conexiones
+  pool_size: 5
+  max_overflow: 10
+
+  # Timeout (segundos)
+  connection_timeout: 10
+
+  # Retry strategy
+  max_retries: 3
+  retry_delay: 2  # segundos
+
+# Fallback a archivos si DB no disponible
+fallback:
+  enabled: true
+  directory: "reports/raw"
+  format: "jsonl"  # jsonl, csv, parquet
+
+# Buffer para batch inserts (performance)
+buffer:
+  size: 100  # eventos en buffer antes de flush
+  flush_interval: 60  # segundos (flush automático)
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "logs/reporting_db.log"

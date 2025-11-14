@@ -8,7 +8,9 @@ Registra cada trade con trazabilidad completa:
 - SL/TP estructurales
 - Microestructura + multiframe scores
 
-Mandato: MANDATO 11
+Integración con Postgres para persistencia institucional.
+
+Mandato: MANDATO 12 (actualizado con integración DB)
 Fecha: 2025-11-14
 """
 
@@ -17,6 +19,14 @@ from datetime import datetime
 from typing import Optional, List, Dict
 import logging
 import json
+
+# Import DB layer
+try:
+    from .db import ReportingDatabase
+    DB_AVAILABLE = True
+except ImportError:
+    DB_AVAILABLE = False
+    ReportingDatabase = None
 
 
 @dataclass
@@ -90,16 +100,33 @@ class ExecutionEventLogger:
     NO bloquea el loop de trading (batch inserts).
     """
 
-    def __init__(self, db_connection=None, buffer_size: int = 100):
+    def __init__(self, db: Optional['ReportingDatabase'] = None,
+                 config_path: str = "config/reporting_db.yaml",
+                 buffer_size: int = 100):
         """
         Args:
-            db_connection: Conexión a Postgres (None = solo buffer)
+            db: ReportingDatabase instance (None = auto-create from config)
+            config_path: Ruta al archivo de configuración DB
             buffer_size: Eventos en buffer antes de flush
         """
-        self.db = db_connection
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+        # Initialize DB connection
+        if db is not None:
+            self.db = db
+        elif DB_AVAILABLE:
+            try:
+                self.db = ReportingDatabase(config_path)
+                self.logger.info("✅ ReportingDatabase initialized")
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize DB: {e}. Using fallback mode.")
+                self.db = None
+        else:
+            self.logger.warning("ReportingDatabase module not available. Using fallback mode.")
+            self.db = None
+
         self.buffer_size = buffer_size
         self.event_buffer = []
-        self.logger = logging.getLogger(self.__class__.__name__)
 
     def log_entry(self, trade_record: TradeRecord):
         """Registrar entrada de trade."""
@@ -183,21 +210,46 @@ class ExecutionEventLogger:
         if not self.event_buffer:
             return
 
+        num_events = len(self.event_buffer)
+
         if self.db:
             try:
-                # TODO: Implementar batch insert a Postgres
-                # Ejemplo: self.db.execute_many("INSERT INTO trade_events ...", self.event_buffer)
-                self.logger.info(f"📊 Flushed {len(self.event_buffer)} events to DB")
+                # Batch insert to Postgres via ReportingDatabase
+                success = self.db.insert_trade_events(self.event_buffer)
+                if success:
+                    self.logger.debug(f"📊 Flushed {num_events} events to DB")
+                else:
+                    # DB layer handles fallback internally
+                    self.logger.debug(f"📊 Flushed {num_events} events (fallback)")
             except Exception as e:
                 self.logger.error(f"DB flush failed: {e}")
+                # Last resort fallback
+                self._emergency_fallback(self.event_buffer)
         else:
-            # Fallback: dump a JSON
-            with open('reports/raw/events_buffer.jsonl', 'a') as f:
-                for event in self.event_buffer:
-                    event['timestamp'] = event['timestamp'].isoformat()
-                    f.write(json.dumps(event) + '\n')
+            # No DB available: fallback to JSONL
+            self._emergency_fallback(self.event_buffer)
 
         self.event_buffer.clear()
+
+    def _emergency_fallback(self, events: List[Dict]):
+        """Fallback de emergencia: escribir a JSONL local."""
+        from pathlib import Path
+        fallback_dir = Path('reports/raw')
+        fallback_dir.mkdir(parents=True, exist_ok=True)
+
+        fallback_file = fallback_dir / 'events_emergency.jsonl'
+
+        try:
+            with open(fallback_file, 'a') as f:
+                for event in events:
+                    # Convert datetime to isoformat for JSON serialization
+                    event_copy = event.copy()
+                    if 'timestamp' in event_copy and hasattr(event_copy['timestamp'], 'isoformat'):
+                        event_copy['timestamp'] = event_copy['timestamp'].isoformat()
+                    f.write(json.dumps(event_copy) + '\n')
+            self.logger.warning(f"⚠️ Emergency fallback: wrote {len(events)} events to {fallback_file}")
+        except Exception as e:
+            self.logger.error(f"Emergency fallback failed: {e}")
 
     def close(self):
         """Flush pendientes y cerrar."""

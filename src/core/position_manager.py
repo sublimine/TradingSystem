@@ -12,6 +12,8 @@ Trailing stops move to:
 This is how institutional traders manage positions - at logical market levels,
 not retail "20 pip trailing stop" or "move to breakeven after 1:1" approaches.
 
+Integrated with ExecutionEventLogger for institutional reporting (MANDATO 12).
+
 Research basis:
 - Wyckoff Method: Price moves between supply/demand zones
 - Market Profile: Value areas and point of control
@@ -21,10 +23,13 @@ Research basis:
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from datetime import datetime
 import logging
 from dataclasses import dataclass
+
+if TYPE_CHECKING:
+    from reporting.event_logger import ExecutionEventLogger
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +47,8 @@ class StructureLevel:
 class PositionTracker:
     """Track individual position state and management."""
 
-    def __init__(self, position_id: str, signal: Dict, lot_size: float):
+    def __init__(self, position_id: str, signal: Dict, lot_size: float,
+                 event_logger: Optional['ExecutionEventLogger'] = None):
         """
         Initialize position tracker.
 
@@ -50,6 +56,7 @@ class PositionTracker:
             position_id: Unique position identifier
             signal: Original signal with entry/stop/target
             lot_size: Position size in lots
+            event_logger: ExecutionEventLogger for institutional reporting (optional)
         """
         self.position_id = position_id
         self.symbol = signal['symbol']
@@ -80,6 +87,9 @@ class PositionTracker:
         # Structure tracking
         self.last_structure_update = datetime.now()
         self.trailing_structure_levels: List[StructureLevel] = []
+
+        # Reporting integration (MANDATO 12)
+        self.event_logger = event_logger
 
         logger.info(f"Position tracker created: {position_id} {self.symbol} {self.direction} "
                    f"{lot_size} lots @ {self.entry_price}")
@@ -157,6 +167,15 @@ class PositionTracker:
 
         logger.info(f"{self.position_id}: Stop updated {old_stop} -> {new_stop} ({reason})")
 
+        # MANDATO 12: Log SL adjustment to reporting system
+        if self.event_logger:
+            self.event_logger.log_sl_adjustment(
+                trade_id=self.position_id,
+                timestamp=datetime.now(),
+                new_sl=new_stop,
+                reason=reason
+            )
+
     def partial_exit(self, exit_price: float, lots_closed: float, reason: str) -> Dict:
         """
         Record partial exit.
@@ -181,6 +200,24 @@ class PositionTracker:
         self.partial_exits.append(partial)
 
         logger.info(f"{self.position_id}: Partial exit {lots_closed} lots @ {exit_price} ({reason})")
+
+        # MANDATO 12: Log partial exit to reporting system
+        if self.event_logger:
+            # Calculate partial PnL
+            if self.direction == 'LONG':
+                pnl_pips = (exit_price - self.entry_price)
+            else:
+                pnl_pips = (self.entry_price - exit_price)
+
+            percent_closed = (lots_closed / self.lot_size) * 100 if self.lot_size > 0 else 0
+
+            self.event_logger.log_partial(
+                trade_id=self.position_id,
+                timestamp=datetime.now(),
+                percent_closed=percent_closed,
+                price=exit_price,
+                pnl_partial=pnl_pips * lots_closed  # Approximate PnL
+            )
 
         return partial
 
@@ -218,13 +255,15 @@ class MarketStructurePositionManager:
     - Full exit at liquidity wicks indicating exhaustion
     """
 
-    def __init__(self, config: Dict, mtf_manager):
+    def __init__(self, config: Dict, mtf_manager,
+                 event_logger: Optional['ExecutionEventLogger'] = None):
         """
         Initialize position manager.
 
         Args:
             config: Position management configuration
             mtf_manager: Multi-timeframe data manager (for structure)
+            event_logger: ExecutionEventLogger for institutional reporting (optional, MANDATO 12)
 
         P2-015: PositionManager config parameters complete documentation
 
@@ -255,6 +294,7 @@ class MarketStructurePositionManager:
         """
         self.config = config
         self.mtf_manager = mtf_manager
+        self.event_logger = event_logger
 
         # Position tracking
         self.active_positions: Dict[str, PositionTracker] = {}
@@ -281,7 +321,7 @@ class MarketStructurePositionManager:
 
     def add_position(self, position_id: str, signal: Dict, lot_size: float):
         """Add new position to track."""
-        tracker = PositionTracker(position_id, signal, lot_size)
+        tracker = PositionTracker(position_id, signal, lot_size, event_logger=self.event_logger)
         self.active_positions[position_id] = tracker
 
         logger.info(f"Position added to manager: {position_id}")
@@ -582,12 +622,60 @@ class MarketStructurePositionManager:
         """Handle stop loss hit."""
         logger.info(f"{position_id}: Position stopped out @ {exit_price}")
 
+        # MANDATO 12: Log exit to reporting system before removal
+        if self.event_logger:
+            # Calculate P&L
+            if tracker.direction == 'LONG':
+                pnl_pips = (exit_price - tracker.entry_price)
+            else:
+                pnl_pips = (tracker.entry_price - exit_price)
+
+            r_multiple = pnl_pips / tracker.initial_risk_pips if tracker.initial_risk_pips > 0 else 0.0
+            holding_minutes = int((datetime.now() - tracker.opened_at).total_seconds() / 60)
+
+            self.event_logger.log_exit(
+                trade_id=position_id,
+                exit_timestamp=datetime.now(),
+                exit_price=exit_price,
+                pnl_gross=pnl_pips * tracker.remaining_lots,  # Approximate
+                pnl_net=pnl_pips * tracker.remaining_lots,     # Approximate (no spread calc here)
+                r_multiple=r_multiple,
+                mae=tracker.max_adverse_excursion,
+                mfe=tracker.max_favorable_excursion,
+                holding_time_minutes=holding_minutes,
+                exit_reason='SL_HIT'
+            )
+
         # Remove from active positions
         del self.active_positions[position_id]
 
     def _handle_target_hit(self, position_id: str, tracker: PositionTracker, exit_price: float):
         """Handle take profit hit."""
         logger.info(f"{position_id}: Position target hit @ {exit_price}")
+
+        # MANDATO 12: Log exit to reporting system before removal
+        if self.event_logger:
+            # Calculate P&L
+            if tracker.direction == 'LONG':
+                pnl_pips = (exit_price - tracker.entry_price)
+            else:
+                pnl_pips = (tracker.entry_price - exit_price)
+
+            r_multiple = pnl_pips / tracker.initial_risk_pips if tracker.initial_risk_pips > 0 else 0.0
+            holding_minutes = int((datetime.now() - tracker.opened_at).total_seconds() / 60)
+
+            self.event_logger.log_exit(
+                trade_id=position_id,
+                exit_timestamp=datetime.now(),
+                exit_price=exit_price,
+                pnl_gross=pnl_pips * tracker.remaining_lots,  # Approximate
+                pnl_net=pnl_pips * tracker.remaining_lots,     # Approximate
+                r_multiple=r_multiple,
+                mae=tracker.max_adverse_excursion,
+                mfe=tracker.max_favorable_excursion,
+                holding_time_minutes=holding_minutes,
+                exit_reason='TP_HIT'
+            )
 
         # Remove from active positions
         del self.active_positions[position_id]
