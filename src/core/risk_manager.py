@@ -20,11 +20,17 @@ from datetime import datetime, timedelta
 from collections import deque, defaultdict
 import logging
 from scipy import stats
+from pathlib import Path
+import yaml
 
+# MANDATO 13: TYPE_CHECKING for ExecutionEventLogger (reporting)
 if TYPE_CHECKING:
     from reporting.event_logger import ExecutionEventLogger
 
-logger = logging.getLogger(__name__)
+# Logging institucional (Mandato 6)
+from src.core.logging_config import get_logger, LogEvent, log_institutional_event
+
+logger = get_logger(__name__)
 
 
 class QualityScorer:
@@ -203,7 +209,15 @@ class StatisticalCircuitBreaker:
             if self._check_cooldown_expired():
                 self.circuit_open = False
                 self.circuit_opened_at = None
-                logger.info("Circuit breaker CLOSED - cooldown period expired")
+
+                # MANDATO 6: Log circuit breaker close
+                log_institutional_event(
+                    logger,
+                    LogEvent.CIRCUIT_BREAKER_CLOSE,
+                    level="INFO",
+                    cooldown_elapsed=f"{self.circuit_cooldown_minutes}min",
+                    status="TRADING_RESUMED"
+                )
             else:
                 remaining = self._get_remaining_cooldown_minutes()
                 return False, f"CIRCUIT BREAKER OPEN - {remaining:.1f} min remaining"
@@ -277,7 +291,23 @@ class StatisticalCircuitBreaker:
         """Open circuit breaker (pause trading)."""
         self.circuit_open = True
         self.circuit_opened_at = datetime.now()
-        logger.warning(f"CIRCUIT BREAKER OPENED at {self.circuit_opened_at}")
+
+        # MANDATO 6: Log circuit breaker open
+        consecutive_losses = self._count_consecutive_losses()
+        recent_pnl = [t['pnl_pct'] for t in self.trade_history]
+        recent_10 = recent_pnl[-10:] if len(recent_pnl) >= 10 else recent_pnl
+        z_score = abs(np.mean(recent_10) / np.std(recent_10)) if len(recent_10) > 0 and np.std(recent_10) > 0 else 0.0
+
+        log_institutional_event(
+            logger,
+            LogEvent.CIRCUIT_BREAKER_OPEN,
+            level="ERROR",
+            reason="STATISTICAL_ANOMALY",
+            z_score=f"{z_score:.2f}",
+            threshold=f"{self.z_score_threshold:.2f}",
+            consecutive_losses=consecutive_losses,
+            cooldown_min=self.circuit_cooldown_minutes
+        )
 
     def _check_cooldown_expired(self) -> bool:
         """Check if cooldown period has expired."""
@@ -349,14 +379,23 @@ class InstitutionalRiskManager:
     6. Per-strategy exposure limits
     """
 
-    def __init__(self, config: Dict, event_logger: Optional['ExecutionEventLogger'] = None):
+    def __init__(self, config: Dict = None, risk_limits_path: str = None,
+                 event_logger: Optional['ExecutionEventLogger'] = None):
         """
         Initialize institutional risk manager.
 
         Args:
-            config: Risk configuration
+            config: Risk configuration (optional, will load from YAML if not provided)
+            risk_limits_path: Path to risk_limits.yaml (Mandato 6)
             event_logger: ExecutionEventLogger for rejection logging (MANDATO 13)
         """
+        # MANDATO 6: Load limits from institutional YAML
+        if risk_limits_path is None:
+            risk_limits_path = Path(__file__).parent.parent.parent / "config" / "risk_limits.yaml"
+
+        if config is None:
+            config = self._load_risk_limits_from_yaml(risk_limits_path)
+
         self.config = config
         self.event_logger = event_logger
 
@@ -378,6 +417,7 @@ class InstitutionalRiskManager:
         self.max_correlated_exposure_pct = config.get('max_correlated_exposure', 5.0)  # 5% max correlated
         self.max_per_symbol_exposure_pct = config.get('max_per_symbol_exposure', 2.0)  # 2% per symbol
         self.max_per_strategy_exposure_pct = config.get('max_per_strategy_exposure', 3.0)  # 3% per strategy
+        self.max_concurrent_positions = config.get('max_concurrent_positions', 8)  # Max positions
 
         # Drawdown limits
         self.max_daily_loss_pct = config.get('max_daily_loss', 3.0)  # 3% daily max loss
@@ -396,8 +436,75 @@ class InstitutionalRiskManager:
         # Symbol correlations (loaded from config or calculated)
         self.symbol_correlations = self._load_symbol_correlations()
 
-        logger.info(f"Institutional Risk Manager initialized: base_risk={self.base_risk_pct}%, "
-                   f"quality_min={self.min_quality_score}")
+        # MANDATO 6: Logging institucional
+        log_institutional_event(
+            logger,
+            "RISK_MANAGER_INIT",
+            level="INFO",
+            base_risk=self.base_risk_pct,
+            max_exposure=self.max_total_exposure_pct,
+            max_positions=self.max_concurrent_positions,
+            quality_min=self.min_quality_score
+        )
+
+    def _load_risk_limits_from_yaml(self, yaml_path: Path) -> Dict:
+        """
+        Load risk limits from YAML config (Mandato 6).
+
+        Args:
+            yaml_path: Path to risk_limits.yaml
+
+        Returns:
+            Config dictionary
+        """
+        try:
+            with open(yaml_path, 'r') as f:
+                data = yaml.safe_load(f)
+
+            # Flatten structure for compatibility
+            config = {
+                'base_risk_per_trade': data['position_sizing']['base_risk_per_trade'],
+                'min_risk_per_trade': data['position_sizing']['min_risk_per_trade'],
+                'max_risk_per_trade': data['position_sizing']['max_risk_per_trade'],
+                'max_total_exposure': data['exposure']['max_total_exposure'],
+                'max_per_symbol_exposure': data['exposure']['max_per_symbol_exposure'],
+                'max_per_strategy_exposure': data['exposure']['max_per_strategy_exposure'],
+                'max_correlated_exposure': data['exposure']['max_correlated_exposure'],
+                'max_concurrent_positions': data['exposure']['max_concurrent_positions'],
+                'max_daily_loss': data['drawdown']['max_daily_loss'],
+                'max_drawdown': data['drawdown']['max_drawdown'],
+                'min_quality_score': data['quality']['min_quality_score'],
+                'circuit_breaker_z_score': data['circuit_breaker']['z_score_threshold'],
+                'consecutive_loss_max_prob': data['circuit_breaker']['consecutive_loss_max_prob'],
+                'circuit_breaker_lookback': data['circuit_breaker']['lookback_trades'],
+                'circuit_cooldown_minutes': data['circuit_breaker']['cooldown_minutes'],
+                'initial_balance': data['initial_balance'],
+            }
+
+            logger.info(f"RISK_LIMITS_LOADED: from {yaml_path}")
+            return config
+
+        except Exception as e:
+            logger.error(f"RISK_LIMITS_LOAD_ERROR: {e} - using defaults")
+            # Return default config
+            return {
+                'base_risk_per_trade': 0.5,
+                'min_risk_per_trade': 0.33,
+                'max_risk_per_trade': 1.0,
+                'max_total_exposure': 6.0,
+                'max_per_symbol_exposure': 2.0,
+                'max_per_strategy_exposure': 3.0,
+                'max_correlated_exposure': 5.0,
+                'max_concurrent_positions': 8,
+                'max_daily_loss': 3.0,
+                'max_drawdown': 15.0,
+                'min_quality_score': 0.60,
+                'circuit_breaker_z_score': 2.5,
+                'consecutive_loss_max_prob': 0.05,
+                'circuit_breaker_lookback': 30,
+                'circuit_cooldown_minutes': 120,
+                'initial_balance': 100000,
+            }
 
     def evaluate_signal(self, signal: Dict, market_context: Dict) -> Dict:
         """
@@ -419,7 +526,7 @@ class InstitutionalRiskManager:
         # 1. Circuit breaker check
         can_trade, cb_reason = self.circuit_breaker.check_should_trade()
         if not can_trade:
-            # MANDATO 13: Log circuit breaker rejection
+            # MANDATO 13: Log rejection to reporting DB
             if self.event_logger:
                 self.event_logger.log_rejection(
                     timestamp=datetime.now(),
@@ -430,6 +537,15 @@ class InstitutionalRiskManager:
                     risk_requested_pct=0.0
                 )
 
+            # MANDATO 6: Log to institutional logs
+            log_institutional_event(
+                logger,
+                LogEvent.RISK_REJECTED,
+                level="WARNING",
+                signal_id=signal.get('signal_id', 'unknown'),
+                reason="CIRCUIT_BREAKER",
+                details=cb_reason
+            )
             return {
                 'approved': False,
                 'reason': cb_reason,
@@ -441,7 +557,7 @@ class InstitutionalRiskManager:
         quality_score = self.quality_scorer.calculate_quality(signal, market_context)
 
         if quality_score < self.min_quality_score:
-            # MANDATO 13: Log quality rejection
+            # MANDATO 13: Log rejection to reporting DB
             if self.event_logger:
                 self.event_logger.log_rejection(
                     timestamp=datetime.now(),
@@ -452,6 +568,15 @@ class InstitutionalRiskManager:
                     risk_requested_pct=self.base_risk_pct
                 )
 
+            # MANDATO 6: Log to institutional logs
+            log_institutional_event(
+                logger,
+                LogEvent.RISK_QUALITY_LOW,
+                level="WARNING",
+                signal_id=signal.get('signal_id', 'unknown'),
+                quality=f"{quality_score:.3f}",
+                min_threshold=f"{self.min_quality_score:.2f}"
+            )
             return {
                 'approved': False,
                 'reason': f"Quality too low: {quality_score:.3f} < {self.min_quality_score}",
@@ -466,7 +591,7 @@ class InstitutionalRiskManager:
         # 4. Check exposure limits INCLUDING proposed position
         exposure_check = self._check_exposure_limits(signal, position_size_pct)
         if not exposure_check['approved']:
-            # MANDATO 13: Log exposure rejection
+            # MANDATO 13: Log rejection to reporting DB
             if self.event_logger:
                 self.event_logger.log_rejection(
                     timestamp=datetime.now(),
@@ -477,6 +602,15 @@ class InstitutionalRiskManager:
                     risk_requested_pct=position_size_pct
                 )
 
+            # MANDATO 6: Log to institutional logs
+            log_institutional_event(
+                logger,
+                LogEvent.RISK_REJECTED,
+                level="WARNING",
+                signal_id=signal.get('signal_id', 'unknown'),
+                reason=exposure_check['limit_type'],
+                details=exposure_check['reason']
+            )
             return {
                 'approved': False,
                 'reason': exposure_check['reason'],
@@ -486,7 +620,7 @@ class InstitutionalRiskManager:
 
         # 5. Check drawdown limits
         if not self._check_drawdown_limits():
-            # MANDATO 13: Log drawdown rejection
+            # MANDATO 13: Log rejection to reporting DB
             if self.event_logger:
                 self.event_logger.log_rejection(
                     timestamp=datetime.now(),
@@ -497,6 +631,16 @@ class InstitutionalRiskManager:
                     risk_requested_pct=position_size_pct
                 )
 
+            # MANDATO 6: Log to institutional logs
+            log_institutional_event(
+                logger,
+                LogEvent.RISK_REJECTED,
+                level="WARNING",
+                signal_id=signal.get('signal_id', 'unknown'),
+                reason="DRAWDOWN_LIMIT",
+                current_dd=f"{self._get_current_drawdown():.2f}%",
+                max_dd=f"{self.max_drawdown_pct}%"
+            )
             return {
                 'approved': False,
                 'reason': f"Drawdown limit exceeded: {self._get_current_drawdown():.2f}%",
@@ -510,6 +654,17 @@ class InstitutionalRiskManager:
         stop_loss = signal['stop_loss']
         position_size_lots = self._calculate_lot_size(
             symbol, entry_price, stop_loss, position_size_pct
+        )
+
+        # MANDATO 6: Log approved signal
+        log_institutional_event(
+            logger,
+            LogEvent.RISK_APPROVED,
+            level="INFO",
+            signal_id=signal.get('signal_id', 'unknown'),
+            quality=f"{quality_score:.3f}",
+            position_size_pct=f"{position_size_pct:.2f}%",
+            lot_size=f"{position_size_lots:.2f}"
         )
 
         return {
@@ -579,7 +734,8 @@ class InstitutionalRiskManager:
         if total_exposure + proposed_risk_pct >= self.max_total_exposure_pct:
             return {
                 'approved': False,
-                'reason': f"Total exposure limit: {total_exposure:.2f}% >= {self.max_total_exposure_pct}%"
+                'reason': f"Total exposure limit: {total_exposure:.2f}% >= {self.max_total_exposure_pct}%",
+                'limit_type': 'TOTAL_EXPOSURE'
             }
 
         # Check per-symbol exposure INCLUDING proposed position
@@ -588,7 +744,8 @@ class InstitutionalRiskManager:
         if symbol_exposure + proposed_risk_pct >= self.max_per_symbol_exposure_pct:
             return {
                 'approved': False,
-                'reason': f"Symbol exposure limit: {symbol} {symbol_exposure:.2f}% >= {self.max_per_symbol_exposure_pct}%"
+                'reason': f"Symbol exposure limit: {symbol} {symbol_exposure:.2f}% >= {self.max_per_symbol_exposure_pct}%",
+                'limit_type': 'SYMBOL_EXPOSURE'
             }
 
         # Check per-strategy exposure INCLUDING proposed position
@@ -597,7 +754,8 @@ class InstitutionalRiskManager:
         if strategy_exposure + proposed_risk_pct >= self.max_per_strategy_exposure_pct:
             return {
                 'approved': False,
-                'reason': f"Strategy exposure limit: {strategy} {strategy_exposure:.2f}% >= {self.max_per_strategy_exposure_pct}%"
+                'reason': f"Strategy exposure limit: {strategy} {strategy_exposure:.2f}% >= {self.max_per_strategy_exposure_pct}%",
+                'limit_type': 'STRATEGY_EXPOSURE'
             }
 
         # Check correlated exposure INCLUDING proposed position
@@ -605,10 +763,19 @@ class InstitutionalRiskManager:
         if correlated_exposure + proposed_risk_pct >= self.max_correlated_exposure_pct:
             return {
                 'approved': False,
-                'reason': f"Correlated exposure limit: {correlated_exposure:.2f}% >= {self.max_correlated_exposure_pct}%"
+                'reason': f"Correlated exposure limit: {correlated_exposure:.2f}% >= {self.max_correlated_exposure_pct}%",
+                'limit_type': 'CORRELATED_EXPOSURE'
             }
 
-        return {'approved': True, 'reason': ''}
+        # Check max concurrent positions
+        if len(self.active_positions) >= self.max_concurrent_positions:
+            return {
+                'approved': False,
+                'reason': f"Max concurrent positions: {len(self.active_positions)} >= {self.max_concurrent_positions}",
+                'limit_type': 'MAX_POSITIONS'
+            }
+
+        return {'approved': True, 'reason': '', 'limit_type': None}
 
     def _calculate_correlated_exposure(self, symbol: str) -> float:
         """Calculate exposure to symbols correlated with given symbol."""
@@ -774,7 +941,17 @@ class InstitutionalRiskManager:
         # Remove from active
         del self.active_positions[position_id]
 
-        logger.info(f"Position closed: {position_id} PnL={pnl_pct:.2f}% ({pnl_r:.2f}R)")
+        # MANDATO 6: Log position close
+        log_institutional_event(
+            logger,
+            LogEvent.TRADE_CLOSE,
+            level="INFO",
+            trade_id=position_id,
+            symbol=pos['symbol'],
+            exit=f"{exit_price:.5f}",
+            pnl=f"{pnl_pct:+.2f}%",
+            r_multiple=f"{pnl_r:.2f}R"
+        )
 
     def get_statistics(self) -> Dict:
         """Get current risk statistics."""
