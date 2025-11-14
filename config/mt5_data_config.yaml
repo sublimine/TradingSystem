@@ -1,0 +1,310 @@
+# MANDATO 20 - MT5 Data Download Configuration
+#
+# Configuration for downloading REAL historical data from MetaTrader 5
+#
+# SECURITY NOTICE:
+# - NEVER commit real credentials to this file
+# - ALWAYS use environment variables for sensitive data
+# - This file contains ONLY structure and defaults
+#
+# Autor: SUBLIMINE Institutional Trading System
+# Fecha: 2025-11-14
+# Mandato: MANDATO 20
+
+# =============================================================================
+# MT5 CONNECTION SETTINGS
+# =============================================================================
+mt5_connection:
+  # Credentials MUST come from environment variables (NEVER hardcode)
+  # Set these in your environment or .env file (gitignored):
+  #   export MT5_LOGIN=12345678
+  #   export MT5_PASSWORD=your_password
+  #   export MT5_SERVER=YourBroker-Server
+
+  login: ${MT5_LOGIN}           # ENV: MT5_LOGIN
+  password: ${MT5_PASSWORD}     # ENV: MT5_PASSWORD
+  server: ${MT5_SERVER}         # ENV: MT5_SERVER (e.g., "ICMarkets-Demo")
+
+  # Connection retry settings (managed by MT5Connector)
+  timeout: 60000                # milliseconds
+  max_retries: 5
+  base_delay: 2                 # seconds (exponential backoff)
+
+
+# =============================================================================
+# DATA DOWNLOAD SETTINGS
+# =============================================================================
+download_settings:
+  # Output directory for REAL data
+  output_dir: "data/historical/REAL"
+
+  # Naming convention: REAL_{SYMBOL}_{TIMEFRAME}.csv
+  prefix: "REAL_"
+
+  # Default timeframe if not specified
+  default_timeframe: "M15"
+
+  # Download batch size (symbols per batch, for rate limiting)
+  batch_size: 5
+
+  # Delay between downloads (seconds, to avoid rate limits)
+  delay_between_downloads: 1.0
+
+
+# =============================================================================
+# DATA VALIDATION SETTINGS
+# =============================================================================
+validation:
+  # Enable data quality checks
+  enabled: true
+
+  # Drop rows with NaN values
+  drop_nans: true
+
+  # Fix high < low (swap values)
+  fix_hl_inversions: true
+
+  # Drop bars with open/close outside high/low range
+  drop_invalid_ohlc: true
+
+  # Set negative volumes to 0
+  fix_negative_volume: true
+
+  # Outlier detection: price change > threshold
+  outlier_threshold_pct: 0.50  # 50% price change = outlier (log warning only)
+
+  # Missing data threshold (warn if missing > X%)
+  missing_data_threshold_pct: 10.0
+
+
+# =============================================================================
+# SYMBOL UNIVERSE - CALIBRATION (MANDATO 18R/19)
+# =============================================================================
+# These symbols match backtest_calibration_20251114.yaml
+symbols_calibration:
+  # FX Majors (7)
+  fx_majors:
+    - EURUSD
+    - GBPUSD
+    - USDJPY
+    - AUDUSD
+    - NZDUSD
+    - USDCHF
+    - USDCAD
+
+  # FX Crosses (2)
+  fx_crosses:
+    - EURJPY
+    - GBPJPY
+
+  # Indices (3)
+  indices:
+    - US500      # S&P 500
+    - NAS100     # NASDAQ 100
+    - DE40       # DAX 40
+
+  # Commodities (2)
+  commodities:
+    - XAUUSD     # Gold
+    - XTIUSD     # WTI Crude Oil
+
+  # Crypto (1)
+  crypto:
+    - BTCUSD     # Bitcoin
+
+
+# =============================================================================
+# TIMEFRAMES
+# =============================================================================
+timeframes:
+  # Supported timeframes (MT5 constants)
+  supported:
+    - M1     # 1 minute
+    - M5     # 5 minutes
+    - M15    # 15 minutes
+    - M30    # 30 minutes
+    - H1     # 1 hour
+    - H4     # 4 hours
+    - D1     # 1 day
+    - W1     # 1 week
+    - MN1    # 1 month
+
+  # Calibration default (matches backtest config)
+  calibration_default: M15
+
+  # Multi-timeframe analysis (future)
+  multi_tf:
+    - M15    # Entry timeframe
+    - H1     # Trend filter
+    - D1     # Regime detection
+
+
+# =============================================================================
+# DATE RANGES
+# =============================================================================
+date_ranges:
+  # MANDATO 19 - Calibration Period
+  calibration:
+    start: "2023-01-01"
+    end: "2024-06-30"
+
+  # MANDATO 19 - Hold-Out Period (NEVER used in calibration)
+  holdout:
+    start: "2024-07-01"
+    end: "2024-12-31"
+
+  # Full dataset (for initial download)
+  full:
+    start: "2023-01-01"
+    end: "2024-12-31"
+
+  # Extended history (if available)
+  extended:
+    start: "2020-01-01"
+    end: "2024-12-31"
+
+
+# =============================================================================
+# DOWNLOAD PRESETS
+# =============================================================================
+# Pre-configured download jobs for common use cases
+
+presets:
+  # MANDATO 19 - Minimum scope (3 symbols, 3 strategies)
+  mandato19_minimum:
+    symbols:
+      - EURUSD
+      - XAUUSD
+      - US500
+    timeframe: M15
+    date_range: full
+    description: "Minimum scope for MANDATO 19 calibration execution"
+
+  # MANDATO 19 - Full calibration universe
+  mandato19_full:
+    symbols:
+      - EURUSD
+      - GBPUSD
+      - USDJPY
+      - AUDUSD
+      - NZDUSD
+      - USDCHF
+      - USDCAD
+      - EURJPY
+      - GBPJPY
+      - US500
+      - NAS100
+      - DE40
+      - XAUUSD
+      - XTIUSD
+      - BTCUSD
+    timeframe: M15
+    date_range: full
+    description: "Full calibration universe (15 symbols)"
+
+  # FX only
+  fx_only:
+    symbols:
+      - EURUSD
+      - GBPUSD
+      - USDJPY
+      - AUDUSD
+    timeframe: M15
+    date_range: full
+    description: "FX majors only"
+
+  # Multi-timeframe download (single symbol)
+  multi_tf_template:
+    symbols:
+      - EURUSD
+    timeframes:
+      - M15
+      - H1
+      - D1
+    date_range: full
+    description: "Template for multi-timeframe analysis"
+
+
+# =============================================================================
+# QUALITY ASSURANCE
+# =============================================================================
+qa:
+  # Minimum bars required for valid dataset
+  min_bars:
+    M15: 10000   # ~104 days of M15 data (assuming 24/5 trading)
+    H1: 2500     # ~104 days of H1 data
+    D1: 250      # ~1 year of D1 data
+
+  # Expected bars calculation (for completeness check)
+  trading_hours_per_week:
+    FX: 120      # 24/5 trading
+    Indices: 100 # ~20 hours/day, 5 days/week
+    Commodities: 120
+    Crypto: 168  # 24/7
+
+  # Alert thresholds
+  alert_if_missing_pct: 15.0     # Alert if >15% data missing
+  alert_if_outliers: 10          # Alert if >10 outlier bars detected
+
+
+# =============================================================================
+# LOGGING
+# =============================================================================
+logging:
+  # Log level for download script
+  level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+  # Log file location
+  log_dir: "logs/data_downloads"
+
+  # Log file naming: mt5_download_{YYYYMMDD}_{HHMMSS}.log
+  log_file_format: "mt5_download_{timestamp}.log"
+
+  # Save download manifest (metadata about what was downloaded)
+  save_manifest: true
+  manifest_dir: "data/historical/REAL"
+
+
+# =============================================================================
+# USAGE EXAMPLES
+# =============================================================================
+# See scripts/download_mt5_history.py for CLI usage
+#
+# Example 1: Check connection only
+#   python scripts/download_mt5_history.py --check-connection
+#
+# Example 2: Download specific symbols
+#   python scripts/download_mt5_history.py \
+#     --symbols EURUSD,XAUUSD,US500 \
+#     --timeframe M15 \
+#     --start 2023-01-01 \
+#     --end 2024-12-31 \
+#     --dest data/historical/REAL
+#
+# Example 3: Download from config preset (future enhancement)
+#   python scripts/download_mt5_history.py --preset mandato19_minimum
+#
+# =============================================================================
+# SECURITY REMINDERS
+# =============================================================================
+#
+# ⚠️  NEVER commit credentials to Git
+# ⚠️  ALWAYS use environment variables for sensitive data
+# ⚠️  ADD .env to .gitignore
+# ⚠️  ROTATE credentials if accidentally exposed
+# ⚠️  USE demo account for testing
+#
+# Example .env file (GITIGNORED):
+# ```
+# MT5_LOGIN=12345678
+# MT5_PASSWORD=YourSecurePassword123!
+# MT5_SERVER=ICMarkets-Demo
+# ```
+#
+# Load .env in Python:
+# ```python
+# from dotenv import load_dotenv
+# load_dotenv()  # Loads .env file
+# os.getenv('MT5_LOGIN')
+# ```
+# =============================================================================
