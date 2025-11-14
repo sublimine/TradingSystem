@@ -582,7 +582,8 @@ class InstitutionalBrain:
     """
 
     def __init__(self, config: Dict, risk_manager, position_manager,
-                 regime_detector, mtf_manager, ml_engine=None, event_logger: Optional['ExecutionEventLogger'] = None):
+                 regime_detector, mtf_manager, ml_engine=None, event_logger: Optional['ExecutionEventLogger'] = None,
+                 brain_policy_store=None):
         """
         Initialize institutional brain.
 
@@ -594,6 +595,7 @@ class InstitutionalBrain:
             mtf_manager: Multi-timeframe manager instance
             ml_engine: ML Adaptive Engine instance (optional)
             event_logger: Institutional reporting logger (MANDATO 13)
+            brain_policy_store: BrainPolicyStore for strategy supervision (MANDATO 14, optional)
         """
         self.config = config
         self.risk_manager = risk_manager
@@ -602,6 +604,7 @@ class InstitutionalBrain:
         self.mtf_manager = mtf_manager
         self.ml_engine = ml_engine  # ML ENGINE FOR CONTINUOUS LEARNING
         self.event_logger = event_logger  # MANDATO 13
+        self.brain_policy_store = brain_policy_store  # MANDATO 14: Strategy supervision
 
         # Components
         self.arbitrator = SignalArbitrator(config, event_logger=event_logger)
@@ -619,6 +622,9 @@ class InstitutionalBrain:
             logger.info("Institutional Brain initialized - Advanced orchestration WITH ML LEARNING active")
         else:
             logger.info("Institutional Brain initialized - Advanced orchestration active (no ML)")
+
+        if brain_policy_store:
+            logger.info("MANDATO 14: Brain-layer policy supervision ACTIVE")
 
     def process_signals(self, raw_signals: List[Dict], market_data: Dict[str, pd.DataFrame],
                        features: Dict) -> List[Dict]:
@@ -701,6 +707,17 @@ class InstitutionalBrain:
                 logger.info(f"{symbol}: No signals after regime filtering")
                 self.total_signals_rejected += len(signals)
                 continue
+
+            # 3.5. MANDATO 14: Apply Brain-layer policies (if enabled)
+            if self.brain_policy_store:
+                filtered_signals = self._apply_brain_layer_filters(
+                    filtered_signals, current_regime, symbol
+                )
+
+                if not filtered_signals:
+                    logger.info(f"{symbol}: No signals after Brain-layer filtering")
+                    self.total_signals_rejected += len(signals)
+                    continue
 
             # 4. Arbitrate between signals (pick best)
             market_context = {
@@ -1027,6 +1044,94 @@ class InstitutionalBrain:
 
         logger.info(f"Trade {trade_id} recorded in ML: {trade_data['pnl_r']:.2f}R")
 
+    def _apply_brain_layer_filters(self, signals: List[Dict], regime: str,
+                                   symbol: str) -> List[Dict]:
+        """
+        Apply Brain-layer policy filters to signals.
+
+        MANDATO 14: Filter signals based on Brain policies (state, regime, threshold).
+
+        Args:
+            signals: List of signals to filter
+            regime: Current market regime
+            symbol: Trading symbol
+
+        Returns:
+            Filtered list of signals
+        """
+        filtered = []
+
+        for signal in signals:
+            strategy_id = signal.get('strategy_name', 'UNKNOWN')
+            policy = self.brain_policy_store.get_policy(strategy_id)
+
+            if not policy:
+                # Sin policy, aprobar señal (comportamiento por defecto)
+                filtered.append(signal)
+                continue
+
+            # 1. Filtro por estado
+            if policy.state_suggested == 'RETIRED':
+                self._log_brain_decision(
+                    signal, symbol, 'BLOCKED',
+                    reason=f'Strategy RETIRED by Brain-layer'
+                )
+                continue
+
+            # 2. Filtro por régimen
+            if not policy.is_enabled_in_regime(regime):
+                self._log_brain_decision(
+                    signal, symbol, 'REGIME_DISABLED',
+                    reason=f'Strategy disabled in {regime} by Brain-layer'
+                )
+                continue
+
+            # 3. Ajuste de threshold de calidad
+            quality_score = signal.get('metadata', {}).get('quality_score', 0.0)
+            adjusted_threshold = policy.get_effective_threshold(regime, base=0.60)
+
+            if quality_score < adjusted_threshold:
+                self._log_brain_decision(
+                    signal, symbol, 'QUALITY_BELOW_THRESHOLD',
+                    reason=f'Quality {quality_score:.3f} < adjusted threshold {adjusted_threshold:.3f}',
+                    quality_score=quality_score,
+                    threshold_required=adjusted_threshold
+                )
+                continue
+
+            # 4. Añadir metadata de Brain a señal (para Arbiter)
+            signal['brain_weight'] = policy.weight_recommendation
+            signal['brain_state'] = policy.state_suggested
+            signal['brain_adjusted_threshold'] = adjusted_threshold
+
+            filtered.append(signal)
+
+        return filtered
+
+    def _log_brain_decision(self, signal: Dict, symbol: str, action: str,
+                           reason: str = '', **kwargs):
+        """
+        Log Brain-layer decision to reporting system.
+
+        MANDATO 14: Auditoría de decisiones del Brain.
+        """
+        if not self.event_logger:
+            return
+
+        event_data = {
+            'strategy_id': signal.get('strategy_name', 'UNKNOWN'),
+            'symbol': symbol,
+            'action': action,
+            'reason': reason,
+            'quality_score_actual': signal.get('metadata', {}).get('quality_score', 0.0),
+            **kwargs
+        }
+
+        logger.info(f"Brain decision: {signal.get('strategy_name')} {symbol} - {action}: {reason}")
+
+        # TODO: Implementar logging a BD cuando se extienda event_logger
+        # self.event_logger.log_brain_decision(timestamp=datetime.now(), **event_data)
+
     def get_statistics(self) -> Dict:
         """Get brain statistics."""
         approval_rate = (self.total_signals_approved / self.total_signals_received * 100
@@ -1045,5 +1150,9 @@ class InstitutionalBrain:
         # Add ML statistics if available
         if self.ml_engine:
             stats['ml_engine'] = self.ml_engine.get_statistics()
+
+        # Add Brain-layer statistics if available (MANDATO 14)
+        if self.brain_policy_store:
+            stats['brain_layer'] = self.brain_policy_store.get_statistics()
 
         return stats
