@@ -1,0 +1,633 @@
+# UNIVERSO DE MERCADOS INSTITUCIONAL - CONFIGURACIÓN TÉCNICA
+# Proyecto: SUBLIMINE TradingSystem
+# Mandato: MANDATO 10
+# Fecha: 2025-11-14
+# Total Símbolos: 27
+
+---
+
+# ============================================================
+# FX MAJORS (7 símbolos)
+# ============================================================
+
+symbols:
+  EURUSD:
+    asset_class: FX
+    region: EU_US
+    role: core_fx_benchmark
+    spread_typical_pips: 0.8
+    liquidity: VERY_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - momentum_quality
+      - order_flow_toxicity
+      - vpin_reversal_extreme
+      - statistical_arbitrage_johansen
+      - correlation_divergence
+    pairs_for_cointegration:
+      - GBPUSD
+      - USDCHF
+    priority: CORE
+    max_exposure_pct: 8
+
+  GBPUSD:
+    asset_class: FX
+    region: EU_US
+    role: core_fx_volatility
+    spread_typical_pips: 1.0
+    liquidity: VERY_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - vpin_reversal_extreme
+      - crisis_mode_volatility_spike
+      - statistical_arbitrage_johansen
+      - correlation_divergence
+    pairs_for_cointegration:
+      - EURUSD
+    priority: CORE
+    max_exposure_pct: 7
+
+  USDJPY:
+    asset_class: FX
+    region: US_ASIA
+    role: core_fx_safe_haven
+    spread_typical_pips: 0.8
+    liquidity: VERY_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - order_flow_toxicity
+      - statistical_arbitrage_johansen
+    pairs_for_cointegration:
+      - EURJPY
+    priority: CORE
+    max_exposure_pct: 7
+
+  USDCHF:
+    asset_class: FX
+    region: US_EU
+    role: safe_haven
+    spread_typical_pips: 1.2
+    liquidity: HIGH
+    eligible_strategies:
+      - liquidity_sweep
+      - mean_reversion_statistical
+      - statistical_arbitrage_johansen
+    pairs_for_cointegration:
+      - EURUSD
+    priority: SECONDARY
+    max_exposure_pct: 5
+
+  AUDUSD:
+    asset_class: FX
+    region: ASIA_PACIFIC
+    role: commodity_currency_risk_proxy
+    spread_typical_pips: 1.0
+    liquidity: HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - order_flow_toxicity
+      - statistical_arbitrage_johansen
+      - correlation_divergence
+    pairs_for_cointegration:
+      - NZDUSD
+    priority: CORE
+    max_exposure_pct: 6
+
+  NZDUSD:
+    asset_class: FX
+    region: ASIA_PACIFIC
+    role: commodity_currency_carry
+    spread_typical_pips: 1.5
+    liquidity: MEDIUM_HIGH
+    eligible_strategies:
+      - liquidity_sweep
+      - mean_reversion_statistical
+      - statistical_arbitrage_johansen
+      - correlation_divergence
+    pairs_for_cointegration:
+      - AUDUSD
+    priority: SECONDARY
+    max_exposure_pct: 4
+
+  USDCAD:
+    asset_class: FX
+    region: US_CANADA
+    role: commodity_currency_oil_proxy
+    spread_typical_pips: 1.2
+    liquidity: HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - correlation_divergence
+    pairs_for_correlation:
+      - XTIUSD
+    priority: SECONDARY
+    max_exposure_pct: 5
+
+# ============================================================
+# FX CROSSES (7 símbolos)
+# ============================================================
+
+  EURGBP:
+    asset_class: FX
+    region: EU
+    role: regional_range_bound
+    spread_typical_pips: 1.5
+    liquidity: MEDIUM_HIGH
+    eligible_strategies:
+      - mean_reversion_statistical
+      - liquidity_sweep
+      - statistical_arbitrage_johansen
+    priority: SECONDARY
+    max_exposure_pct: 4
+
+  EURJPY:
+    asset_class: FX
+    region: EU_ASIA
+    role: risk_proxy_carry_trade
+    spread_typical_pips: 1.5
+    liquidity: HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - vpin_reversal_extreme
+      - statistical_arbitrage_johansen
+    pairs_for_cointegration:
+      - USDJPY
+      - GBPJPY
+    priority: CORE
+    max_exposure_pct: 6
+
+  GBPJPY:
+    asset_class: FX
+    region: EU_ASIA
+    role: volatility_beast
+    spread_typical_pips: 2.0
+    liquidity: MEDIUM_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - vpin_reversal_extreme
+      - crisis_mode_volatility_spike
+    pairs_for_cointegration:
+      - EURJPY
+    priority: EXPERIMENTAL
+    max_exposure_pct: 3
+    risk_note: "ALTA_VOLATILIDAD - Slippage risk"
+
+  AUDJPY:
+    asset_class: FX
+    region: ASIA_PACIFIC
+    role: risk_proxy_commodity_carry
+    spread_typical_pips: 1.8
+    liquidity: MEDIUM_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - statistical_arbitrage_johansen
+    pairs_for_cointegration:
+      - NZDJPY
+    priority: SECONDARY
+    max_exposure_pct: 4
+
+  NZDJPY:
+    asset_class: FX
+    region: ASIA_PACIFIC
+    role: high_beta_risk
+    spread_typical_pips: 2.2
+    liquidity: MEDIUM
+    eligible_strategies:
+      - liquidity_sweep
+      - statistical_arbitrage_johansen
+    pairs_for_cointegration:
+      - AUDJPY
+    priority: EXPERIMENTAL
+    max_exposure_pct: 3
+
+  EURAUD:
+    asset_class: FX
+    region: EU_ASIA_PACIFIC
+    role: risk_divergence
+    spread_typical_pips: 2.0
+    liquidity: MEDIUM
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - correlation_divergence
+    priority: SECONDARY
+    max_exposure_pct: 3
+
+  EURCAD:
+    asset_class: FX
+    region: EU_CANADA
+    role: regional_divergence
+    spread_typical_pips: 2.0
+    liquidity: MEDIUM
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - statistical_arbitrage_johansen
+    pairs_for_cointegration:
+      - USDCAD
+    priority: SECONDARY
+    max_exposure_pct: 3
+
+# ============================================================
+# ÍNDICES (6 símbolos)
+# ============================================================
+
+  US500:
+    asset_class: INDEX
+    region: US
+    role: core_equity_benchmark
+    spread_typical_pct: 0.02
+    liquidity: VERY_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - crisis_mode_volatility_spike
+      - vpin_reversal_extreme
+      - order_flow_toxicity
+      - iceberg_detection
+      - spoofing_detection_l2
+      - footprint_orderflow_clusters
+    priority: CORE
+    max_exposure_pct: 10
+
+  NAS100:
+    asset_class: INDEX
+    region: US
+    role: tech_proxy_high_beta
+    spread_typical_pct: 0.04
+    liquidity: VERY_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - vpin_reversal_extreme
+      - crisis_mode_volatility_spike
+      - footprint_orderflow_clusters
+    priority: CORE
+    max_exposure_pct: 8
+
+  US30:
+    asset_class: INDEX
+    region: US
+    role: blue_chip_defensive
+    spread_typical_pct: 0.04
+    liquidity: HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - mean_reversion_statistical
+    priority: SECONDARY
+    max_exposure_pct: 5
+
+  DE40:
+    asset_class: INDEX
+    region: EU
+    role: eu_equity_benchmark
+    spread_typical_pct: 0.06
+    liquidity: HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - vpin_reversal_extreme
+    priority: SECONDARY
+    max_exposure_pct: 5
+
+  UK100:
+    asset_class: INDEX
+    region: EU
+    role: uk_equity_brexit_proxy
+    spread_typical_pct: 0.08
+    liquidity: MEDIUM_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - crisis_mode_volatility_spike
+    priority: SECONDARY
+    max_exposure_pct: 4
+
+  JP225:
+    asset_class: INDEX
+    region: ASIA
+    role: asia_equity_benchmark
+    spread_typical_pct: 0.10
+    liquidity: MEDIUM
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+    priority: EXPERIMENTAL
+    max_exposure_pct: 3
+
+# ============================================================
+# COMMODITIES (5 símbolos)
+# ============================================================
+
+  XAUUSD:
+    asset_class: COMMODITY
+    region: GLOBAL
+    role: safe_haven_inflation_hedge
+    spread_typical_usd: 0.20
+    liquidity: VERY_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - vpin_reversal_extreme
+      - crisis_mode_volatility_spike
+      - order_flow_toxicity
+      - statistical_arbitrage_johansen
+      - iceberg_detection
+      - footprint_orderflow_clusters
+    pairs_for_cointegration:
+      - XAGUSD
+    priority: CORE
+    max_exposure_pct: 8
+
+  XAGUSD:
+    asset_class: COMMODITY
+    region: GLOBAL
+    role: industrial_metal_gold_proxy
+    spread_typical_usd: 0.03
+    liquidity: HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - vpin_reversal_extreme
+      - statistical_arbitrage_johansen
+      - correlation_divergence
+      - mean_reversion_statistical
+    pairs_for_cointegration:
+      - XAUUSD
+    priority: SECONDARY
+    max_exposure_pct: 4
+
+  XTIUSD:
+    asset_class: COMMODITY
+    region: US
+    role: energy_benchmark_wti
+    spread_typical_usd: 0.03
+    liquidity: VERY_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - crisis_mode_volatility_spike
+      - vpin_reversal_extreme
+      - correlation_divergence
+    pairs_for_correlation:
+      - USDCAD
+      - XBRUSD
+    priority: CORE
+    max_exposure_pct: 6
+
+  XBRUSD:
+    asset_class: COMMODITY
+    region: EU
+    role: energy_benchmark_brent
+    spread_typical_usd: 0.03
+    liquidity: VERY_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - correlation_divergence
+    pairs_for_correlation:
+      - XTIUSD
+    priority: SECONDARY
+    max_exposure_pct: 4
+
+  NATGAS:
+    asset_class: COMMODITY
+    region: US
+    role: energy_high_volatility
+    spread_typical_usd: 0.008
+    liquidity: MEDIUM
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - crisis_mode_volatility_spike
+    priority: EXPERIMENTAL
+    max_exposure_pct: 2
+    risk_note: "EXTREMADAMENTE_VOLATIL - Solo crisis mode, slippage altísimo"
+
+# ============================================================
+# CRYPTO (2 símbolos)
+# ============================================================
+
+  BTCUSD:
+    asset_class: CRYPTO
+    region: GLOBAL
+    role: crypto_benchmark_high_beta
+    spread_typical_usd: 10
+    liquidity: VERY_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - vpin_reversal_extreme
+      - order_flow_toxicity
+      - crisis_mode_volatility_spike
+      - spoofing_detection_l2
+      - footprint_orderflow_clusters
+    pairs_for_correlation:
+      - ETHUSD
+    priority: EXPERIMENTAL
+    max_exposure_pct: 5
+    risk_note: "24/7 trading, gap risk on weekends"
+
+  ETHUSD:
+    asset_class: CRYPTO
+    region: GLOBAL
+    role: crypto_beta_defi_proxy
+    spread_typical_usd: 1.0
+    liquidity: VERY_HIGH
+    eligible_strategies:
+      - breakout_volume_confirmation
+      - liquidity_sweep
+      - vpin_reversal_extreme
+      - correlation_divergence
+      - spoofing_detection_l2
+    pairs_for_correlation:
+      - BTCUSD
+    priority: EXPERIMENTAL
+    max_exposure_pct: 3
+
+# ============================================================
+# GRUPOS Y CLUSTERS
+# ============================================================
+
+groups:
+  fx_core:
+    description: "FX majors de máxima liquidez"
+    symbols:
+      - EURUSD
+      - GBPUSD
+      - USDJPY
+      - AUDUSD
+    max_combined_exposure_pct: 25
+
+  fx_crosses:
+    description: "FX crosses líquidos"
+    symbols:
+      - EURJPY
+      - GBPJPY
+      - EURGBP
+      - AUDJPY
+      - EURAUD
+      - EURCAD
+      - NZDJPY
+    max_combined_exposure_pct: 20
+
+  fx_safe_haven:
+    description: "Safe haven currencies"
+    symbols:
+      - USDCHF
+      - USDJPY
+    max_combined_exposure_pct: 10
+
+  indices_core:
+    description: "Índices principales"
+    symbols:
+      - US500
+      - NAS100
+      - US30
+      - DE40
+      - UK100
+    max_combined_exposure_pct: 30
+
+  commodities_metals:
+    description: "Metales preciosos"
+    symbols:
+      - XAUUSD
+      - XAGUSD
+    max_combined_exposure_pct: 12
+
+  commodities_energy:
+    description: "Energía (petróleo, gas)"
+    symbols:
+      - XTIUSD
+      - XBRUSD
+      - NATGAS
+    max_combined_exposure_pct: 10
+
+  crypto_core:
+    description: "Crypto líquidas"
+    symbols:
+      - BTCUSD
+      - ETHUSD
+    max_combined_exposure_pct: 8
+
+# ============================================================
+# CORRELACIÓN Y CLUSTERS
+# ============================================================
+
+correlation_clusters:
+  usd_inverse:
+    description: "Pares inversos al USD (alta correlación entre ellos)"
+    symbols:
+      - EURUSD
+      - GBPUSD
+      - AUDUSD
+      - NZDUSD
+    expected_correlation: 0.75
+    max_simultaneous_positions: 2
+    risk_note: "Evitar sobre-exposición anti-USD"
+
+  jpy_crosses:
+    description: "JPY crosses (risk-on proxy)"
+    symbols:
+      - EURJPY
+      - GBPJPY
+      - AUDJPY
+      - NZDJPY
+    expected_correlation: 0.80
+    max_simultaneous_positions: 2
+    risk_note: "Alta correlación en risk-on/risk-off"
+
+  us_equity:
+    description: "Índices US equity"
+    symbols:
+      - US500
+      - NAS100
+      - US30
+    expected_correlation: 0.90
+    max_simultaneous_positions: 2
+    risk_note: "Diversificar, no duplicar exposición equity US"
+
+  metals:
+    description: "Metales preciosos"
+    symbols:
+      - XAUUSD
+      - XAGUSD
+    expected_correlation: 0.80
+    max_simultaneous_positions: 2
+
+  oil:
+    description: "Petróleo WTI/Brent"
+    symbols:
+      - XTIUSD
+      - XBRUSD
+    expected_correlation: 0.95
+    max_simultaneous_positions: 1
+    risk_note: "Casi idénticos, no duplicar"
+
+  crypto:
+    description: "Cryptocurrencies"
+    symbols:
+      - BTCUSD
+      - ETHUSD
+    expected_correlation: 0.85
+    max_simultaneous_positions: 2
+
+# ============================================================
+# LÍMITES GLOBALES
+# ============================================================
+
+global_limits:
+  max_symbols_total: 27
+  max_active_positions_total: 15
+  max_exposure_per_asset_class:
+    FX: 40
+    INDEX: 30
+    COMMODITY: 20
+    CRYPTO: 10
+  max_exposure_per_region:
+    US: 35
+    EU: 25
+    ASIA_PACIFIC: 15
+    GLOBAL: 25
+  max_exposure_per_strategy:
+    breakout_volume_confirmation: 30
+    liquidity_sweep: 25
+    statistical_arbitrage_johansen: 15
+    order_flow_toxicity: 20
+    crisis_mode_volatility_spike: 10
+
+# ============================================================
+# DATA QUALITY REQUIREMENTS
+# ============================================================
+
+data_requirements:
+  min_history_days: 1095  # 3 años
+  min_data_health_score: 0.75
+  max_gap_tolerance_hours: 2
+  required_features:
+    - OHLCV
+    - volume_classification  # Para VPIN
+    - tick_data  # Para OFI (opcional pero recomendado)
+
+# ============================================================
+# PRÓXIMOS PASOS
+# ============================================================
+
+# TODO (Mandato 11):
+# - Integrar universe.yaml con ExposureManager
+# - Implementar correlation matrix dinámica
+# - Validar disponibilidad de datos históricos
+# - Backtest de estrategias APROBAR en símbolos elegibles
+
+# TODO (Mandato 12):
+# - Backtesting completo
+# - Ajuste de max_exposure_pct según performance real
+# - Considerar expansión a 35-40 símbolos si justificado
