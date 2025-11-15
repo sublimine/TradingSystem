@@ -1,0 +1,89 @@
+# Live Trading Configuration - MANDATO 23
+# CRITICAL: Este archivo controla si LIVE TRADING está permitido
+# Cambiar enabled: true SOLO cuando esté listo para trading REAL
+
+live_trading:
+  # MASTER SWITCH - MUST be true para permitir órdenes LIVE
+  # WARNING: enabled: true → DINERO REAL EN RIESGO
+  enabled: false  # CHANGE TO true ONLY when ready for LIVE
+
+  # Kill Switch - Capa 3: Broker Health
+  max_latency_ms: 500  # Latencia máxima tolerada (ms)
+  max_ping_age_seconds: 30  # Edad máxima del último ping (s)
+
+  # Kill Switch - Capa 4: Data Integrity
+  max_corrupted_ticks: 10  # Máximo de ticks corruptos antes de bloquear
+
+  # Order Execution
+  max_order_retries: 3  # Reintentos para errores transitorios
+  retry_delay_ms: 100  # Delay entre reintentos (ms)
+
+  # MT5 Connection
+  mt5:
+    max_retries: 5  # Reintentos de conexión MT5
+    base_delay: 2.0  # Delay base para backoff exponencial (s)
+
+  # Risk Limits (integración con KillSwitch)
+  # Estos límites se verifican en cada orden
+  risk_limits:
+    max_daily_loss_pct: 0.02  # 2% daily loss máximo
+    max_reject_rate_pct: 0.30  # 30% reject rate máximo
+    max_exposure_pct: 0.50  # 50% exposición máxima
+    max_clock_skew_seconds: 1.0  # 1s clock skew máximo
+    min_data_quality_pct: 0.80  # 80% data quality mínimo
+
+  # Logging & Auditoría
+  logging:
+    log_all_orders: true  # Log TODAS las órdenes LIVE
+    log_kill_switch_checks: true  # Log cada check de kill switch
+    critical_events_to_file: true  # Eventos críticos a archivo separado
+    audit_trail_enabled: true  # Audit trail completo
+
+  # Monitoring
+  monitoring:
+    broker_ping_interval_seconds: 10  # Ping broker cada 10s
+    account_snapshot_interval_seconds: 60  # Snapshot cuenta cada 60s
+    kill_switch_status_interval_seconds: 30  # Status kill switch cada 30s
+
+# Configuración específica para diferentes environments
+environments:
+  # Production (cuenta REAL)
+  production:
+    enabled: false  # MUST be explicitly enabled
+    account_type: "REAL"
+    confirmation_required: true
+    triple_confirm: true  # Requiere 3 confirmaciones
+
+  # Staging (cuenta demo pero con setup LIVE)
+  staging:
+    enabled: false
+    account_type: "DEMO"
+    confirmation_required: true
+    triple_confirm: false
+
+# Notifications (opcional, para alertas)
+notifications:
+  enabled: false  # Enable para recibir notificaciones
+  methods:
+    - email
+    - sms
+    - slack
+
+  # Kill Switch Alerts
+  kill_switch_alerts:
+    on_state_change: true
+    on_order_blocked: true
+    on_broker_unhealthy: true
+    on_data_integrity_fail: true
+
+# Emergency Contacts (para emergencias)
+emergency:
+  contacts:
+    - name: "Operator 1"
+      phone: "+1234567890"
+      email: "operator1@example.com"
+
+  # Auto-actions en emergencia
+  auto_actions:
+    close_all_positions_on_kill_switch: false  # NO cerrar automáticamente
+    pause_new_orders_only: true  # Solo pausar nuevas órdenes
