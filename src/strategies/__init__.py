@@ -14,7 +14,7 @@ from .correlation_divergence import CorrelationDivergence
 from .iceberg_detection import IcebergDetection
 from .htf_ltf_liquidity import HTFLTFLiquidity
 from .fvg_institutional import FVGInstitutional
-from .idp_inducement_distribution import IDPInducementDistribution
+from .idp_inducement_distribution import IDPInducement  # MANDATO24R: Fixed class name
 from .order_block_institutional import OrderBlockInstitutional
 from .ofi_refinement import OFIRefinement
 

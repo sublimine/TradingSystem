@@ -22,7 +22,7 @@ from src.strategies.htf_ltf_liquidity import HTFLTFLiquidity
 from src.strategies.volatility_regime_adaptation import VolatilityRegimeAdaptation
 from src.strategies.momentum_quality import MomentumQuality
 from src.strategies.mean_reversion_statistical import MeanReversionStatistical
-from src.strategies.idp_inducement_distribution import IDPInducementDistribution
+from src.strategies.idp_inducement_distribution import IDPInducement  # MANDATO24R: Fixed class name
 from src.strategies.iceberg_detection import IcebergDetection
 from src.strategies.breakout_volume_confirmation import BreakoutVolumeConfirmation
 from src.strategies.correlation_divergence import CorrelationDivergence
@@ -97,7 +97,7 @@ class StrategyOrchestrator:
             'volatility_regime_adaptation': VolatilityRegimeAdaptation,
             'momentum_quality': MomentumQuality,
             'mean_reversion_statistical': MeanReversionStatistical,
-            'idp_inducement_distribution': IDPInducementDistribution,
+            'idp_inducement_distribution': IDPInducement,  # MANDATO24R: Fixed class name
             'iceberg_detection': IcebergDetection,
             'breakout_volume_confirmation': BreakoutVolumeConfirmation,
             'correlation_divergence': CorrelationDivergence,

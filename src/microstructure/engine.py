@@ -25,11 +25,13 @@ from dataclasses import dataclass, field
 try:
     from src.features.order_flow import (
         VPINCalculator,
-        calculate_ofi,
-        calculate_signed_volume
+        calculate_signed_volume,
+        calculate_cumulative_volume_delta
     )
+    from src.features.ofi import calculate_ofi  # OFI is in separate module
     HAS_ORDER_FLOW = True
-except ImportError:
+except ImportError as e:
+    logger.warning(f"Order flow features not available: {e}")
     HAS_ORDER_FLOW = False
 
 try:
