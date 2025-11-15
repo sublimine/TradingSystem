@@ -105,9 +105,6 @@ class MicrostructureEngine:
         # VPIN calculators (uno por símbolo)
         self.vpin_calculators: Dict[str, object] = {}  # VPINCalculator instances
 
-        # CVD accumulators (running sum por símbolo)
-        self.cvd_accumulators: Dict[str, float] = {}
-
         # OFI lookback window (default 20 bars)
         features_config = config.get('features', {})
         self.ofi_lookback = features_config.get('ofi_lookback', 20)
@@ -199,7 +196,7 @@ class MicrostructureEngine:
             market_data: OHLCV DataFrame
 
         Returns:
-            OFI value (típicamente -10 a +10, pero sin bound)
+            OFI value (normalizado, típicamente -1 a +1)
         """
         try:
             # Get lookback window
@@ -208,13 +205,11 @@ class MicrostructureEngine:
             if len(lookback_data) < 2:
                 return 0.0
 
-            # Calculate OFI
-            ofi = calculate_ofi(
-                lookback_data['close'],
-                lookback_data['volume']
-            )
+            # Calculate OFI (firma correcta: DataFrame, window_size)
+            ofi_series = calculate_ofi(lookback_data, window_size=self.ofi_lookback)
 
-            return float(ofi) if ofi is not None else 0.0
+            # Return latest value
+            return float(ofi_series.iloc[-1]) if len(ofi_series) > 0 and not pd.isna(ofi_series.iloc[-1]) else 0.0
 
         except Exception as e:
             logger.debug(f"{symbol}: OFI calculation error: {e}")
@@ -222,48 +217,37 @@ class MicrostructureEngine:
 
     def _calculate_cvd(self, symbol: str, market_data: pd.DataFrame) -> float:
         """
-        Calcula Cumulative Volume Delta.
+        Calcula Cumulative Volume Delta usando rolling window.
 
-        CVD = running sum of signed volume (buy volume - sell volume).
-        Mantiene estado en self.cvd_accumulators.
+        CVD = suma acumulada de volumen signed en ventana de 20 barras.
+        Consistente con implementación canónica (calculate_cumulative_volume_delta).
 
         Args:
             symbol: Symbol name
             market_data: OHLCV DataFrame
 
         Returns:
-            CVD value (running sum desde inicio del engine)
+            CVD value (rolling sum de signed volume)
         """
         try:
-            # Initialize accumulator if first time
-            if symbol not in self.cvd_accumulators:
-                self.cvd_accumulators[symbol] = 0.0
+            if len(market_data) < 2:
+                return 0.0
 
-            # Get latest bar
-            latest_bar = market_data.iloc[-1]
-
-            # Get previous close (for signed volume)
-            if len(market_data) >= 2:
-                prev_close = market_data.iloc[-2]['close']
-            else:
-                # First bar, assume neutral
-                return self.cvd_accumulators[symbol]
-
-            # Calculate signed volume
-            signed_vol = calculate_signed_volume(
-                latest_bar['close'],
-                prev_close,
-                latest_bar['volume']
+            # Calculate signed volume para todo el DataFrame (firma correcta: Series, Series)
+            signed_volumes = calculate_signed_volume(
+                market_data['close'],
+                market_data['volume']
             )
 
-            # Accumulate
-            self.cvd_accumulators[symbol] += signed_vol
+            # CVD = rolling sum (consistente con calculate_cumulative_volume_delta)
+            cvd_series = calculate_cumulative_volume_delta(signed_volumes, window=20)
 
-            return self.cvd_accumulators[symbol]
+            # Return latest value
+            return float(cvd_series.iloc[-1]) if len(cvd_series) > 0 and not pd.isna(cvd_series.iloc[-1]) else 0.0
 
         except Exception as e:
             logger.debug(f"{symbol}: CVD calculation error: {e}")
-            return self.cvd_accumulators.get(symbol, 0.0)
+            return 0.0
 
     def _calculate_vpin(self, symbol: str, market_data: pd.DataFrame) -> float:
         """
@@ -396,16 +380,13 @@ class MicrostructureEngine:
         """
         Reset state para un símbolo (útil para testing o re-inicialización).
 
-        Borra VPIN calculator y CVD accumulator para el símbolo.
+        Borra VPIN calculator para el símbolo.
 
         Args:
             symbol: Symbol to reset
         """
         if symbol in self.vpin_calculators:
             del self.vpin_calculators[symbol]
-
-        if symbol in self.cvd_accumulators:
-            del self.cvd_accumulators[symbol]
 
         logger.debug(f"Reset microstructure state for {symbol}")
 
@@ -414,7 +395,6 @@ class MicrostructureEngine:
         Reset TODOS los símbolos (útil para iniciar nueva sesión).
         """
         self.vpin_calculators.clear()
-        self.cvd_accumulators.clear()
 
         logger.info("Reset all microstructure state")
 
