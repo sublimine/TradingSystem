@@ -1,0 +1,43 @@
+{
+  "timestamp": "2025-11-15T09:04:58.137579",
+  "mode": "PAPER",
+  "uptime_seconds": 1.3e-05,
+  "kill_switch": {
+    "state": "ACTIVE",
+    "reason": null,
+    "blocked_since": null,
+    "total_blocks": 0
+  },
+  "positions": {
+    "open_positions": 0,
+    "total_exposure_pct": 0.0,
+    "max_exposure_pct": 0.0,
+    "positions_by_symbol": {}
+  },
+  "pnl": {
+    "daily_pnl": 0.0,
+    "daily_pnl_pct": 0.0,
+    "current_drawdown": 0.0,
+    "max_drawdown": 0.0,
+    "total_trades_today": 0,
+    "winning_trades": 0,
+    "losing_trades": 0
+  },
+  "signals": {
+    "signals_generated": 0,
+    "signals_rejected": 0,
+    "reject_rate_pct": 0.0,
+    "avg_signal_quality": 0.0,
+    "signals_by_strategy": {}
+  },
+  "microstructure": {
+    "symbols": [],
+    "avg_vpin": 0.0,
+    "avg_ofi": 0.0,
+    "avg_cvd": 0.0,
+    "extreme_vpin_count": 0
+  },
+  "alerts": [],
+  "demo_mode": true,
+  "note": "Demo snapshot - system not running"
+}
