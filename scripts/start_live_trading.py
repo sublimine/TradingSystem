@@ -3,8 +3,10 @@
 Start Live Trading - Script de inicio LIVE con validaciones
 
 MANDATO 23: Live Execution & Kill Switch
+MANDATO 26: Production Hardening (health checks integrated)
 
 Valida prerequisites antes de lanzar LIVE trading:
+- HEALTH CHECKS (smoke test) - MANDATO 26
 - Config LIVE habilitado
 - MT5 conectado
 - Kill Switch operacional
@@ -13,9 +15,11 @@ Valida prerequisites antes de lanzar LIVE trading:
 
 Usage:
     python scripts/start_live_trading.py --capital 10000
+    python scripts/start_live_trading.py --capital 10000 --skip-health-check
+    python scripts/start_live_trading.py --capital 10000 --force-start
 
 Author: SUBLIMINE Institutional Trading System
-Date: 2025-11-14
+Date: 2025-11-15 (Updated for MANDATO 26)
 """
 
 import sys
@@ -23,6 +27,7 @@ import os
 import argparse
 import yaml
 import logging
+import subprocess
 from pathlib import Path
 
 # Add parent directory to path
@@ -44,14 +49,18 @@ class LiveTradingLauncher:
     Launcher para LIVE trading con validaciones completas.
     """
 
-    def __init__(self, capital: float):
+    def __init__(self, capital: float, skip_health_check: bool = False, force_start: bool = False):
         """
         Inicializa launcher.
 
         Args:
             capital: Capital inicial
+            skip_health_check: Skip smoke tests (NOT RECOMMENDED FOR LIVE)
+            force_start: Force start despite P1 failures (CRITICAL APPROVAL REQUIRED)
         """
         self.capital = capital
+        self.skip_health_check = skip_health_check
+        self.force_start = force_start
         self.config = None
         self.live_config = None
 
@@ -59,9 +68,87 @@ class LiveTradingLauncher:
         """
         Ejecuta validaciones y lanza LIVE trading.
         """
-        logger.info("=" * 80)
-        logger.info("LIVE TRADING LAUNCHER - MANDATO 23")
-        logger.info("=" * 80)
+        logger.critical("=" * 80)
+        logger.critical("🚨 LIVE TRADING LAUNCHER - MANDATO 26 🚨")
+        logger.critical("=" * 80)
+        logger.critical(f"Capital: ${self.capital:,.2f}")
+        logger.critical("⚠️  REAL MONEY AT RISK  ⚠️")
+        logger.critical("=" * 80)
+
+        # Step 0: HEALTH CHECKS (MANDATO 26)
+        if not self.skip_health_check:
+            logger.critical("")
+            logger.critical("Step 0/6: Running MANDATORY health checks...")
+            health_status = self._run_health_checks()
+
+            if health_status == 1:
+                # P0 failure - ABORT (MANDATORY)
+                logger.critical("")
+                logger.critical("=" * 80)
+                logger.critical("❌ P0 HEALTH CHECK FAILURE - LAUNCH ABORTED")
+                logger.critical("=" * 80)
+                logger.critical("Infrastructure is broken. DO NOT START LIVE TRADING.")
+                logger.critical("Fix P0 issues and re-run smoke test before attempting LIVE.")
+                logger.critical("")
+                logger.critical("To view detailed report:")
+                logger.critical("  ls -lt reports/health/SMOKE_TEST_INSTITUTIONAL_*.md | head -1")
+                logger.critical("=" * 80)
+                return False
+
+            elif health_status == 2:
+                # P1 failure - CRITICAL WARNING
+                logger.critical("")
+                logger.critical("=" * 80)
+                logger.critical("🚨 P1 HEALTH CHECK FAILURES DETECTED 🚨")
+                logger.critical("=" * 80)
+                logger.critical("Core trading functionality may be impaired.")
+                logger.critical("LAUNCHING LIVE WITH P1 FAILURES IS EXTREMELY RISKY.")
+                logger.critical("")
+
+                if not self.force_start:
+                    logger.critical("Options:")
+                    logger.critical("  1. ABORT and fix P1 issues (STRONGLY RECOMMENDED)")
+                    logger.critical("  2. Force start with --force-start")
+                    logger.critical("     ⚠️  REQUIRES: Risk Manager + CTO approval")
+                    logger.critical("     ⚠️  MUST: Document in compliance log")
+                    logger.critical("")
+                    logger.critical("ABORTING LAUNCH FOR SAFETY.")
+                    logger.critical("=" * 80)
+                    return False
+                else:
+                    logger.critical("🚨 FORCE START ENABLED - PROCEEDING WITH P1 FAILURES 🚨")
+                    logger.critical("⚠️  This decision MUST be approved by:")
+                    logger.critical("    - Risk Manager")
+                    logger.critical("    - CTO / Technical Lead")
+                    logger.critical("⚠️  Document this in compliance/operational log")
+                    logger.critical("=" * 80)
+                    input("Press ENTER to acknowledge and continue...")
+                    # Continue with force start
+
+            elif health_status == 3:
+                # P2 warnings
+                logger.critical("")
+                logger.critical("⚠️  P2 warnings detected (non-critical) - proceeding")
+                logger.critical("")
+
+            else:
+                # All pass
+                logger.critical("✅ Health checks PASSED")
+                logger.critical("")
+        else:
+            logger.critical("")
+            logger.critical("=" * 80)
+            logger.critical("🚨 HEALTH CHECKS SKIPPED (--skip-health-check) 🚨")
+            logger.critical("=" * 80)
+            logger.critical("⚠️  THIS IS EXTREMELY DANGEROUS FOR LIVE TRADING")
+            logger.critical("⚠️  Skipping health checks can result in REAL MONEY LOSS")
+            logger.critical("⚠️  This override MUST be approved by CTO")
+            logger.critical("=" * 80)
+            confirm = input("Type 'I UNDERSTAND THE RISKS' to continue: ")
+            if confirm != "I UNDERSTAND THE RISKS":
+                logger.critical("Launch cancelled")
+                return False
+            logger.critical("")
 
         # Step 1: Load configs
         if not self._load_configs():
@@ -84,13 +171,52 @@ class LiveTradingLauncher:
             return False
 
         # Step 6: Launch LIVE trading
-        logger.info("=" * 80)
-        logger.info("LAUNCHING LIVE TRADING")
-        logger.info("=" * 80)
+        logger.critical("=" * 80)
+        logger.critical("🚀 LAUNCHING LIVE TRADING 🚀")
+        logger.critical("=" * 80)
 
         self._launch_live_trading()
 
         return True
+
+    def _run_health_checks(self) -> int:
+        """
+        Ejecuta smoke test institucional (MANDATORY para LIVE).
+
+        Returns:
+            Exit code from smoke test (0=pass, 1=P0 fail, 2=P1 fail, 3=P2 warn)
+        """
+        script_path = Path(__file__).parent / "smoke_test_institutional.py"
+
+        if not script_path.exists():
+            logger.critical(f"❌ CRITICAL: Smoke test not found: {script_path}")
+            logger.critical("❌ Cannot launch LIVE without health checks")
+            return 1  # Treat missing smoke test as P0 failure for LIVE
+
+        try:
+            # Run FULL smoke test for LIVE (not just production subset)
+            logger.critical("Running FULL smoke test (LIVE mode requires comprehensive checks)...")
+            result = subprocess.run(
+                [sys.executable, str(script_path)],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+
+            # Print output
+            if result.stdout:
+                print(result.stdout)
+
+            return result.returncode
+
+        except subprocess.TimeoutExpired:
+            logger.critical("❌ Health check timed out (>60s)")
+            logger.critical("❌ This indicates a serious system problem")
+            return 1  # Treat timeout as P0 failure
+
+        except Exception as e:
+            logger.critical(f"❌ Health check failed to run: {e}")
+            return 1  # Treat errors as P0 failure
 
     def _load_configs(self) -> bool:
         """
@@ -301,7 +427,7 @@ class LiveTradingLauncher:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description='Start LIVE trading with validations'
+        description='Start LIVE trading with validations (MANDATO 26: Health checks integrated)'
     )
 
     parser.add_argument(
@@ -311,9 +437,25 @@ def main():
         help='Starting capital (default: 10000)'
     )
 
+    parser.add_argument(
+        '--skip-health-check',
+        action='store_true',
+        help='Skip health checks (EXTREMELY DANGEROUS - requires CTO approval)'
+    )
+
+    parser.add_argument(
+        '--force-start',
+        action='store_true',
+        help='Force start despite P1 failures (requires Risk Manager + CTO approval)'
+    )
+
     args = parser.parse_args()
 
-    launcher = LiveTradingLauncher(capital=args.capital)
+    launcher = LiveTradingLauncher(
+        capital=args.capital,
+        skip_health_check=args.skip_health_check,
+        force_start=args.force_start
+    )
 
     try:
         launcher.run()
