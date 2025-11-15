@@ -1,4 +1,21 @@
 """
+⚠️  DEPRECATED - DO NOT USE ⚠️
+
+This file is LEGACY (v1) and has been REPLACED by main_institutional.py (MANDATO 24).
+
+DEPRECATION STATUS: MANDATO 25 - 2025-11-15
+REPLACEMENT: Use main_institutional.py instead
+
+This entry point uses outdated loop structure and is NOT maintained.
+For current institutional system, use:
+
+    python main_institutional.py --mode research  # Backtest
+    python main_institutional.py --mode paper     # Paper trading
+    python main_institutional.py --mode live      # Live trading
+
+---
+
+ORIGINAL HEADER (OBSOLETE):
 Elite Trading System - Main Entry Point with Auto-ML Initialization
 
 This is the primary entry point for the trading system.
@@ -24,8 +41,27 @@ Usage:
     python main.py --mode backtest --days 90
 
 Author: Elite Trading System
-Version: 2.0
+Version: 2.0 (DEPRECATED)
 """
+
+import sys
+import logging
+
+logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger(__name__)
+
+logger.warning("=" * 80)
+logger.warning("⚠️  DEPRECATION WARNING ⚠️")
+logger.warning("=" * 80)
+logger.warning("main_DEPRECATED_v1.py is OBSOLETE")
+logger.warning("Use main_institutional.py instead:")
+logger.warning("  python main_institutional.py --mode research")
+logger.warning("  python main_institutional.py --mode paper")
+logger.warning("  python main_institutional.py --mode live")
+logger.warning("=" * 80)
+logger.warning("")
+
+# Continue with original imports below...
 
 import argparse
 import logging

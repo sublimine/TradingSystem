@@ -1,4 +1,21 @@
 """
+⚠️  DEPRECATED - DO NOT USE ⚠️
+
+This file is LEGACY (v2 / MANDATO 23) and has been REPLACED by main_institutional.py (MANDATO 24).
+
+DEPRECATION STATUS: MANDATO 25 - 2025-11-15
+REPLACEMENT: Use main_institutional.py instead
+
+This entry point is from MANDATO 23 and has been superseded by integrated loop in MANDATO 24.
+For current institutional system with full feature pipeline and brain integration, use:
+
+    python main_institutional.py --mode research  # Backtest
+    python main_institutional.py --mode paper     # Paper trading
+    python main_institutional.py --mode live      # Live trading
+
+---
+
+ORIGINAL HEADER (OBSOLETE - MANDATO 23):
 Elite Trading System - Main Entry Point with LIVE/PAPER Execution
 
 MANDATO 23: Integración de sistema de ejecución institucional con separación quirúrgica.
@@ -21,9 +38,29 @@ Usage:
     python main_with_execution.py --mode backtest --days 90
 
 Author: SUBLIMINE Institutional Trading System
-Version: 2.1 - MANDATO 23
+Version: 2.1 - MANDATO 23 (DEPRECATED)
 Date: 2025-11-14
 """
+
+import sys
+import logging
+
+logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger(__name__)
+
+logger.warning("=" * 80)
+logger.warning("⚠️  DEPRECATION WARNING ⚠️")
+logger.warning("=" * 80)
+logger.warning("main_DEPRECATED_v2.py (MANDATO 23) is OBSOLETE")
+logger.warning("Replaced by main_institutional.py (MANDATO 24)")
+logger.warning("Use main_institutional.py instead:")
+logger.warning("  python main_institutional.py --mode research")
+logger.warning("  python main_institutional.py --mode paper")
+logger.warning("  python main_institutional.py --mode live")
+logger.warning("=" * 80)
+logger.warning("")
+
+# Continue with original imports below...
 
 import argparse
 import logging
