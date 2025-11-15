@@ -277,13 +277,13 @@ class LiveTradingLauncher:
 
     def _launch_live_trading(self):
         """
-        Lanza LIVE trading via main_with_execution.py
+        Lanza LIVE trading via main_institutional.py (MANDATO 24).
         """
         import subprocess
 
         cmd = [
             sys.executable,
-            'main_with_execution.py',
+            'main_institutional.py',  # MANDATO 24: Unified entry point
             '--mode', 'live',
             '--capital', str(self.capital)
         ]

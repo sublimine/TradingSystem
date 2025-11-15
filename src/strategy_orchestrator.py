@@ -140,3 +140,145 @@ class StrategyOrchestrator:
         """Initialize Adaptive Participation Rate executor."""
         # TODO: Implementation
         pass
+
+    def generate_signals(
+        self,
+        market_data: Dict[str, pd.DataFrame],
+        current_regime: str,
+        features: Dict[str, Dict]
+    ) -> List:
+        """
+        Genera señales de TODAS las estrategias activas.
+
+        MANDATO 24: Método crítico que integra feature pipeline con estrategias.
+
+        Args:
+            market_data: Dict[symbol, DataFrame] con datos de mercado (OHLCV)
+            current_regime: Régimen actual ('trending', 'ranging', 'volatile', 'quiet')
+            features: Dict[symbol, Dict[feature_name, value]] con features pre-calculadas
+                Ejemplo:
+                    {
+                        'EURUSD': {
+                            'ofi': 0.35,
+                            'cvd': 1234.5,
+                            'vpin': 0.78,
+                            'l2_snapshot': <OrderBookSnapshot>,
+                            'imbalance': 0.25,
+                            'atr': 0.0001
+                        }
+                    }
+
+        Returns:
+            Lista de señales (Signal objects) de todas las estrategias
+
+        Example:
+            >>> signals = orchestrator.generate_signals(
+            ...     market_data={'EURUSD': df},
+            ...     current_regime='trending',
+            ...     features={'EURUSD': {'vpin': 0.78, 'ofi': 0.35}}
+            ... )
+            >>> print(f"Generated {len(signals)} signals")
+
+        Note:
+            - Filtra estrategias activas por régimen
+            - Pasa features a cada estrategia via evaluate()
+            - Añade metadata (strategy name, regime) a cada señal
+            - Maneja errores por estrategia (no falla todo el loop)
+        """
+        all_signals = []
+
+        # Filtrar estrategias activas por régimen
+        active_strategies = self._get_strategies_for_regime(current_regime)
+
+        logger.debug(f"{len(active_strategies)} strategies active for regime '{current_regime}'")
+
+        # Generar señales de cada estrategia
+        for strategy_name, strategy in active_strategies.items():
+            try:
+                # Get primary symbol for strategy
+                # Primero intenta getattr, luego config, luego default
+                primary_symbol = getattr(strategy, 'symbol', None)
+                if primary_symbol is None:
+                    # Fallback: obtener de config
+                    strategy_config = self.config.get(strategy_name, {})
+                    primary_symbol = strategy_config.get('symbol', 'EURUSD')
+
+                # Get market data for symbol
+                strategy_data = market_data.get(primary_symbol)
+
+                if strategy_data is None or strategy_data.empty:
+                    logger.debug(
+                        f"No data for {primary_symbol}, skipping {strategy.__class__.__name__}"
+                    )
+                    continue
+
+                # Get features for symbol
+                strategy_features = features.get(primary_symbol, {})
+
+                # CRITICAL: Pass features to strategy
+                signals = strategy.evaluate(strategy_data, strategy_features)
+
+                # Add strategy metadata to signals
+                for signal in signals:
+                    if signal.metadata is None:
+                        signal.metadata = {}
+
+                    signal.metadata['strategy'] = strategy.__class__.__name__
+                    signal.metadata['strategy_name'] = strategy_name
+                    signal.metadata['regime'] = current_regime
+
+                # Update performance tracker
+                self.performance_tracker[strategy_name]['signals_generated'] += len(signals)
+
+                all_signals.extend(signals)
+
+                if signals:
+                    logger.debug(
+                        f"{strategy.__class__.__name__} generated {len(signals)} signals "
+                        f"(symbol={primary_symbol}, regime={current_regime})"
+                    )
+
+            except Exception as e:
+                logger.error(f"Error in {strategy_name}: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
+
+        logger.info(
+            f"Generated {len(all_signals)} total signals from {len(active_strategies)} strategies"
+        )
+
+        return all_signals
+
+    def _get_strategies_for_regime(self, regime: str) -> Dict:
+        """
+        Filtra estrategias activas para el régimen actual.
+
+        Args:
+            regime: Current market regime
+
+        Returns:
+            Dict de estrategias activas {strategy_name: strategy_instance}
+
+        Note:
+            - Si APR habilitado, usa sus pesos
+            - Si no, filtra por preferred_regimes de cada estrategia
+            - Si estrategia no especifica preferencia, siempre activa
+        """
+        # Si APR (Active Portfolio Rebalancing) está habilitado, usar sus pesos
+        if self.apr_executor and hasattr(self.apr_executor, 'get_active_strategies'):
+            return self.apr_executor.get_active_strategies(regime)
+
+        # Si no, filtrar manualmente por régimen
+        active = {}
+
+        for strategy_name, strategy in self.strategies.items():
+            # Check si estrategia tiene preferencia de régimen
+            if hasattr(strategy, 'preferred_regimes'):
+                if regime in strategy.preferred_regimes:
+                    active[strategy_name] = strategy
+            else:
+                # Si no especifica preferencia, siempre activa
+                active[strategy_name] = strategy
+
+        return active
