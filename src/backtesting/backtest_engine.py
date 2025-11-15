@@ -46,6 +46,14 @@ except ImportError:
     calculate_cumulative_volume_delta = None
     calculate_atr = None
 
+# MANDATO25: Import MicrostructureEngine for feature parity
+try:
+    from microstructure.engine import MicrostructureEngine
+    HAS_MICROSTRUCTURE_ENGINE = True
+except ImportError:
+    MicrostructureEngine = None
+    HAS_MICROSTRUCTURE_ENGINE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -68,7 +76,8 @@ class BacktestEngine:
                  risk_per_trade: float = 0.01,
                  commission_per_lot: float = 7.0,
                  slippage_pips: float = 0.5,
-                 spread_pips: Optional[Dict[str, float]] = None):
+                 spread_pips: Optional[Dict[str, float]] = None,
+                 config: Optional[Dict] = None):
         """
         Initialize backtest engine.
 
@@ -79,6 +88,7 @@ class BacktestEngine:
             commission_per_lot: Commission per standard lot (round-trip)
             slippage_pips: Average slippage in pips
             spread_pips: Dict of average spreads per symbol {'EURUSD': 1.2, ...}
+            config: System config dict (for MicrostructureEngine) - MANDATO25
         """
         self.strategies = strategies
         self.initial_capital = initial_capital
@@ -86,6 +96,7 @@ class BacktestEngine:
         self.commission_per_lot = commission_per_lot
         self.slippage_pips = slippage_pips
         self.spread_pips = spread_pips or {}
+        self.config = config or {}
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -95,8 +106,18 @@ class BacktestEngine:
         self.trades = []
         self.open_positions = {}
 
-        # VPIN calculators per symbol
-        self.vpin_calculators = {}
+        # MANDATO25: MicrostructureEngine for feature parity (BACKTEST ↔ PAPER ↔ LIVE)
+        if HAS_MICROSTRUCTURE_ENGINE:
+            self.microstructure_engine = MicrostructureEngine(self.config)
+            self.use_microstructure_engine = True
+            self.logger.info("✅ Using MicrostructureEngine for feature calculation (PARITY MODE)")
+        else:
+            self.microstructure_engine = None
+            self.use_microstructure_engine = False
+            self.logger.warning("⚠️ MicrostructureEngine not available - using fallback feature calculation")
+
+        # VPIN calculators per symbol (fallback only if MicrostructureEngine unavailable)
+        self.vpin_calculators = {} if not self.use_microstructure_engine else None
 
     def run_backtest(self,
                      historical_data: Dict[str, pd.DataFrame],
@@ -358,6 +379,8 @@ class BacktestEngine:
         """
         Calculate institutional features (OFI, CVD, VPIN, ATR) for strategy evaluation.
 
+        MANDATO25: Now uses MicrostructureEngine for EXACT parity with PAPER/LIVE modes.
+
         Args:
             symbol: Trading symbol
             historical_data: Full historical DataFrame for symbol
@@ -366,20 +389,34 @@ class BacktestEngine:
         Returns:
             Dict with features: {'ofi', 'cvd', 'vpin', 'atr'}
         """
-        features = {}
-
         # Get window of recent data (last 100 bars up to current)
         lookback = min(100, current_idx + 1)
         recent_data = historical_data.iloc[max(0, current_idx - lookback + 1):current_idx + 1]
 
         if len(recent_data) < 20:
             # Not enough data - return neutral/safe values
-            features['ofi'] = 0.0
-            features['cvd'] = 0.0
-            features['vpin'] = 0.5
-            features['atr'] = 0.0001
-            return features
+            return {
+                'ofi': 0.0,
+                'cvd': 0.0,
+                'vpin': 0.5,
+                'atr': 0.0001
+            }
 
+        # MANDATO25: Use MicrostructureEngine if available (PARITY MODE)
+        if self.use_microstructure_engine:
+            try:
+                microstructure_features = self.microstructure_engine.calculate_features(
+                    symbol,
+                    recent_data,
+                    l2_data=None  # L2 not available in backtest
+                )
+                return self.microstructure_engine.get_features_dict(microstructure_features)
+            except Exception as e:
+                self.logger.warning(f"MicrostructureEngine failed for {symbol}: {e} - using fallback")
+                # Fall through to fallback calculation
+
+        # FALLBACK: Inline calculation (legacy, only if MicrostructureEngine unavailable)
+        features = {}
         try:
             # ATR (Average True Range)
             if calculate_atr is not None:
