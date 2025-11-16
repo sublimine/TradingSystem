@@ -56,8 +56,8 @@ class OFIRefinement(StrategyBase):
         self.min_data_points = config.get('min_data_points', 200)
         
         # Risk management
-        self.stop_loss_atr_multiplier = config.get('stop_loss_atr_multiplier', 2.5)
-        self.take_profit_atr_multiplier = config.get('take_profit_atr_multiplier', 4.0)
+        self.stop_loss_pct = config.get('stop_loss_pct', 2.5)
+        self.take_profit_pct = config.get('take_profit_pct', 4.0)
         
         # State tracking
         # FIX BUG #12: Use deque with maxlen to prevent memory leak
@@ -177,30 +177,6 @@ class OFIRefinement(StrategyBase):
         
         return coherent
     
-    def calculate_atr(self, data: pd.DataFrame, period: int = 14) -> float:
-        """
-        Calculate Average True Range for position sizing.
-        
-        Args:
-            data: DataFrame with OHLC data
-            period: ATR period
-            
-        Returns:
-            Current ATR value
-        """
-        high = data['high']
-        low = data['low']
-        close = data['close'].shift(1)
-        
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
-        
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        
-        return atr
     
     def evaluate(self, data: pd.DataFrame, features: Dict) -> Optional[Signal]:
         """
@@ -270,16 +246,15 @@ class OFIRefinement(StrategyBase):
         
         # STEP 6: Generate signal
         current_price = data['close'].iloc[-1]
-        atr = self.calculate_atr(data)
         
         if z_score > 0:
             direction = 'long'
-            stop_loss = current_price - (atr * self.stop_loss_atr_multiplier)
-            take_profit = current_price + (atr * self.take_profit_atr_multiplier)
+            stop_loss = current_price - (current_price * 0.002)
+            take_profit = current_price + (current_price * 0.006)
         else:
             direction = 'short'
-            stop_loss = current_price + (atr * self.stop_loss_atr_multiplier)
-            take_profit = current_price - (atr * self.take_profit_atr_multiplier)
+            stop_loss = current_price + (current_price * 0.002)
+            take_profit = current_price - (current_price * 0.006)
         
         # Calculate confidence based on z-score magnitude
         confidence = min(0.95, 0.65 + (abs(z_score) - self.z_entry_threshold) * 0.15)
@@ -307,8 +282,7 @@ class OFIRefinement(StrategyBase):
                 'ofi_z_score': float(z_score),
                 'vpin': float(vpin) if vpin else None,
                 'price_change_20p': float(price_change_pct),
-                'atr': float(atr),
-                'risk_reward_ratio': self.take_profit_atr_multiplier / self.stop_loss_atr_multiplier
+                'risk_reward_ratio': self.take_profit_pct / self.stop_loss_pct
             }
         )
         

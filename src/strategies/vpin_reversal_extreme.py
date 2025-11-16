@@ -74,7 +74,7 @@ class VPINReversalExtreme(StrategyBase):
         self.max_bars_after_peak = config.get('max_bars_after_peak', 5)
 
         # Risk management - ELITE
-        self.stop_loss_beyond_extreme = config.get('stop_loss_beyond_extreme', 1.2)
+        self.stop_loss_buffer_pips * 0.0001 = config.get('stop_loss_beyond_extreme', 1.2)
         self.take_profit_r = config.get('take_profit_r', 4.5)
 
         # State tracking
@@ -274,15 +274,15 @@ class VPINReversalExtreme(StrategyBase):
         if self.extreme_direction == 'UP':
             direction = 'SHORT'
             # Stop above extreme high
-            atr = self._calculate_atr(market_data)
-            stop_loss = self.extreme_price + (atr * self.stop_loss_beyond_extreme)
+            pip_buffer = 8 * 0.0001  # 8 pips fixed
+            stop_loss = self.extreme_price + (pip_buffer * self.stop_loss_buffer_pips * 0.0001)
             risk = stop_loss - current_price
             take_profit = current_price - (risk * self.take_profit_r)
         else:
             direction = 'LONG'
             # Stop below extreme low
-            atr = self._calculate_atr(market_data)
-            stop_loss = self.extreme_price - (atr * self.stop_loss_beyond_extreme)
+            pip_buffer = 8 * 0.0001  # 8 pips fixed
+            stop_loss = self.extreme_price - (pip_buffer * self.stop_loss_buffer_pips * 0.0001)
             risk = current_price - stop_loss
             take_profit = current_price + (risk * self.take_profit_r)
 
@@ -320,20 +320,6 @@ class VPINReversalExtreme(StrategyBase):
 
         return signal
 
-    def _calculate_atr(self, market_data: pd.DataFrame, period: int = 14) -> float:
-        """Calculate ATR for stop placement."""
-        high = market_data['high']
-        low = market_data['low']
-        close = market_data['close'].shift(1)
-
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
-
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        return atr if not np.isnan(atr) else 0.0001
 
     def _reset_extreme_tracking(self):
         """Reset extreme zone tracking."""

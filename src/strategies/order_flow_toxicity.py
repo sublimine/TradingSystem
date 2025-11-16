@@ -96,7 +96,7 @@ class OrderFlowToxicityStrategy(StrategyBase):
         self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
 
         # Risk management
-        self.stop_loss_atr_multiple = config.get('stop_loss_atr_multiple', 2.0)
+        self.stop_loss_pct = config.get('stop_loss_atr_multiple', 2.0)
         self.take_profit_r_multiple = config.get('take_profit_r_multiple', 3.0)
 
         # State tracking
@@ -133,9 +133,7 @@ class OrderFlowToxicityStrategy(StrategyBase):
         vpin = features.get('vpin', 0.5)
         ofi = features.get('ofi', 0.0)
         cvd = features.get('cvd', 0.0)
-        atr = features.get('atr')
 
-        if atr is None or atr <= 0:
             return []
 
         # Track VPIN and OFI history
@@ -350,22 +348,21 @@ class OrderFlowToxicityStrategy(StrategyBase):
         """Generate signal for confirmed toxic flow fade."""
 
         try:
-            atr = features.get('atr')
             vpin = features.get('vpin', 0.5)
 
             if fade_direction == 'LONG':
                 entry_price = current_price
-                stop_loss = current_price - (atr * self.stop_loss_atr_multiple)
+                stop_loss = current_price - (current_price * 0.0025)
                 risk = entry_price - stop_loss
                 take_profit = entry_price + (risk * self.take_profit_r_multiple)
             else:  # SHORT
                 entry_price = current_price
-                stop_loss = current_price + (atr * self.stop_loss_atr_multiple)
+                stop_loss = current_price + (current_price * 0.0025)
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * self.take_profit_r_multiple)
 
             # Validate risk
-            if risk <= 0 or risk > atr * 4.0:
+            if risk <= 0 or risk > (entry_price * 0.003):
                 return None
 
             rr_ratio = abs(take_profit - entry_price) / abs(entry_price - stop_loss) if risk > 0 else 0
@@ -427,7 +424,6 @@ class OrderFlowToxicityStrategy(StrategyBase):
         if len(market_data) < 50:
             return False
 
-        required_features = ['ofi', 'cvd', 'vpin', 'atr']
         for feature in required_features:
             if feature not in features:
                 self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")
