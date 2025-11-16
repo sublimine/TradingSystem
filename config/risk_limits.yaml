@@ -1,0 +1,341 @@
+# INSTITUTIONAL RISK LIMITS - SUBLIMINE SYSTEM
+# INTOCABLE - DO NOT MODIFY WITHOUT CIO APPROVAL
+#
+# These limits are HARD CAPS enforced at multiple layers:
+# 1. RiskAllocator (pre-trade)
+# 2. PositionManager (during trade)
+# 3. CircuitBreakers (emergency)
+# 4. KillSwitch (final safety)
+#
+# Research basis:
+# - Kelly Criterion (fractional Kelly for institutional risk)
+# - VaR/CVaR (99% confidence)
+# - Drawdown-based position sizing (Vince 1990, 1992)
+# - Institutional risk management best practices
+
+# ============================================================================
+# GLOBAL RISK PARAMETERS
+# ============================================================================
+global:
+  # Maximum risk per single trade idea (% of NAV)
+  max_risk_per_trade_pct: 0.02              # 2% hard cap
+  min_risk_per_trade_pct: 0.005             # 0.5% minimum (for micro-tests)
+  default_risk_per_trade_pct: 0.01          # 1% default
+
+  # Maximum total portfolio risk (% of NAV)
+  max_portfolio_risk_pct: 0.10              # 10% total exposure cap
+
+  # Maximum correlation exposure (% of NAV in correlated positions)
+  max_correlation_exposure_pct: 0.05        # 5% max in correlated trades
+
+  # Daily loss limits (% of NAV)
+  daily_loss_limit_pct: 0.05                # 5% daily loss = pause trading
+  daily_loss_hard_stop_pct: 0.08            # 8% daily loss = STOP ALL
+
+  # Drawdown limits (% from peak NAV)
+  max_drawdown_pause_pct: 0.20              # 20% DD = pause new trades
+  max_drawdown_liquidate_pct: 0.30          # 30% DD = emergency liquidation
+
+  # Position limits
+  max_positions_total: 10                   # Max 10 concurrent positions
+  max_positions_per_symbol: 2               # Max 2 positions per symbol
+  max_positions_per_strategy: 3             # Max 3 positions per strategy
+
+# ============================================================================
+# PER-SYMBOL LIMITS
+# ============================================================================
+# Prevent over-concentration in single instruments
+symbol_limits:
+  # Major FX pairs (high liquidity)
+  EURUSD:
+    max_exposure_pct: 0.04                  # 4% max exposure
+    max_positions: 2
+    min_distance_between_entries_pips: 20   # 20 pips minimum spacing
+
+  GBPUSD:
+    max_exposure_pct: 0.04
+    max_positions: 2
+    min_distance_between_entries_pips: 25   # Higher volatility = wider spacing
+
+  USDJPY:
+    max_exposure_pct: 0.04
+    max_positions: 2
+    min_distance_between_entries_pips: 20
+
+  AUDUSD:
+    max_exposure_pct: 0.03
+    max_positions: 2
+    min_distance_between_entries_pips: 20
+
+  USDCAD:
+    max_exposure_pct: 0.03
+    max_positions: 2
+    min_distance_between_entries_pips: 20
+
+  NZDUSD:
+    max_exposure_pct: 0.025                 # Lower liquidity = lower exposure
+    max_positions: 1
+    min_distance_between_entries_pips: 25
+
+  # Cross pairs (medium liquidity)
+  EURGBP:
+    max_exposure_pct: 0.03
+    max_positions: 2
+    min_distance_between_entries_pips: 15
+
+  EURJPY:
+    max_exposure_pct: 0.03
+    max_positions: 2
+    min_distance_between_entries_pips: 25
+
+  GBPJPY:
+    max_exposure_pct: 0.025                 # High volatility
+    max_positions: 1
+    min_distance_between_entries_pips: 30
+
+  # Metals (high volatility)
+  XAUUSD:
+    max_exposure_pct: 0.03
+    max_positions: 2
+    min_distance_between_entries_pips: 50   # Gold = wider spacing
+
+  XAGUSD:
+    max_exposure_pct: 0.02                  # Silver = lower allocation
+    max_positions: 1
+    min_distance_between_entries_pips: 20
+
+  # Default for unlisted symbols (conservative)
+  default:
+    max_exposure_pct: 0.02
+    max_positions: 1
+    min_distance_between_entries_pips: 20
+
+# ============================================================================
+# PER-STRATEGY LIMITS
+# ============================================================================
+# Prevent over-reliance on single strategy family
+strategy_limits:
+  # Microstructure strategies (high frequency, lower risk per trade)
+  microstructure:
+    max_exposure_pct: 0.04                  # 4% max across all microstructure
+    max_positions: 4
+    max_risk_per_trade_pct: 0.01            # 1% per trade (tighter stops)
+
+  # Statistical arbitrage (mean reversion, pairs)
+  stat_arb:
+    max_exposure_pct: 0.05                  # 5% max
+    max_positions: 3
+    max_risk_per_trade_pct: 0.015           # 1.5% per trade
+
+  # Momentum (directional, higher risk)
+  momentum:
+    max_exposure_pct: 0.03                  # 3% max (more volatile)
+    max_positions: 2
+    max_risk_per_trade_pct: 0.015           # 1.5% per trade
+
+  # Regime-based (macro, lower frequency)
+  regime:
+    max_exposure_pct: 0.04                  # 4% max
+    max_positions: 2
+    max_risk_per_trade_pct: 0.02            # 2% per trade (wider stops)
+
+  # Event-driven (news, calendar)
+  event_driven:
+    max_exposure_pct: 0.03                  # 3% max (unpredictable)
+    max_positions: 2
+    max_risk_per_trade_pct: 0.02            # 2% per trade (news volatility)
+
+# ============================================================================
+# CIRCUIT BREAKERS
+# ============================================================================
+# Emergency stops triggered by market/system conditions
+circuit_breakers:
+  # Volatility spike circuit breaker
+  volatility_spike:
+    enabled: true
+    volatility_threshold: 3.0               # 3x normal volatility = pause
+    lookback_periods: 20
+    cooldown_minutes: 30                    # 30 min cooldown after trigger
+
+  # Consecutive losses circuit breaker
+  consecutive_losses:
+    enabled: true
+    max_consecutive_losses: 5               # 5 losses in a row = pause
+    cooldown_minutes: 60                    # 1 hour cooldown
+
+  # Rapid drawdown circuit breaker
+  rapid_drawdown:
+    enabled: true
+    drawdown_threshold_pct: 0.10            # 10% DD in short period = pause
+    time_window_minutes: 60                 # Within 1 hour
+    cooldown_minutes: 120                   # 2 hour cooldown
+
+  # Market hours circuit breaker (avoid low liquidity)
+  market_hours:
+    enabled: true
+    avoid_hours_utc: [22, 23, 0, 1, 2]      # Avoid low liquidity hours (NY close to Tokyo open)
+    max_spread_multiplier: 2.0              # Pause if spread > 2x normal
+
+# ============================================================================
+# CORRELATION LIMITS
+# ============================================================================
+# Prevent over-exposure to correlated positions
+correlation:
+  # Maximum % of NAV in correlated positions
+  max_correlated_exposure_pct: 0.05         # 5% max in correlated trades
+
+  # Correlation threshold to consider positions "correlated"
+  correlation_threshold: 0.70               # 0.70+ correlation = correlated
+
+  # Lookback period for correlation calculation
+  correlation_lookback_days: 30
+
+  # Pairs with known high correlation (enforced limits)
+  known_correlated_pairs:
+    - ['EURUSD', 'GBPUSD']                  # EUR/GBP correlation
+    - ['AUDUSD', 'NZDUSD']                  # AUD/NZD correlation
+    - ['EURJPY', 'GBPJPY']                  # EUR/GBP vs JPY
+    - ['XAUUSD', 'XAGUSD']                  # Gold-Silver correlation
+    - ['USDCAD', 'WTIUSD']                  # CAD-Oil inverse correlation
+
+# ============================================================================
+# TIME-BASED LIMITS
+# ============================================================================
+# Prevent overtrading and ensure proper risk distribution
+time_limits:
+  # Maximum new trades per day
+  max_trades_per_day: 10                    # 10 new trades/day max
+
+  # Maximum new trades per hour (prevent algo runaway)
+  max_trades_per_hour: 3                    # 3 new trades/hour max
+
+  # Minimum time between trades (same symbol)
+  min_time_between_trades_same_symbol_minutes: 30  # 30 min spacing
+
+  # Minimum time between trades (same strategy)
+  min_time_between_trades_same_strategy_minutes: 15  # 15 min spacing
+
+  # Cooldown after large loss (single trade)
+  cooldown_after_large_loss:
+    enabled: true
+    loss_threshold_pct: 0.015               # 1.5% loss on single trade
+    cooldown_minutes: 60                    # 1 hour cooldown
+
+# ============================================================================
+# POSITION SIZING PARAMETERS
+# ============================================================================
+# Dynamic position sizing based on market conditions
+position_sizing:
+  # Sizing method
+  method: 'fixed_fractional'                # Options: 'fixed_fractional', 'kelly', 'optimal_f'
+
+  # Fixed fractional parameters
+  fixed_fractional:
+    risk_per_trade_pct: 0.01                # 1% default
+
+  # Kelly Criterion parameters (if method = 'kelly')
+  kelly:
+    fractional_kelly: 0.25                  # Use 25% of full Kelly (conservative)
+    min_win_rate: 0.55                      # Require 55%+ win rate
+    min_avg_rr: 1.5                         # Require 1.5+ avg R:R
+
+  # Optimal F parameters (if method = 'optimal_f')
+  optimal_f:
+    fractional_f: 0.30                      # Use 30% of optimal F
+    min_trades_for_calculation: 30          # Require 30+ trades for valid calculation
+
+  # Contract size mapping (for lot size calculation)
+  contract_sizes:
+    EURUSD: 100000                          # Standard lot
+    GBPUSD: 100000
+    USDJPY: 100000
+    AUDUSD: 100000
+    USDCAD: 100000
+    NZDUSD: 100000
+    EURGBP: 100000
+    EURJPY: 100000
+    GBPJPY: 100000
+    XAUUSD: 100                             # 100 oz per lot
+    XAGUSD: 5000                            # 5000 oz per lot
+
+# ============================================================================
+# KILLSWITCH PARAMETERS
+# ============================================================================
+# Final safety layer - overrides all other settings
+killswitch:
+  # Health check parameters
+  health_check:
+    enabled: true
+    max_lag_seconds: 5                      # Max data lag before pause
+    min_heartbeat_interval_seconds: 10      # Heartbeat every 10s
+
+  # Risk check parameters
+  risk_check:
+    enabled: true
+    enforce_all_risk_limits: true           # Enforce all limits above
+
+  # Market check parameters
+  market_check:
+    enabled: true
+    min_liquidity_score: 0.60               # Minimum market liquidity
+    max_spread_pips: 5                      # Max spread (major pairs)
+
+  # Emergency override
+  emergency_stop:
+    enabled: false                          # Manual emergency stop (CIO only)
+    reason: ''                              # Reason for emergency stop
+
+# ============================================================================
+# REPORTING AND MONITORING
+# ============================================================================
+# Risk monitoring and alert thresholds
+monitoring:
+  # Alert thresholds (% of limit reached)
+  alert_thresholds:
+    warning: 0.70                           # 70% of limit = warning
+    critical: 0.90                          # 90% of limit = critical alert
+
+  # Metrics to track
+  tracked_metrics:
+    - 'total_exposure_pct'
+    - 'correlation_exposure_pct'
+    - 'daily_pnl_pct'
+    - 'drawdown_from_peak_pct'
+    - 'positions_count'
+    - 'trades_per_day'
+    - 'avg_risk_per_trade_pct'
+
+  # Reporting frequency
+  reporting:
+    realtime_dashboard: true                # Real-time risk dashboard
+    daily_report: true                      # Daily risk report
+    weekly_summary: true                    # Weekly risk summary
+    monthly_review: true                    # Monthly risk review
+
+# ============================================================================
+# NOTES
+# ============================================================================
+# This file defines HARD LIMITS that cannot be exceeded.
+#
+# Risk hierarchy (strictest to most permissive):
+# 1. KillSwitch (final safety)
+# 2. Circuit Breakers (emergency conditions)
+# 3. Global limits (portfolio-wide caps)
+# 4. Symbol limits (per-instrument caps)
+# 5. Strategy limits (per-family caps)
+# 6. Time limits (frequency controls)
+#
+# These limits are enforced by:
+# - RiskAllocator (pre-trade validation)
+# - PositionManager (during trade monitoring)
+# - CircuitBreakers (market condition triggers)
+# - KillSwitch (final override)
+#
+# DO NOT MODIFY WITHOUT:
+# 1. CIO approval
+# 2. Backtest validation
+# 3. Paper trading verification
+# 4. Documentation update
+#
+# Last review: 2025-11-16
+# Next review: 2025-12-16 (monthly review mandatory)

@@ -55,9 +55,9 @@ class OFIRefinement(StrategyBase):
         self.price_coherence_required = config.get('price_coherence_required', True)
         self.min_data_points = config.get('min_data_points', 200)
         
-        # Risk management
-        self.stop_loss_atr_multiplier = config.get('stop_loss_atr_multiplier', 2.5)
-        self.take_profit_atr_multiplier = config.get('take_profit_atr_multiplier', 4.0)
+        # Risk management - INSTITUTIONAL (NO ATR)
+        self.stop_loss_pct = config.get('stop_loss_pct', 0.012)  # 1.2% stop
+        self.take_profit_pct = config.get('take_profit_pct', 0.025)  # 2.5% target
         
         # State tracking
         # FIX BUG #12: Use deque with maxlen to prevent memory leak
@@ -177,30 +177,8 @@ class OFIRefinement(StrategyBase):
         
         return coherent
     
-    def calculate_atr(self, data: pd.DataFrame, period: int = 14) -> float:
-        """
-        Calculate Average True Range for position sizing.
-        
-        Args:
-            data: DataFrame with OHLC data
-            period: ATR period
-            
-        Returns:
-            Current ATR value
-        """
-        high = data['high']
-        low = data['low']
-        close = data['close'].shift(1)
-        
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
-        
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        
-        return atr
+    # REMOVED: calculate_atr() - NO ATR in institutional system
+    # Replaced with institutional_sl_tp module (% price + structure)
     
     def evaluate(self, data: pd.DataFrame, features: Dict) -> Optional[Signal]:
         """
@@ -268,18 +246,21 @@ class OFIRefinement(StrategyBase):
                 self.logger.warning("Price-OFI coherence check failed")
                 return None
         
-        # STEP 6: Generate signal
+        # STEP 6: Generate signal (INSTITUTIONAL - NO ATR)
         current_price = data['close'].iloc[-1]
-        atr = self.calculate_atr(data)
-        
+
+        # Import institutional SL/TP module (NO ATR)
+        from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
+
         if z_score > 0:
-            direction = 'long'
-            stop_loss = current_price - (atr * self.stop_loss_atr_multiplier)
-            take_profit = current_price + (atr * self.take_profit_atr_multiplier)
+            direction = 'LONG'
+            # Use % price for SL/TP (from config: stop_loss_pct, take_profit_pct)
+            stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, data)
+            take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, None, self.take_profit_pct)
         else:
-            direction = 'short'
-            stop_loss = current_price + (atr * self.stop_loss_atr_multiplier)
-            take_profit = current_price - (atr * self.take_profit_atr_multiplier)
+            direction = 'SHORT'
+            stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, data)
+            take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, None, self.take_profit_pct)
         
         # Calculate confidence based on z-score magnitude
         confidence = min(0.95, 0.65 + (abs(z_score) - self.z_entry_threshold) * 0.15)
