@@ -25,6 +25,7 @@ from .broker_adapter import BrokerAdapter, Order, Position
 from .paper_broker import PaperBrokerAdapter
 from .live_broker import LiveBrokerAdapter
 from src.strategies.strategy_base import Signal
+from src.risk import KillSwitch
 
 logger = logging.getLogger(__name__)
 
@@ -37,12 +38,13 @@ class ExecutionManager:
     Proporciona interfaz unificada independiente del broker usado.
     """
 
-    def __init__(self, execution_config: ExecutionConfig):
+    def __init__(self, execution_config: ExecutionConfig, enable_kill_switch: bool = True):
         """
         Inicializar gestor de ejecución.
 
         Args:
             execution_config: Configuración de ejecución
+            enable_kill_switch: Si True, activa KillSwitch 4-Layer (default: True)
         """
         self.config = execution_config
         self.mode = execution_config.mode
@@ -50,6 +52,24 @@ class ExecutionManager:
 
         # Inicializar broker según modo
         self._initialize_broker()
+
+        # Initialize KillSwitch (PLAN OMEGA FASE 3.3)
+        self.kill_switch: Optional[KillSwitch] = None
+        if enable_kill_switch:
+            kill_switch_config = {
+                'initial_balance': execution_config.initial_capital,
+                'max_risk_per_trade': execution_config.max_risk_per_trade,
+                'max_daily_loss_pct': execution_config.max_daily_loss,
+                'max_consecutive_losses': 5,
+                'max_strategy_loss': -200.0,
+                'min_win_rate': 0.30,
+                'min_trades_for_wr': 20,
+                'emergency_drawdown_pct': 0.15
+            }
+            self.kill_switch = KillSwitch(kill_switch_config)
+            logger.info("✅ KillSwitch 4-Layer System activated")
+        else:
+            logger.warning("⚠️  KillSwitch DISABLED - trading without protection")
 
         # Tracking
         self.signals_received = 0
@@ -92,6 +112,8 @@ class ExecutionManager:
 
         Convierte señal a orden y la envía al broker.
 
+        PLAN OMEGA FASE 3.3: Validación con KillSwitch 4-Layer
+
         Args:
             signal: Señal generada por estrategia
             current_price: Precio actual del mercado
@@ -108,13 +130,29 @@ class ExecutionManager:
                 self.orders_rejected += 1
                 return False
 
-            # Calcular tamaño de posición
+            # Calcular tamaño de posición y riesgo
             position_size = self._calculate_position_size(signal, current_price)
 
             if position_size <= 0:
                 logger.warning(f"Invalid position size: {position_size}")
                 self.orders_rejected += 1
                 return False
+
+            # Calcular riesgo en USD
+            risk_amount = abs(current_price - signal.stop_loss) * position_size * 100000
+
+            # KILLSWITCH VALIDATION (FASE 3.3)
+            if self.kill_switch:
+                is_allowed, rejection_reason = self.kill_switch.validate_trade(
+                    strategy_name=signal.strategy_name,
+                    risk_amount=risk_amount,
+                    entry_price=current_price
+                )
+
+                if not is_allowed:
+                    logger.warning(f"🛑 KILLSWITCH BLOCKED: {rejection_reason}")
+                    self.orders_rejected += 1
+                    return False
 
             # Crear orden
             order = Order(
@@ -187,7 +225,53 @@ class ExecutionManager:
             market_data: Datos actuales del mercado
         """
         if self.broker:
+            # Guardar cantidad de posiciones antes
+            positions_before = len(self.broker.get_positions())
+
+            # Actualizar posiciones (puede cerrar posiciones por SL/TP)
             self.broker.update_positions(market_data)
+
+            # Sincronizar con KillSwitch si hay posiciones cerradas
+            positions_after = len(self.broker.get_positions())
+            if positions_before > positions_after:
+                self._sync_killswitch_with_broker()
+
+    def _sync_killswitch_with_broker(self):
+        """
+        Sincronizar KillSwitch con posiciones cerradas del broker.
+
+        PLAN OMEGA FASE 3.3: Actualizar KillSwitch con resultados de trades
+        """
+        if not self.kill_switch:
+            return
+
+        # Solo funciona con PaperBroker por ahora
+        if not isinstance(self.broker, PaperBrokerAdapter):
+            return
+
+        # Obtener posiciones cerradas recientes
+        if hasattr(self.broker, 'closed_positions'):
+            for closed_pos in self.broker.closed_positions:
+                # Verificar si ya fue procesada por KillSwitch
+                if closed_pos.get('_killswitch_processed'):
+                    continue
+
+                strategy_name = closed_pos.get('strategy_name', 'unknown')
+                pnl = closed_pos.get('pnl', 0.0)
+                is_winner = pnl > 0
+
+                # Registrar en KillSwitch
+                self.kill_switch.record_trade_result(
+                    strategy_name=strategy_name,
+                    pnl=pnl,
+                    is_winner=is_winner
+                )
+
+                # Marcar como procesada
+                closed_pos['_killswitch_processed'] = True
+
+                logger.debug(f"KillSwitch updated: {strategy_name}, P&L=${pnl:.2f}, "
+                           f"Winner={is_winner}")
 
     def get_positions(self) -> List[Position]:
         """
@@ -354,7 +438,35 @@ class ExecutionManager:
         if isinstance(self.broker, PaperBrokerAdapter):
             stats.update(self.broker.get_statistics())
 
+        # Agregar estado del KillSwitch (PLAN OMEGA FASE 3.3)
+        if self.kill_switch:
+            stats['killswitch'] = self.kill_switch.get_status()
+
         return stats
+
+    def get_killswitch_status(self) -> Optional[Dict]:
+        """
+        Obtener estado del KillSwitch.
+
+        Returns:
+            Dict con estado o None si KillSwitch no activo
+        """
+        if self.kill_switch:
+            return self.kill_switch.get_status()
+        return None
+
+    def is_trading_allowed(self) -> bool:
+        """
+        Verificar si trading está permitido.
+
+        Verifica KillSwitch si está activo.
+
+        Returns:
+            True si se puede operar
+        """
+        if self.kill_switch:
+            return self.kill_switch.is_trading_allowed()
+        return True  # Si no hay KillSwitch, permitir trading
 
     def shutdown(self):
         """Apagar gestor de ejecución."""
