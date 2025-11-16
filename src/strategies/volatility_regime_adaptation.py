@@ -43,10 +43,11 @@ class VolatilityRegimeAdaptation(StrategyBase):
 
         self.lookback_period = config.get('lookback_period', 20)
         self.regime_lookback = config.get('regime_lookback', 40)
-        self.low_vol_entry_threshold = config.get('low_vol_entry_threshold', 1.0)  # Entrada mÃƒÂ¡s temprana
+        self.low_vol_entry_threshold = config.get('low_vol_entry_threshold', 1.0)  # Entry threshold
         self.high_vol_entry_threshold = config.get('high_vol_entry_threshold', 2.0)
-        self.low_vol_stop_multiplier = config.get('low_vol_stop_multiplier', 1.5)
-        self.high_vol_stop_multiplier = config.get('high_vol_stop_multiplier', 2.5)
+        # Risk management (NO ATR - % price based)
+        self.low_vol_stop_pct = config.get('low_vol_stop_pct', 0.010)  # 1.0% stop in low vol
+        self.high_vol_stop_pct = config.get('high_vol_stop_pct', 0.015)  # 1.5% stop in high vol
         self.low_vol_sizing_boost = config.get('low_vol_sizing_boost', 1.2)
         self.high_vol_sizing_reduction = config.get('high_vol_sizing_reduction', 0.7)
         self.min_regime_confidence = config.get('min_regime_confidence', 0.6)
@@ -213,16 +214,14 @@ class VolatilityRegimeAdaptation(StrategyBase):
         current_price = signal_dict['price']
         direction = signal_dict['direction']
 
-        atr = (market_data['high'].tail(14) - market_data['low'].tail(14)).mean()
+        # Risk management (NO ATR - % price based on regime)
+        from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
-        stop_multiplier = self.low_vol_stop_multiplier if self.current_regime == 0 else self.high_vol_stop_multiplier
+        stop_pct = self.low_vol_stop_pct if self.current_regime == 0 else self.high_vol_stop_pct
+        take_profit_r = 2.0  # Fixed 2R target
 
-        if direction == 'LONG':
-            stop_loss = current_price - (atr * stop_multiplier)
-            take_profit = current_price + (atr * stop_multiplier * 2.0)
-        else:
-            stop_loss = current_price + (atr * stop_multiplier)
-            take_profit = current_price - (atr * stop_multiplier * 2.0)
+        stop_loss, _ = calculate_stop_loss_price(direction, current_price, stop_pct, market_data)
+        take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, take_profit_r)
 
         base_sizing_level = 3
         if self.current_regime == 0:
@@ -241,13 +240,14 @@ class VolatilityRegimeAdaptation(StrategyBase):
             'regime_confidence': float(self.regime_confidence),
             'current_volatility': float(self.volatility_history[-1]),
             'entry_threshold_used': float(self.low_vol_entry_threshold if self.current_regime == 0 else self.high_vol_entry_threshold),
-            'stop_multiplier_used': float(stop_multiplier),
+            'stop_pct_used': float(stop_pct),  # % price stop (NO ATR)
+            'take_profit_r': float(take_profit_r),
             'ofi': float(signal_dict['ofi']),                        # ELITE: OFI not RSI
             'structure_score': float(signal_dict['structure_score']), # ELITE: Structure
             'volume_ratio': float(signal_dict['volume_ratio']),      # ELITE: Volume
             'signal_strength': float(signal_dict['signal_strength']),
             'signal_type': 'INSTITUTIONAL_FLOW',                     # ELITE: Not retail
-            'strategy_version': '2.0'                                # Version bump
+            'strategy_version': '3.0'                                # Version bump (ATR purged)
         }
 
         signal = Signal(
