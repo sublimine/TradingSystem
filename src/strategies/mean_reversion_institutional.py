@@ -1,5 +1,5 @@
 """
-Mean Reversion Statistical Strategy - TRULY INSTITUTIONAL GRADE
+Mean Reversion Institutional Strategy - TRULY INSTITUTIONAL GRADE
 
 🏆 REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL Z-SCORE GARBAGE
 
@@ -43,7 +43,7 @@ from datetime import datetime
 from .strategy_base import StrategyBase, Signal
 
 
-class MeanReversionStatistical(StrategyBase):
+class MeanReversionInstitutional(StrategyBase):
     """
     INSTITUTIONAL Mean Reversion strategy using order flow exhaustion.
 

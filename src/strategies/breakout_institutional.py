@@ -1,5 +1,5 @@
 """
-Breakout Volume Confirmation Strategy - TRULY INSTITUTIONAL GRADE
+Breakout Institutional Strategy - TRULY INSTITUTIONAL GRADE
 
 🏆 REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL BREAKOUT GARBAGE
 
@@ -43,7 +43,7 @@ import logging
 from .strategy_base import StrategyBase, Signal
 
 
-class BreakoutVolumeConfirmation(StrategyBase):
+class BreakoutInstitutional(StrategyBase):
     """
     INSTITUTIONAL Breakout strategy using real order flow.
 

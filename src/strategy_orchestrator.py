@@ -19,12 +19,12 @@ from src.strategies.ofi_refinement import OFIRefinement
 from src.strategies.fvg_institutional import FVGInstitutional
 from src.strategies.order_block_institutional import OrderBlockInstitutional
 from src.strategies.htf_ltf_liquidity import HTFLTFLiquidity
-from src.strategies.volatility_regime_adaptation import VolatilityRegimeAdaptation
-from src.strategies.momentum_quality import MomentumQuality
-from src.strategies.mean_reversion_statistical import MeanReversionStatistical
+from src.strategies.volatility_institutional import VolatilityInstitutional
+from src.strategies.momentum_institutional import MomentumInstitutional
+from src.strategies.mean_reversion_institutional import MeanReversionInstitutional
 from src.strategies.idp_inducement_distribution import IDPInducementDistribution
 from src.strategies.iceberg_detection import IcebergDetection
-from src.strategies.breakout_volume_confirmation import BreakoutVolumeConfirmation
+from src.strategies.breakout_institutional import BreakoutInstitutional
 from src.strategies.correlation_divergence import CorrelationDivergence
 from src.strategies.kalman_pairs_trading import KalmanPairsTrading
 from src.strategies.liquidity_sweep import LiquiditySweepStrategy
@@ -94,12 +94,12 @@ class StrategyOrchestrator:
             'fvg_institutional': FVGInstitutional,
             'order_block_institutional': OrderBlockInstitutional,
             'htf_ltf_liquidity': HTFLTFLiquidity,
-            'volatility_regime_adaptation': VolatilityRegimeAdaptation,
-            'momentum_quality': MomentumQuality,
-            'mean_reversion_statistical': MeanReversionStatistical,
+            'volatility_regime_adaptation': VolatilityInstitutional,
+            'momentum_quality': MomentumInstitutional,
+            'mean_reversion_statistical': MeanReversionInstitutional,
             'idp_inducement_distribution': IDPInducementDistribution,
             'iceberg_detection': IcebergDetection,
-            'breakout_volume_confirmation': BreakoutVolumeConfirmation,
+            'breakout_volume_confirmation': BreakoutInstitutional,
             'correlation_divergence': CorrelationDivergence,
             'kalman_pairs_trading': KalmanPairsTrading,
             'liquidity_sweep': LiquiditySweepStrategy,

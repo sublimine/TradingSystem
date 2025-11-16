@@ -4,10 +4,10 @@
 from .liquidity_sweep import LiquiditySweepStrategy
 from .order_flow_toxicity import OrderFlowToxicityStrategy
 from .kalman_pairs_trading import KalmanPairsTrading
-from .volatility_regime_adaptation import VolatilityRegimeAdaptation
-from .momentum_quality import MomentumQuality
-from .mean_reversion_statistical import MeanReversionStatistical
-from .breakout_volume_confirmation import BreakoutVolumeConfirmation
+from .volatility_institutional import VolatilityInstitutional
+from .momentum_institutional import MomentumInstitutional
+from .mean_reversion_institutional import MeanReversionInstitutional
+from .breakout_institutional import BreakoutInstitutional
 from .correlation_divergence import CorrelationDivergence
 
 # Advanced institutional strategies
@@ -38,10 +38,10 @@ __all__ = [
     'LiquiditySweepStrategy',
     'OrderFlowToxicityStrategy',
     'KalmanPairsTrading',
-    'VolatilityRegimeAdaptation',
-    'MomentumQuality',
-    'MeanReversionStatistical',
-    'BreakoutVolumeConfirmation',
+    'VolatilityInstitutional',
+    'MomentumInstitutional',
+    'MeanReversionInstitutional',
+    'BreakoutInstitutional',
     'CorrelationDivergence',
     # Advanced strategies
     'IcebergDetection',

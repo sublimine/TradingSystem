@@ -1349,7 +1349,7 @@ CLASES
 Formato: PascalCase
 Ejemplos:
   - LiquiditySweep
-  - MeanReversionStatistical
+  - MeanReversionInstitutional
   - OrderFlowToxicity
 
 FUNCIONES
