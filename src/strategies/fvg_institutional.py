@@ -402,11 +402,8 @@ class FVGInstitutional(StrategyBase):
         if not self.validate_inputs(data, features):
             return []
 
-        # Get ATR
-        atr = features.get('atr')
-        if atr is None or np.isnan(atr) or atr <= 0:
-            # Calculate ATR if not provided
-            atr = self._calculate_atr(data)
+        # Get ATR (TYPE B - descriptive metric for gap size normalization)
+        atr = features.get('atr', 0.0001)  # Small default if missing
 
         # Get required order flow features
         ofi = features.get('ofi')
@@ -545,20 +542,8 @@ class FVGInstitutional(StrategyBase):
             self.logger.error(f"FVG signal creation failed: {str(e)}", exc_info=True)
             return None
 
-    def _calculate_atr(self, data: pd.DataFrame, period: int = 14) -> float:
-        """Calculate ATR for gap validation and stops."""
-        high = data['high']
-        low = data['low']
-        close = data['close'].shift(1)
-
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
-
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        return atr if not pd.isna(atr) else (data['high'].iloc[-1] - data['low'].iloc[-1])
+    # REMOVED: _calculate_atr() - NO ATR calculation needed
+    # ATR comes from features (TYPE B - descriptive metric for gap size normalization)
 
     def validate_inputs(self, data: pd.DataFrame, features: Dict) -> bool:
         """Validate required inputs are present."""

@@ -96,8 +96,8 @@ class MeanReversionStatistical(StrategyBase):
         # Confirmation score
         self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
 
-        # Risk management
-        self.stop_loss_atr = config.get('stop_loss_atr', 2.0)
+        # Risk management (NO ATR - % price based)
+        self.stop_loss_pct = config.get('stop_loss_pct', 0.015)  # 1.5% stop (mean reversion needs room)
         self.take_profit_mean = config.get('take_profit_mean', True)  # Take profit at mean
 
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -131,11 +131,8 @@ class MeanReversionStatistical(StrategyBase):
         ofi = features.get('ofi')
         cvd = features.get('cvd')
         vpin = features.get('vpin')
-        atr = features.get('atr')
+        atr = features.get('atr')  # TYPE B - descriptive metric only (not for risk decisions)
         adx = features.get('adx', 50)  # Default high if not available
-
-        if atr is None or atr <= 0:
-            atr = self._calculate_atr(market_data)
 
         # Get symbol and current price
         symbol = market_data.attrs.get('symbol', 'UNKNOWN')
@@ -297,29 +294,24 @@ class MeanReversionStatistical(StrategyBase):
                                 direction: str, statistical_extreme: Dict,
                                 confirmation_score: float, criteria: Dict,
                                 market_data: pd.DataFrame, features: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed institutional mean reversion."""
+        """Generate signal for confirmed institutional mean reversion. NO ATR - % price based."""
 
         try:
-            atr = features.get('atr')
-            if atr is None or atr <= 0:
-                atr = self._calculate_atr(market_data)
+            from src.features.institutional_sl_tp import calculate_stop_loss_price
 
             mean_price = statistical_extreme['mean']
+            entry_price = current_price
 
-            if direction == 'SHORT':
-                entry_price = current_price
-                stop_loss = current_price + (atr * self.stop_loss_atr)
-                take_profit = mean_price  # Target mean
-            else:  # LONG
-                entry_price = current_price
-                stop_loss = current_price - (atr * self.stop_loss_atr)
-                take_profit = mean_price  # Target mean
+            # Institutional stops: % price based (mean reversion needs wider stops for extremes)
+            stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
+            take_profit = mean_price  # Target mean (statistical reversion)
 
-            # Validate risk
+            # Validate risk (% price based, not ATR)
             risk = abs(entry_price - stop_loss)
             reward = abs(take_profit - entry_price)
 
-            if risk <= 0 or risk > atr * 4.0:
+            max_risk_pct = 0.03  # 3% max risk for mean reversion (needs room for extremes)
+            if risk <= 0 or risk > (entry_price * max_risk_pct):
                 return None
 
             rr_ratio = reward / risk if risk > 0 else 0
@@ -376,20 +368,8 @@ class MeanReversionStatistical(StrategyBase):
             self.logger.error(f"Mean reversion signal creation failed: {str(e)}", exc_info=True)
             return None
 
-    def _calculate_atr(self, market_data: pd.DataFrame, period: int = 14) -> float:
-        """Calculate ATR."""
-        high = market_data['high']
-        low = market_data['low']
-        close = market_data['close'].shift(1)
-
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
-
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        return atr if not pd.isna(atr) else (market_data['high'].iloc[-1] - market_data['low'].iloc[-1])
+    # REMOVED: _calculate_atr() - NO ATR in institutional system
+    # Replaced with institutional_sl_tp module (% price + structure)
 
     def validate_inputs(self, market_data: pd.DataFrame, features: Dict) -> bool:
         """Validate required inputs are present."""
