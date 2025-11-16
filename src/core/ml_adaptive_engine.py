@@ -504,6 +504,7 @@ class PerformanceAttributionAnalyzer:
             # feature_keys = ['vpin', 'cvd', 'ofi', 'atr', 'volume_profile', ...]
             # features.extend([trade.entry_features.get(k, 0.0) for k in feature_keys])
             # Esto garantiza mismo feature vector siempre, con 0.0 default si falta
+            # NOTE: 'atr' in feature_keys would be TYPE B (descriptive ML feature), NOT risk sizing
             features.extend(list(trade.entry_features.values())[:10])  # Limit features
 
             X.append(features)

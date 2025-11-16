@@ -240,9 +240,10 @@ class MarketStructurePositionManager:
                 50% exit balances risk reduction with profit potential
 
             Structure Detection:
-            - structure_proximity_atr (float): ATR multiplier for structure search (default: 0.5)
+            - structure_proximity_pips (float): Pips distance for structure search (default: 20.0)
                 Maximum distance to consider structure level "near" price
-                0.5 ATR = tight proximity, ensures structure is relevant
+                20 pips = tight proximity, ensures structure is relevant
+                ⚠️ NO ATR - pips-based per PLAN OMEGA
 
             Update Frequency:
             - update_interval_bars (int): Bars between position updates (default: 1)
@@ -270,8 +271,8 @@ class MarketStructurePositionManager:
         self.min_r_for_partial = config.get('min_r_for_partial', 2.5)     # Partial exit after 2.5R
         self.partial_exit_pct = config.get('partial_exit_pct', 0.50)      # Exit 50% on partial
 
-        # Structure proximity thresholds (ATR multiples)
-        self.structure_proximity_atr = config.get('structure_proximity_atr', 0.5)
+        # Structure proximity thresholds (PIPS - NO ATR per PLAN OMEGA)
+        self.structure_proximity_pips = config.get('structure_proximity_pips', 20.0)  # 20 pips
 
         # Update frequency
         self.update_interval_bars = config.get('update_interval_bars', 1)
@@ -400,17 +401,8 @@ class MarketStructurePositionManager:
             )
             return None
 
-        # FIX: Calculate proper ATR (True Range), not just close.diff()
-        if len(market_data) > 14:
-            high_low = market_data['high'] - market_data['low']
-            high_close = (market_data['high'] - market_data['close'].shift(1)).abs()
-            low_close = (market_data['low'] - market_data['close'].shift(1)).abs()
-            true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-            atr = true_range.rolling(14).mean().iloc[-1]
-        else:
-            atr = 0.0001
-
-        max_distance = atr * self.structure_proximity_atr
+        # NO ATR - use pips-based distance per PLAN OMEGA
+        max_distance = self.structure_proximity_pips / 10000  # Convert pips to price
 
         candidates = []
 

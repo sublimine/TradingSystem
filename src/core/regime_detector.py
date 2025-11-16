@@ -63,10 +63,12 @@ class RegimeDetector:
                 ADX <20 = confirmed ranging, optimal for mean reversion
 
         Volatility Thresholds (percentile-based):
+            ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
             - low_vol_percentile (float): Percentile for low volatility (default: 30)
-                ATR below 30th percentile = low vol regime
+                ATR below 30th percentile = low vol regime (TYPE B - regime detection)
             - high_vol_percentile (float): Percentile for high volatility (default: 70)
-                ATR above 70th percentile = high vol regime
+                ATR above 70th percentile = high vol regime (TYPE B - regime detection)
+            ATR is used ONLY for volatility regime classification, NOT for risk sizing.
 
         These thresholds are based on:
         - Ang & Bekaert (2002) regime switching research
@@ -165,17 +167,22 @@ class RegimeDetector:
         """
         Detect volatility regime using ATR analysis.
 
+        ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
+        ATR is used here for VOLATILITY REGIME DETECTION (pattern identification).
+        NOT used for risk sizing, stop loss, or take profit calculations.
+        Similar to crisis_mode_volatility_spike.py ATR spike detection.
+
         Returns:
             {'regime': 'LOW'|'NORMAL'|'HIGH', 'confidence': float}
         """
-        # Calculate recent ATR
+        # Calculate recent ATR (TYPE B - regime detection)
         if 'atr' in market_data.columns:
             recent_atr = market_data['atr'].tail(20).mean()
         else:
             high_low = market_data['high'] - market_data['low']
             recent_atr = high_low.tail(20).mean()
 
-        # Calculate historical ATR distribution
+        # Calculate historical ATR distribution (TYPE B - regime detection)
         if 'atr' in market_data.columns:
             historical_atr = market_data['atr'].tail(self.lookback_period * 3)
         else:

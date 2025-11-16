@@ -99,7 +99,13 @@ class MultiTimeframeDataManager:
                 logger.error(f"Error updating {symbol} {tf_name}: {e}")
 
     def _process_ohlcv(self, rates, symbol: str, timeframe: str) -> pd.DataFrame:
-        """Process raw OHLCV data into DataFrame with indicators."""
+        """
+        Process raw OHLCV data into DataFrame with indicators.
+
+        ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
+        ATR is calculated here for PATTERN DETECTION (order blocks, FVGs, liquidity zones).
+        NOT used for risk sizing, stop loss, or take profit calculations.
+        """
         df = pd.DataFrame(rates)
         df['time'] = pd.to_datetime(df['time'], unit='s')
         df['timestamp'] = df['time']
@@ -113,12 +119,12 @@ class MultiTimeframeDataManager:
         df['ema_50'] = df['close'].ewm(span=50, adjust=False).mean()
         df['ema_200'] = df['close'].ewm(span=200, adjust=False).mean()
 
-        # ATR
+        # ATR (TYPE B - descriptive metric for pattern detection)
         high_low = df['high'] - df['low']
         high_close = (df['high'] - df['close'].shift()).abs()
         low_close = (df['low'] - df['close'].shift()).abs()
         true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-        df['atr'] = true_range.rolling(14).mean()
+        df['atr'] = true_range.rolling(14).mean()  # TYPE B - descriptive metric only
 
         # Volume profile
         df['volume_ma'] = df['volume'].rolling(20).mean()
@@ -130,11 +136,15 @@ class MultiTimeframeDataManager:
         """
         Update market structure information for timeframe.
 
+        ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
+        ATR is used for PATTERN DETECTION (order blocks, FVGs, liquidity zones).
+        NOT used for risk sizing, stop loss, or take profit calculations.
+
         Identifies:
         - Swing highs/lows (institutional levels)
-        - Order blocks (displacement candles)
-        - Fair value gaps
-        - Liquidity zones (consolidation areas)
+        - Order blocks (displacement candles - >1.5 ATR range)
+        - Fair value gaps (minimum gap size >0.3 ATR)
+        - Liquidity zones (ATR compression <0.6 mean ATR)
         """
         if len(df) < 50:
             return

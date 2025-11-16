@@ -655,10 +655,11 @@ class RegimeEngine:
             
             up_move = high - high.shift(1)
             down_move = low.shift(1) - low
-            
+
             plus_dm = np.where((up_move > down_move) & (up_move > 0), up_move, 0)
             minus_dm = np.where((down_move > up_move) & (down_move > 0), down_move, 0)
-            
+
+            # ATR TYPE B - used for ADX calculation (DI normalization), NOT risk sizing
             atr = tr.rolling(window=period).mean()
             plus_di = 100 * pd.Series(plus_dm).rolling(window=period).mean() / atr
             minus_di = 100 * pd.Series(minus_dm).rolling(window=period).mean() / atr
