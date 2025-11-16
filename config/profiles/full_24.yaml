@@ -1,0 +1,91 @@
+# FULL_24 Runtime Profile - PLAN OMEGA FASE 3.4
+#
+# Perfil completo con las 24 estrategias institucionales
+# - Máxima diversificación
+# - Requiere mayor capital
+# - Requiere datos completos (pairs, correlaciones, L2 orderbook)
+#
+# ESTRATEGIAS ACTIVAS: 24/24
+# CATEGORÍAS:
+# - GREEN (5): Core strategies
+# - HYBRID (19): Advanced strategies (pairs, correlations, L2, news)
+
+profile_name: "FULL_24"
+profile_type: "aggressive"
+description: "All 24 institutional strategies - maximum diversification"
+
+# Estrategias activas (TODAS)
+enabled_strategies:
+  # GREEN CORE (5)
+  - mean_reversion_statistical
+  - liquidity_sweep
+  - order_flow_toxicity
+  - momentum_quality
+  - order_block_institutional
+
+  # HYBRID PAIRS/CORRELATIONS (7)
+  - kalman_pairs_trading
+  - correlation_divergence
+  - correlation_cascade_detection
+  - statistical_arbitrage_johansen
+
+  # HYBRID ADVANCED (9)
+  - volatility_regime_adaptation
+  - breakout_volume_confirmation
+  - fvg_institutional
+  - htf_ltf_liquidity
+  - iceberg_detection
+  - idp_inducement_distribution
+  - ofi_refinement
+  - vpin_reversal_extreme
+  - fractal_market_structure
+
+  # HYBRID EXOTIC (3)
+  - footprint_orderflow_clusters
+  - crisis_mode_volatility_spike
+  - calendar_arbitrage_flows
+  - topological_data_analysis_regime
+  - spoofing_detection_l2
+  - nfp_news_event_handler
+
+disabled_strategies: []
+
+# Configuración de ejecución recomendada
+execution:
+  mode: "PAPER"                     # Validar primero en PAPER
+  initial_capital: 50000.0          # Mayor capital recomendado
+  max_positions: 10                 # Máximo 10 posiciones simultáneas
+  max_risk_per_trade: 0.020         # 2.0% por trade
+  max_daily_loss: 0.05              # 5% max daily loss
+
+# KillSwitch configuration (default)
+killswitch:
+  enabled: true
+  max_consecutive_losses: 5
+  emergency_drawdown_pct: 0.15      # 15% emergency stop
+
+# Sesiones de trading (todas)
+trading_sessions:
+  preferred: ["london", "new_york", "tokyo"]
+  avoid_asian: false                # Tradear todas las sesiones
+
+# Data requirements
+data_requirements:
+  requires_pairs_data: true         # 7 strategies requieren pairs
+  requires_l2_orderbook: true       # 2 strategies (spoofing, footprint)
+  requires_news_calendar: true      # 1 strategy (NFP handler)
+
+# Metadata
+stats:
+  expected_signals_per_day: 15-40
+  average_win_rate: 62-68%          # Ligeramente menor por diversificación
+  risk_reward_avg: 2.8-3.2
+  max_drawdown_historical: 18%
+
+# Warnings
+warnings:
+  - "Requiere mayor capital ($50k+ recomendado)"
+  - "Requiere datos completos de pares (EURUSD, GBPUSD, etc.)"
+  - "Requiere news calendar para NFP/FOMC/CPI"
+  - "Mayor complejidad computacional"
+  - "Validar PRIMERO en PAPER antes de LIVE"

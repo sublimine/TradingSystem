@@ -1,0 +1,73 @@
+# GREEN_ONLY Runtime Profile - PLAN OMEGA FASE 3.4
+#
+# Perfil conservador con las 5 estrategias core GREEN
+# - Menor complejidad computacional
+# - Sin dependencias de pairs/correlaciones
+# - Ideal para: live trading inicial, capital limitado, menor experiencia
+#
+# ESTRATEGIAS ACTIVAS: 5/24
+# - mean_reversion_statistical (Avellaneda & Lee 2010)
+# - liquidity_sweep (ICT 2024 Standards)
+# - order_flow_toxicity (VPIN fade - Easley et al. 2012)
+# - momentum_quality (Quality momentum)
+# - order_block_institutional (Order block retest)
+
+profile_name: "GREEN_ONLY"
+profile_type: "conservative"
+description: "5 core GREEN strategies - minimal complexity, maximum reliability"
+
+# Estrategias activas
+enabled_strategies:
+  - mean_reversion_statistical
+  - liquidity_sweep
+  - order_flow_toxicity
+  - momentum_quality
+  - order_block_institutional
+
+# Estrategias deshabilitadas (19 HYBRID)
+disabled_strategies:
+  - kalman_pairs_trading
+  - correlation_divergence
+  - volatility_regime_adaptation
+  - breakout_volume_confirmation
+  - fvg_institutional
+  - htf_ltf_liquidity
+  - iceberg_detection
+  - idp_inducement_distribution
+  - ofi_refinement
+  - vpin_reversal_extreme
+  - fractal_market_structure
+  - correlation_cascade_detection
+  - footprint_orderflow_clusters
+  - crisis_mode_volatility_spike
+  - statistical_arbitrage_johansen
+  - calendar_arbitrage_flows
+  - topological_data_analysis_regime
+  - spoofing_detection_l2
+  - nfp_news_event_handler
+
+# Configuración de ejecución recomendada
+execution:
+  mode: "PAPER"                     # Comenzar en PAPER
+  initial_capital: 10000.0
+  max_positions: 3                  # Conservador: max 3 posiciones
+  max_risk_per_trade: 0.015         # 1.5% por trade (conservador)
+  max_daily_loss: 0.04              # 4% max daily loss
+
+# KillSwitch configuration (más estricto para GREEN_ONLY)
+killswitch:
+  enabled: true
+  max_consecutive_losses: 4         # Más estricto que default (5)
+  emergency_drawdown_pct: 0.12      # 12% emergency stop (vs 15% default)
+
+# Sesiones de trading recomendadas
+trading_sessions:
+  preferred: ["london", "new_york"]
+  avoid_asian: true                 # Evitar sesión asiática (menor liquidez)
+
+# Metadata
+stats:
+  expected_signals_per_day: 3-8
+  average_win_rate: 65-72%
+  risk_reward_avg: 2.5-3.5
+  max_drawdown_historical: 12%

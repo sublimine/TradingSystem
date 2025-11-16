@@ -67,7 +67,8 @@ class StrategyOrchestrator:
 
     def __init__(self, config_path: str = 'config/strategies_institutional.yaml',
                  brain=None,
-                 execution_config: Optional[ExecutionConfig] = None):
+                 execution_config: Optional[ExecutionConfig] = None,
+                 profile: Optional[str] = None):
         """
         Initialize the orchestrator with configuration.
 
@@ -76,6 +77,9 @@ class StrategyOrchestrator:
             brain: Brain reference for coordination (optional)
             execution_config: ExecutionConfig for automatic execution (optional)
                 If None, orchestrator only generates signals without executing
+            profile: Runtime profile name (optional)
+                Options: 'green_only', 'full_24', or None for all enabled strategies
+                PLAN OMEGA FASE 3.4: Runtime profile support
         """
         self.config = self._load_config(config_path)
         self.brain = brain  # Store brain reference for strategy coordination
@@ -83,6 +87,15 @@ class StrategyOrchestrator:
         self.active_positions = {}
         self.performance_tracker = {}
         self.apr_executor = None
+
+        # Load and apply runtime profile (PLAN OMEGA FASE 3.4)
+        self.profile_config = None
+        self.profile_name = None
+        if profile:
+            self.profile_config = self._load_profile(profile)
+            self.profile_name = profile
+            logger.info(f"Runtime profile '{profile}' loaded: "
+                       f"{len(self.profile_config.get('enabled_strategies', []))} strategies enabled")
 
         # Initialize MicrostructureEngine for centralized feature calculation
         # PLAN OMEGA FASE 3.1b: Integration
@@ -101,7 +114,8 @@ class StrategyOrchestrator:
         self._initialize_strategies()
         self._initialize_apr()
 
-        logger.info(f"Strategy Orchestrator initialized with {len(self.strategies)} strategies")
+        logger.info(f"Strategy Orchestrator initialized with {len(self.strategies)} strategies" +
+                   (f" (profile: {profile})" if profile else ""))
 
     def _load_config(self, config_path: str) -> Dict:
         """Load configuration from YAML file."""
@@ -112,6 +126,46 @@ class StrategyOrchestrator:
             return config
         except Exception as e:
             logger.error(f"Failed to load configuration: {str(e)}")
+            raise
+
+    def _load_profile(self, profile_name: str) -> Dict:
+        """
+        Load runtime profile configuration.
+
+        PLAN OMEGA FASE 3.4: Runtime profile support
+
+        Args:
+            profile_name: Profile name ('green_only', 'full_24')
+
+        Returns:
+            Profile configuration dict
+
+        Raises:
+            FileNotFoundError: If profile not found
+            ValueError: If profile invalid
+        """
+        # Build profile path
+        profile_path = f'config/profiles/{profile_name}.yaml'
+
+        try:
+            with open(profile_path, 'r') as f:
+                profile_config = yaml.safe_load(f)
+
+            # Validate profile structure
+            if 'enabled_strategies' not in profile_config:
+                raise ValueError(f"Profile '{profile_name}' missing 'enabled_strategies' key")
+
+            logger.info(f"✅ Profile loaded: {profile_config.get('profile_name', profile_name)} "
+                       f"({profile_config.get('profile_type', 'unknown')} mode)")
+
+            return profile_config
+
+        except FileNotFoundError:
+            logger.error(f"Profile '{profile_name}' not found at {profile_path}")
+            logger.info("Available profiles: green_only, full_24")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to load profile '{profile_name}': {e}")
             raise
 
     def _initialize_strategies(self):
@@ -150,7 +204,21 @@ class StrategyOrchestrator:
             # Strategies are at root level in strategies_institutional.yaml
             strategy_config = self.config.get(strategy_name, {})
 
-            if strategy_config.get('enabled', False):
+            # Check if strategy should be loaded
+            should_load = False
+
+            if self.profile_config:
+                # PROFILE MODE: Only load strategies in profile's enabled_strategies list
+                # PLAN OMEGA FASE 3.4: Profile filtering
+                enabled_in_profile = strategy_name in self.profile_config.get('enabled_strategies', [])
+                if enabled_in_profile:
+                    should_load = True
+                    logger.debug(f"Strategy '{strategy_name}' enabled by profile '{self.profile_name}'")
+            else:
+                # NORMAL MODE: Load all strategies with enabled=True
+                should_load = strategy_config.get('enabled', False)
+
+            if should_load:
                 try:
                     self.strategies[strategy_name] = strategy_class(strategy_config)
                     self.performance_tracker[strategy_name] = {
@@ -160,9 +228,9 @@ class StrategyOrchestrator:
                         'losing_trades': 0,
                         'total_pnl': 0.0
                     }
-                    logger.info(f"Strategy '{strategy_name}' initialized successfully")
+                    logger.info(f"✅ Strategy '{strategy_name}' initialized successfully")
                 except Exception as e:
-                    logger.error(f"Failed to initialize strategy '{strategy_name}': {str(e)}")
+                    logger.error(f"❌ Failed to initialize strategy '{strategy_name}': {str(e)}")
 
     def _initialize_apr(self):
         """Initialize Adaptive Participation Rate executor."""
