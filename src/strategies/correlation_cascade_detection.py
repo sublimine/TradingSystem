@@ -57,8 +57,8 @@ class CorrelationCascadeDetection(StrategyBase):
         # Confirmation scoring
         self.min_confirmation_score = config.get('min_confirmation_score', 3.6)
 
-        # Risk management
-        self.stop_loss_atr = config.get('stop_loss_atr', 1.8)
+        # Risk management (NO ATR - % price based)
+        self.stop_loss_pct = config.get('stop_loss_pct', 0.018)  # 1.8% stop (cascade needs room)
         self.take_profit_r = config.get('take_profit_r', 2.3)
 
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -161,11 +161,11 @@ class CorrelationCascadeDetection(StrategyBase):
     def _create_cascade_signal(self, market_data: pd.DataFrame, current_time,
                                primary_breakdown: Dict, secondary_pair: List,
                                secondary_corr: float, features: Dict) -> Optional[Signal]:
-        """Create cascade signal with order flow confirmation."""
+        """Create cascade signal with order flow confirmation. NO ATR - % price based."""
         ofi = features['ofi']
         cvd = features['cvd']
         vpin = features['vpin']
-        atr = features['atr']
+        atr = features.get('atr', 0.0001)  # TYPE B - descriptive metric only
 
         recent_bars = market_data.tail(20)
         confirmation_score, criteria = self._evaluate_institutional_confirmation(
@@ -179,14 +179,11 @@ class CorrelationCascadeDetection(StrategyBase):
         direction = 'LONG' if ofi > 0 else 'SHORT'
         current_price = market_data.iloc[-1]['close']
 
-        if direction == 'LONG':
-            stop_loss = current_price - (self.stop_loss_atr * atr)
-            risk = current_price - stop_loss
-            take_profit = current_price + (risk * self.take_profit_r)
-        else:
-            stop_loss = current_price + (self.stop_loss_atr * atr)
-            risk = stop_loss - current_price
-            take_profit = current_price - (risk * self.take_profit_r)
+        # Entry, stop, target (NO ATR - % price based)
+        from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
+
+        stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
+        take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, self.take_profit_r)
 
         sizing_level = 3 if confirmation_score >= 4.0 else 2
 

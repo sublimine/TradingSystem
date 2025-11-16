@@ -58,8 +58,8 @@ class CrisisModeVolatilitySpike(StrategyBase):
         # Confirmation scoring - INSTITUTIONAL
         self.min_confirmation_score = config.get('min_confirmation_score', 3.8)
 
-        # Risk management
-        self.stop_loss_atr = config.get('stop_loss_atr', 2.5)  # Wider for volatility
+        # Risk management (NO ATR - % price based)
+        self.stop_loss_pct = config.get('stop_loss_pct', 0.025)  # 2.5% stop (crisis needs wider stops)
         self.take_profit_r = config.get('take_profit_r', 3.0)
 
         # State tracking
@@ -81,10 +81,8 @@ class CrisisModeVolatilitySpike(StrategyBase):
                 self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")
                 return False
 
-        atr = features.get('atr')
-        if atr is None or np.isnan(atr) or atr <= 0:
-            return False
-
+        # ATR is TYPE B - used for volatility REGIME detection (spike), NOT for risk sizing
+        # No strict validation needed
         return True
 
     def evaluate(self, market_data: pd.DataFrame, features: Dict) -> List[Signal]:
@@ -95,12 +93,13 @@ class CrisisModeVolatilitySpike(StrategyBase):
         current_time = market_data.iloc[-1].get('timestamp', datetime.now())
 
         # Extract features
-        atr = features['atr']
+        # NOTE: ATR is TYPE B here - used for volatility REGIME detection (spike), NOT risk decisions
+        atr = features.get('atr', 0.0001)  # TYPE B - descriptive metric for volatility regime
         ofi = features['ofi']
         cvd = features['cvd']
         vpin = features['vpin']
 
-        # STEP 1: Detect volatility spike
+        # STEP 1: Detect volatility spike (TYPE B - regime detection, not risk)
         volatility_spike = self._detect_volatility_spike(market_data, atr)
 
         if not volatility_spike:
@@ -292,22 +291,18 @@ class CrisisModeVolatilitySpike(StrategyBase):
     def _create_crisis_signal(self, market_data: pd.DataFrame, current_time,
                              volatility_spike: Dict, confirmation_score: float,
                              criteria: Dict, atr: float, features: Dict) -> Optional[Signal]:
-        """Create crisis trading signal."""
+        """Create crisis trading signal. NO ATR for risk - % price based."""
         current_price = market_data.iloc[-1]['close']
 
         # Direction from OFI (institutions lead)
         ofi_direction = criteria['ofi_absorption']['direction']
         direction = ofi_direction
 
-        # Entry, stop loss, take profit
-        if direction == 'LONG':
-            stop_loss = current_price - (self.stop_loss_atr * atr)
-            risk = current_price - stop_loss
-            take_profit = current_price + (risk * self.take_profit_r)
-        else:  # SHORT
-            stop_loss = current_price + (self.stop_loss_atr * atr)
-            risk = stop_loss - current_price
-            take_profit = current_price - (risk * self.take_profit_r)
+        # Entry, stop loss, take profit (NO ATR - % price based)
+        from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
+
+        stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
+        take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, self.take_profit_r)
 
         # Sizing based on confirmation strength
         if confirmation_score >= 4.5:

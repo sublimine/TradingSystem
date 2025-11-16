@@ -116,9 +116,9 @@ class HTFLTFLiquidity(StrategyBase):
         # Confirmation score
         self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
 
-        # Risk management
-        self.stop_buffer_atr = config.get('stop_buffer_atr', 1.0)
-        self.take_profit_atr = config.get('take_profit_atr', 3.0)
+        # Risk management (NO ATR - pips based for zone buffers)
+        self.stop_buffer_pips = config.get('stop_buffer_pips', 15.0)  # 15 pip buffer below/above zone
+        self.take_profit_r = config.get('take_profit_r', 3.0)  # 3R target
 
         # State tracking
         self.htf_zones: List[LiquidityZone] = []
@@ -156,10 +156,7 @@ class HTFLTFLiquidity(StrategyBase):
         ofi = features.get('ofi')
         cvd = features.get('cvd')
         vpin = features.get('vpin')
-        atr = features.get('atr')
-
-        if atr is None or atr <= 0:
-            atr = self._calculate_atr(data)
+        atr = features.get('atr', 0.0001)  # TYPE B - descriptive metric for zone sizing
 
         # Get symbol and current price
         symbol = data.attrs.get('symbol', 'UNKNOWN')
@@ -396,26 +393,28 @@ class HTFLTFLiquidity(StrategyBase):
                                zone: LiquidityZone, direction: str,
                                confirmation_score: float, criteria: Dict,
                                data: pd.DataFrame, features: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed HTF zone with LTF order flow."""
+        """Generate signal for confirmed HTF zone with LTF order flow. NO ATR - pips + % price based."""
 
         try:
-            atr = features.get('atr')
-            if atr is None or atr <= 0:
-                atr = self._calculate_atr(data)
+            entry_price = current_price
+
+            # Institutional stops: HTF zone boundary + pips buffer
+            buffer_price = self.stop_buffer_pips / 10000  # Convert pips to price
 
             if direction == 'LONG':
-                entry_price = current_price
-                stop_loss = zone.price_level - (self.stop_buffer_atr * atr)
+                # Stop below HTF zone with buffer
+                stop_loss = zone.price_level - buffer_price
                 risk = entry_price - stop_loss
-                take_profit = entry_price + (risk * 3.0)
+                take_profit = entry_price + (risk * self.take_profit_r)
             else:  # SHORT
-                entry_price = current_price
-                stop_loss = zone.price_level + (self.stop_buffer_atr * atr)
+                # Stop above HTF zone with buffer
+                stop_loss = zone.price_level + buffer_price
                 risk = stop_loss - entry_price
-                take_profit = entry_price - (risk * 3.0)
+                take_profit = entry_price - (risk * self.take_profit_r)
 
-            # Validate risk
-            if risk <= 0 or risk > atr * 4.0:
+            # Validate risk (% price based, not ATR)
+            max_risk_pct = 0.025  # 2.5% max risk
+            if risk <= 0 or risk > (entry_price * max_risk_pct):
                 return None
 
             rr_ratio = abs(take_profit - entry_price) / abs(entry_price - stop_loss) if risk > 0 else 0
@@ -472,20 +471,9 @@ class HTFLTFLiquidity(StrategyBase):
             self.logger.error(f"HTF-LTF signal creation failed: {str(e)}", exc_info=True)
             return None
 
-    def _calculate_atr(self, data: pd.DataFrame, period: int = 14) -> float:
-        """Calculate ATR."""
-        high = data['high']
-        low = data['low']
-        close = data['close'].shift(1)
-
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
-
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        return atr if not pd.isna(atr) else (data['high'].iloc[-1] - data['low'].iloc[-1])
+    # REMOVED: _calculate_atr() - NO ATR calculation needed
+    # ATR comes from features (TYPE B - descriptive metric for zone sizing)
+    # Risk management uses pips buffer + % price validation (institutional_sl_tp pattern)
 
     def validate_inputs(self, data: pd.DataFrame, features: Dict) -> bool:
         """Validate required inputs are present."""
