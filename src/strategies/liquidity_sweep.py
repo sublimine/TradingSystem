@@ -243,33 +243,40 @@ class LiquiditySweepStrategy(StrategyBase):
     def _generate_signal(self, symbol: str, timestamp: datetime, level_price: float,
                         level_info: Dict, confirmation_score: int, criteria_scores: Dict,
                         market_data: pd.DataFrame) -> Optional[Signal]:
-        """Generate trading signal after successful sweep detection."""
+        """Generate trading signal after successful sweep detection. NO ATR - pips + % price based."""
         current_price = market_data['close'].iloc[-1]
-        
-        recent_highs = market_data['high'].tail(14)
-        recent_lows = market_data['low'].tail(14)
-        atr_value = (recent_highs - recent_lows).mean()
-        
+
+        # NO ATR - use pips buffer from swept level
+        stop_buffer_pips = 15.0  # 15 pip buffer from swept level
+        buffer_price = stop_buffer_pips / 10000
+
         if level_info['type'] == 'support':
             direction = 'LONG'
             entry_price = current_price
-            stop_loss = level_price - (atr_value * 1.5)
-            take_profit = current_price + (abs(current_price - stop_loss) * 3.0)
+            stop_loss = level_price - buffer_price
+            risk = entry_price - stop_loss
+            take_profit = current_price + (risk * 3.0)
         else:
             direction = 'SHORT'
             entry_price = current_price
-            stop_loss = level_price + (atr_value * 1.5)
-            take_profit = current_price - (abs(stop_loss - current_price) * 3.0)
-        
+            stop_loss = level_price + buffer_price
+            risk = stop_loss - entry_price
+            take_profit = current_price - (risk * 3.0)
+
+        # Validate risk (% price based, not ATR)
+        max_risk_pct = 0.025  # 2.5% max risk
+        if risk <= 0 or risk > (entry_price * max_risk_pct):
+            return None
+
         sizing_level = 4 if confirmation_score == 5 else 3
-        
+
         metadata = {
             'level_price': float(level_price),
             'level_type': level_info['type'],
             'confirmation_score': confirmation_score,
             'criteria_scores': criteria_scores,
-            'atr': float(atr_value),
-            'strategy_version': '1.0'
+            'stop_buffer_pips': float(stop_buffer_pips),
+            'strategy_version': '2.0'  # Version bump - ATR purged
         }
         
         signal = Signal(

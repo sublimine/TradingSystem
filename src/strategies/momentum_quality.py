@@ -160,32 +160,41 @@ class MomentumQuality(StrategyBase):
         return True
 
     def _generate_momentum_signal(self, market_data: pd.DataFrame, analysis: Dict) -> Optional[Signal]:
-        """Generate signal for high-quality momentum setup."""
+        """Generate signal for high-quality momentum setup. NO ATR - pips + % price based."""
         symbol = market_data['symbol'].iloc[-1] if 'symbol' in market_data.columns else 'UNKNOWN'
         current_time = market_data['time'].iloc[-1]
         current_price = market_data['close'].iloc[-1]
         direction = 'LONG' if analysis['direction'] > 0 else 'SHORT'
 
-        atr = (market_data['high'].tail(14) - market_data['low'].tail(14)).mean()
+        # NO ATR - use pips buffer for swing points or % price for fallback
+        swing_buffer_pips = 5.0  # 5 pip buffer from swing point
+        fallback_stop_pct = 0.020  # 2.0% fallback stop if no swing point
+        buffer_price = swing_buffer_pips / 10000
 
         recent_swing_points = self._identify_recent_swing_points(market_data)
-        
+
         if direction == 'LONG':
             if recent_swing_points['swing_low'] is not None:
-                stop_loss = recent_swing_points['swing_low'] - (atr * 0.5)
+                stop_loss = recent_swing_points['swing_low'] - buffer_price
             else:
-                stop_loss = current_price - (atr * 2.0)
-            
+                stop_loss = current_price * (1.0 - fallback_stop_pct)
+
             price_move = abs(analysis['price_change_pct']) / 100 * current_price
             take_profit = current_price + (price_move * 1.5)
         else:
             if recent_swing_points['swing_high'] is not None:
-                stop_loss = recent_swing_points['swing_high'] + (atr * 0.5)
+                stop_loss = recent_swing_points['swing_high'] + buffer_price
             else:
-                stop_loss = current_price + (atr * 2.0)
-            
+                stop_loss = current_price * (1.0 + fallback_stop_pct)
+
             price_move = abs(analysis['price_change_pct']) / 100 * current_price
             take_profit = current_price - (price_move * 1.5)
+
+        # Validate risk (% price based, not ATR)
+        risk = abs(current_price - stop_loss)
+        max_risk_pct = 0.025  # 2.5% max risk
+        if risk <= 0 or risk > (current_price * max_risk_pct):
+            return None
 
         quality_score = analysis['quality_score']
         if quality_score >= 0.85:
@@ -204,8 +213,8 @@ class MomentumQuality(StrategyBase):
             'quality_score': analysis['quality_score'],
             'volume_increasing': analysis['volume_increasing'],
             'vpin_value': analysis['vpin_value'],
-            'stop_type': 'swing_point' if recent_swing_points.get('swing_low' if direction == 'LONG' else 'swing_high') else 'atr_based',
-            'strategy_version': '1.0'
+            'stop_type': 'swing_point' if recent_swing_points.get('swing_low' if direction == 'LONG' else 'swing_high') else 'pct_price',
+            'strategy_version': '2.0'  # Version bump - ATR purged
         }
 
         signal = Signal(

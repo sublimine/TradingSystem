@@ -30,7 +30,8 @@ class IcebergDetection(StrategyBase):
         self.volume_advancement_ratio_threshold = params.get('volume_advancement_ratio_threshold', 4.0)  # Icebergs reales
         self.stall_duration_bars = params.get('stall_duration_bars', 5)
         self.replenishment_detection = params.get('replenishment_detection', True)
-        self.stop_loss_behind_level_atr = params.get('stop_loss_behind_level_atr', 1.0)
+        # NO ATR - use pips buffer from iceberg level
+        self.stop_buffer_pips = params.get('stop_buffer_pips', 10.0)  # 10 pip buffer from iceberg level
         self.take_profit_r_multiple = params.get('take_profit_r_multiple', 2.5)
         
         self.l2_available = False
@@ -210,50 +211,46 @@ class IcebergDetection(StrategyBase):
             'time_at_price_minimum': 8
         }
     def evaluate(self, data: pd.DataFrame, features: Dict) -> Optional[Signal]:
-        """Evaluate iceberg detection conditions."""
+        """Evaluate iceberg detection conditions. NO ATR."""
         try:
             if len(data) < 50:
                 logger.debug(f"Insufficient data: {len(data)} bars")
                 return None
-            
-            atr = features.get('atr')
-            if atr is None or np.isnan(atr) or atr <= 0:
-                logger.warning(f"Invalid ATR: {atr}")
-                return None
-            
+
+            # NO ATR validation needed
             self.l2_available = self._check_l2_availability(features)
-            
+
             if not self.l2_available and self.mode != 'degraded':
                 logger.debug("L2 data not available - switching to DEGRADED MODE")
                 self.mode = 'degraded'
-            
+
             iceberg = detect_iceberg_signature(
                 data.tail(20),
                 self.l2_snapshots if self.l2_available else None,
                 self.stall_duration_bars,
                 self.volume_advancement_ratio_threshold
             )
-            
+
             if iceberg:
                 logger.info(f"Iceberg detected in {iceberg['mode']} mode: "
                           f"confidence={iceberg['confidence']}")
-                
+
                 if iceberg['mode'] == 'DEGRADED' and iceberg['confidence'] == 'LOW':
                     logger.debug("Skipping low confidence iceberg in degraded mode")
                     return None
-                
-                signal = self._create_iceberg_signal(iceberg, data, atr, features)
+
+                signal = self._create_iceberg_signal(iceberg, data, features)
                 return signal
-            
+
             return None
-            
+
         except Exception as e:
             logger.error(f"Iceberg evaluation failed: {str(e)}", exc_info=True)
             return None
     
     def _create_iceberg_signal(self, iceberg: Dict, data: pd.DataFrame,
-                              atr: float, features: Dict) -> Optional[Signal]:
-        """Create signal for iceberg trade with OFI/CVD/VPIN confirmation."""
+                              features: Dict) -> Optional[Signal]:
+        """Create signal for iceberg trade with OFI/CVD/VPIN confirmation. NO ATR - pips based."""
         try:
             current_price = data.iloc[-1]['close']
             iceberg_level = iceberg.get('price_level', current_price)
@@ -264,12 +261,15 @@ class IcebergDetection(StrategyBase):
             # FIX BUG #32: Use neutral default 0.5 instead of worst-case 1.0
             vpin = features.get('vpin', 0.5)
 
+            # NO ATR - use pips buffer from iceberg level
+            buffer_price = self.stop_buffer_pips / 10000
+
             # Determine expected direction
             if iceberg.get('side') == 'BID' or current_price > iceberg_level:
                 direction = "LONG"
                 expected_direction = 1
                 entry_price = current_price
-                stop_loss = iceberg_level - (self.stop_loss_behind_level_atr * atr)
+                stop_loss = iceberg_level - buffer_price
                 risk = entry_price - stop_loss
                 take_profit = entry_price + (risk * self.take_profit_r_multiple)
 
@@ -277,9 +277,15 @@ class IcebergDetection(StrategyBase):
                 direction = "SHORT"
                 expected_direction = -1
                 entry_price = current_price
-                stop_loss = iceberg_level + (self.stop_loss_behind_level_atr * atr)
+                stop_loss = iceberg_level + buffer_price
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * self.take_profit_r_multiple)
+
+            # Validate risk (% price based, not ATR)
+            max_risk_pct = 0.025  # 2.5% max risk
+            if risk <= 0 or risk > (entry_price * max_risk_pct):
+                logger.debug(f"Iceberg signal rejected: risk {risk:.5f} outside 0-{max_risk_pct*100}%")
+                return None
 
             # Check OFI alignment (iceberg absorption should show in OFI)
             ofi_aligned = (ofi > 0 and expected_direction > 0) or (ofi < 0 and expected_direction < 0)
