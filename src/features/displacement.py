@@ -45,6 +45,10 @@ def detect_displacement(data: pd.DataFrame, atr: float, displacement_threshold: 
 
     P2-017: Complete algorithm documentation for displacement detection
 
+    ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
+    ATR is used here for DISPLACEMENT DETECTION (pattern identification), NOT risk sizing.
+    This is a legitimate use case per PLAN OMEGA.
+
     ALGORITHM:
     Institutional order blocks form when large orders "displace" price rapidly with
     anomalous volume, creating imbalance zones that act as future support/resistance.
@@ -53,6 +57,7 @@ def detect_displacement(data: pd.DataFrame, atr: float, displacement_threshold: 
     1. Calculate displacement ratio = body_size / ATR for each candle
        - Body size measures directional price movement
        - ATR normalization makes threshold instrument-agnostic
+       - TYPE B: Used for pattern detection, NOT risk decisions
 
     2. Calculate volume z-score over rolling window
        - z = (volume - mean) / std over lookback_periods
@@ -73,7 +78,7 @@ def detect_displacement(data: pd.DataFrame, atr: float, displacement_threshold: 
 
     Args:
         data: OHLCV DataFrame with 'timestamp', 'open', 'high', 'low', 'close', 'tick_volume'
-        atr: Average True Range value for normalization
+        atr: Average True Range value for normalization (TYPE B - descriptive metric only)
         displacement_threshold: Minimum body/ATR ratio (default: 2.0)
         volume_sigma_threshold: Minimum volume z-score (default: 2.5σ)
         lookback_periods: Rolling window for volume statistics (default: 50)
@@ -134,14 +139,28 @@ def detect_displacement(data: pd.DataFrame, atr: float, displacement_threshold: 
         return []
 
 def validate_order_block_retest(block: OrderBlock, price_data: pd.DataFrame,
-                               buffer_atr: float, atr_value: float) -> Tuple[bool, bool]:
-    """Check if order block is being retested with rejection."""
+                               buffer_pips: float = 5.0) -> Tuple[bool, bool]:
+    """
+    Check if order block is being retested with rejection.
+
+    ⚠️ NO ATR - PIPS BUFFER ⚠️
+    Uses fixed pips buffer (default: 5 pips) instead of ATR multipliers.
+    This is TYPE A compliant per PLAN OMEGA.
+
+    Args:
+        block: OrderBlock to validate
+        price_data: Recent OHLCV data
+        buffer_pips: Buffer in pips for zone detection (default: 5.0)
+
+    Returns:
+        Tuple of (is_retesting, shows_rejection)
+    """
     try:
         if len(price_data) < 3:
             return False, False
-        
+
         current_candle = price_data.iloc[-1]
-        buffer = buffer_atr * atr_value
+        buffer = buffer_pips / 10000  # Convert pips to price
         zone_high_buffered = block.zone_high + buffer
         zone_low_buffered = block.zone_low - buffer
         

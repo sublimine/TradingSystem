@@ -84,19 +84,28 @@ def calculate_bollinger_bands(prices: pd.Series, period: int = 20,
     return upper_band, middle_band, lower_band
 
 
-def calculate_atr(high: pd.Series, low: pd.Series, close: pd.Series, 
+def calculate_atr(high: pd.Series, low: pd.Series, close: pd.Series,
                   period: int = 14) -> pd.Series:
     """
     Calculate Average True Range.
-    
+
+    ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
+    This function calculates ATR as a DESCRIPTIVE metric for:
+    - Pattern detection (volatility regimes, displacement, spikes)
+    - Technical indicator normalization (ADX)
+    - NOT for risk sizing, stop loss, or take profit calculations
+
+    Per PLAN OMEGA, ATR can ONLY be used as TYPE B (descriptive).
+    All risk decisions must use % price or pips-based calculations.
+
     Args:
         high: Series of high prices
         low: Series of low prices
         close: Series of closing prices
         period: Lookback period
-        
+
     Returns:
-        Series of ATR values
+        Series of ATR values (TYPE B - descriptive metric only)
     """
     high_low = high - low
     high_close = (high - close.shift(1)).abs()
@@ -226,13 +235,18 @@ def calculate_adx(high: pd.Series, low: pd.Series, close: pd.Series,
                   period: int = 14) -> pd.Series:
     """
     Calculate Average Directional Index.
-    
+
+    ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
+    This function uses ATR to normalize directional indicators (DI+, DI-).
+    This is standard ADX calculation algorithm, NOT risk sizing.
+    ATR is used as TYPE B (descriptive metric) per PLAN OMEGA.
+
     Args:
         high: Series of high prices
         low: Series of low prices
         close: Series of closing prices
         period: Lookback period
-        
+
     Returns:
         Series of ADX values
     """
