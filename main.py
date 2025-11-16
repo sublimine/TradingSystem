@@ -1,10 +1,28 @@
 """
-Elite Trading System - Main Entry Point with Auto-ML Initialization
+⚠️  DEPRECATED - Legacy Entry Point (Pre-PLAN OMEGA)
 
-This is the primary entry point for the trading system.
-Automatically initializes ALL components including ML engine.
+╔══════════════════════════════════════════════════════════════════╗
+║                      ⚠️  DEPRECATION WARNING ⚠️                    ║
+║                                                                  ║
+║  This main.py is LEGACY code from pre-PLAN OMEGA refactor.      ║
+║  It uses deprecated components:                                 ║
+║    - MLAdaptiveEngine (deprecated)                              ║
+║    - InstitutionalBrain (deprecated)                            ║
+║    - Old Risk/Position managers                                 ║
+║                                                                  ║
+║  PLAN OMEGA (2025) uses:                                        ║
+║    - MicrostructureEngine (centralized features)                ║
+║    - ExecutionManager + KillSwitch (4-layer risk)               ║
+║    - Runtime Profiles (GREEN_ONLY, FULL_24)                     ║
+║    - BacktestEngine (modern backtesting)                        ║
+║                                                                  ║
+║  📖 Migration guide: docs/MIGRATION_FROM_LEGACY.md              ║
+║  📖 New usage: docs/EXECUTION_SYSTEM_GUIDE.md                   ║
+║                                                                  ║
+║  Will be REMOVED in future release.                             ║
+╚══════════════════════════════════════════════════════════════════╝
 
-Features:
+Legacy Features (Pre-OMEGA):
 - Auto-initialization of ML Adaptive Engine
 - Institutional Brain Layer
 - 24 Elite Strategies
@@ -13,7 +31,7 @@ Features:
 - Risk Management
 - Reporting System
 
-Usage:
+Legacy Usage (NOT RECOMMENDED):
     # Paper trading (demo account)
     python main.py --mode paper
 
@@ -24,16 +42,35 @@ Usage:
     python main.py --mode backtest --days 90
 
 Author: Elite Trading System
-Version: 2.0
+Version: 2.0 (DEPRECATED - use PLAN OMEGA)
 """
 
 import argparse
 import logging
 import sys
+import warnings
 from pathlib import Path
 from datetime import datetime
 import yaml
 import MetaTrader5 as mt5
+
+# DEPRECATION WARNING - Show at runtime
+warnings.warn(
+    "\n\n"
+    "=" * 80 + "\n"
+    "⚠️  DEPRECATION WARNING: main.py is LEGACY code (Pre-PLAN OMEGA)\n\n"
+    "This entry point uses deprecated components and will be removed.\n\n"
+    "PLAN OMEGA (2025) provides:\n"
+    "  - MicrostructureEngine (centralized institutional features)\n"
+    "  - ExecutionManager + KillSwitch (4-layer risk protection)\n"
+    "  - Runtime Profiles (GREEN_ONLY, FULL_24)\n"
+    "  - Modern BacktestEngine\n\n"
+    "Migration guide: docs/MIGRATION_FROM_LEGACY.md\n"
+    "New usage: docs/EXECUTION_SYSTEM_GUIDE.md\n"
+    "=" * 80 + "\n",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 # Import core components
 from src.core.brain import InstitutionalBrain
