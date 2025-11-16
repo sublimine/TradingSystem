@@ -45,6 +45,8 @@ from src.strategies.spoofing_detection_l2 import SpoofingDetectionL2
 from src.strategies.nfp_news_event_handler import NFPNewsEventHandler
 
 from src.execution.adaptive_participation_rate import APRExecutor
+from src.core.microstructure_engine import MicrostructureEngine
+from src.strategies.strategy_base import Signal
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +71,11 @@ class StrategyOrchestrator:
         self.active_positions = {}
         self.performance_tracker = {}
         self.apr_executor = None
+
+        # Initialize MicrostructureEngine for centralized feature calculation
+        # PLAN OMEGA FASE 3.1b: Integration
+        self.microstructure_engine = MicrostructureEngine()
+        logger.info("MicrostructureEngine initialized for live trading")
 
         self._initialize_strategies()
         self._initialize_apr()
@@ -140,3 +147,59 @@ class StrategyOrchestrator:
         """Initialize Adaptive Participation Rate executor."""
         # TODO: Implementation
         pass
+
+    def evaluate_strategies(self, market_data: pd.DataFrame) -> List[Signal]:
+        """
+        Evaluate all enabled strategies on current market data.
+
+        PLAN OMEGA FASE 3.1b: MicrostructureEngine Integration
+        Calculates institutional features once, then passes to all strategies.
+
+        Args:
+            market_data: DataFrame with OHLCV data
+                Required columns: 'timestamp', 'open', 'high', 'low', 'close', 'volume'
+
+        Returns:
+            List of Signal objects from all strategies
+        """
+        if len(market_data) < 20:
+            logger.debug("Insufficient market data for strategy evaluation")
+            return []
+
+        # STEP 1: Calculate features ONCE using MicrostructureEngine
+        try:
+            features = self.microstructure_engine.calculate_features(
+                market_data,
+                use_cache=True  # Cache for live trading (same bar = same features)
+            )
+            logger.debug(f"Features calculated: OFI={features.get('ofi', 0):.3f}, "
+                        f"VPIN={features.get('vpin', 0):.3f}, CVD={features.get('cvd', 0):.3f}")
+        except Exception as e:
+            logger.error(f"Feature calculation failed: {e}")
+            return []
+
+        # STEP 2: Evaluate each enabled strategy
+        all_signals = []
+
+        for strategy_name, strategy in self.strategies.items():
+            try:
+                # Each strategy gets the same features dict
+                signals = strategy.evaluate(market_data, features)
+
+                if signals:
+                    # Ensure signals is a list
+                    if not isinstance(signals, list):
+                        signals = [signals]
+
+                    # Track signals generated
+                    self.performance_tracker[strategy_name]['signals_generated'] += len(signals)
+
+                    all_signals.extend(signals)
+                    logger.info(f"Strategy '{strategy_name}' generated {len(signals)} signal(s)")
+
+            except Exception as e:
+                logger.error(f"Strategy '{strategy_name}' evaluation failed: {e}", exc_info=True)
+
+        logger.info(f"Total signals generated: {len(all_signals)} from {len(self.strategies)} strategies")
+
+        return all_signals
