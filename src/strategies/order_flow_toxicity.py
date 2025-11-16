@@ -95,8 +95,8 @@ class OrderFlowToxicityStrategy(StrategyBase):
         # Confirmation score
         self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
 
-        # Risk management
-        self.stop_loss_atr_multiple = config.get('stop_loss_atr_multiple', 2.0)
+        # Risk management - INSTITUTIONAL (NO ATR)
+        self.stop_loss_pct = config.get('stop_loss_pct', 0.012)  # 1.2% stop
         self.take_profit_r_multiple = config.get('take_profit_r_multiple', 3.0)
 
         # State tracking
@@ -350,22 +350,26 @@ class OrderFlowToxicityStrategy(StrategyBase):
         """Generate signal for confirmed toxic flow fade."""
 
         try:
-            atr = features.get('atr')
+            # NO ATR - removed atr = features.get('atr')
             vpin = features.get('vpin', 0.5)
+
+            # Import institutional SL/TP (NO ATR)
+            from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
             if fade_direction == 'LONG':
                 entry_price = current_price
-                stop_loss = current_price - (atr * self.stop_loss_atr_multiple)
+                stop_loss, _ = calculate_stop_loss_price('LONG', entry_price, self.stop_loss_pct, market_data)
+                take_profit, _ = calculate_take_profit_price('LONG', entry_price, stop_loss, self.take_profit_r_multiple)
                 risk = entry_price - stop_loss
-                take_profit = entry_price + (risk * self.take_profit_r_multiple)
             else:  # SHORT
                 entry_price = current_price
-                stop_loss = current_price + (atr * self.stop_loss_atr_multiple)
+                stop_loss, _ = calculate_stop_loss_price('SHORT', entry_price, self.stop_loss_pct, market_data)
+                take_profit, _ = calculate_take_profit_price('SHORT', entry_price, stop_loss, self.take_profit_r_multiple)
                 risk = stop_loss - entry_price
-                take_profit = entry_price - (risk * self.take_profit_r_multiple)
 
-            # Validate risk
-            if risk <= 0 or risk > atr * 4.0:
+            # Validate risk (% of price, not ATR)
+            max_risk_pct = 0.03  # 3% max risk
+            if risk <= 0 or risk > (entry_price * max_risk_pct):
                 return None
 
             rr_ratio = abs(take_profit - entry_price) / abs(entry_price - stop_loss) if risk > 0 else 0

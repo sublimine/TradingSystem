@@ -73,8 +73,8 @@ class VPINReversalExtreme(StrategyBase):
         self.enter_on_vpin_decay = config.get('enter_on_vpin_decay', True)
         self.max_bars_after_peak = config.get('max_bars_after_peak', 5)
 
-        # Risk management - ELITE
-        self.stop_loss_beyond_extreme = config.get('stop_loss_beyond_extreme', 1.2)
+        # Risk management - ELITE (NO ATR)
+        self.stop_loss_pct = config.get('stop_loss_pct', 0.010)  # 1.0% stop
         self.take_profit_r = config.get('take_profit_r', 4.5)
 
         # State tracking
@@ -271,20 +271,19 @@ class VPINReversalExtreme(StrategyBase):
         Target: Large R-multiple (4.5R typical for these rare setups)
         """
         # Determine signal direction (opposite of extreme)
+        # Import institutional SL/TP (NO ATR)
+        from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
+
         if self.extreme_direction == 'UP':
             direction = 'SHORT'
-            # Stop above extreme high
-            atr = self._calculate_atr(market_data)
-            stop_loss = self.extreme_price + (atr * self.stop_loss_beyond_extreme)
-            risk = stop_loss - current_price
-            take_profit = current_price - (risk * self.take_profit_r)
+            # Stop above extreme high (% price)
+            stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
+            take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, self.take_profit_r)
         else:
             direction = 'LONG'
-            # Stop below extreme low
-            atr = self._calculate_atr(market_data)
-            stop_loss = self.extreme_price - (atr * self.stop_loss_beyond_extreme)
-            risk = current_price - stop_loss
-            take_profit = current_price + (risk * self.take_profit_r)
+            # Stop below extreme low (% price)
+            stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
+            take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, self.take_profit_r)
 
         # Sizing: MAXIMUM (level 5) - these are ultra-high quality setups
         sizing_level = 5
@@ -320,20 +319,8 @@ class VPINReversalExtreme(StrategyBase):
 
         return signal
 
-    def _calculate_atr(self, market_data: pd.DataFrame, period: int = 14) -> float:
-        """Calculate ATR for stop placement."""
-        high = market_data['high']
-        low = market_data['low']
-        close = market_data['close'].shift(1)
-
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
-
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        return atr if not np.isnan(atr) else 0.0001
+    # REMOVED: _calculate_atr() - NO ATR in institutional system
+    # Replaced with institutional_sl_tp module (% price + structure)
 
     def _reset_extreme_tracking(self):
         """Reset extreme zone tracking."""

@@ -29,7 +29,7 @@ class SpoofingDetectionL2(StrategyBase):
         self.large_order_threshold = config.get('large_order_threshold', 10.0)  # 10x average
         self.imbalance_threshold = config.get('imbalance_threshold', 0.70)
         self.cancellation_window_bars = config.get('cancellation_window_bars', 5)
-        self.stop_loss_atr = config.get('stop_loss_atr', 1.5)
+        self.stop_loss_pct = config.get('stop_loss_pct', 0.010)  # 1.0% stop (NO ATR)
         self.take_profit_r = config.get('take_profit_r', 2.0)
 
         # FIX BUG #11: Use deque with maxlen to prevent memory leak
@@ -154,10 +154,11 @@ class SpoofingDetectionL2(StrategyBase):
             self.logger.debug(f"Anti-spoof signal rejected: VPIN too high {vpin:.3f}")
             return None
 
-        atr = self._calculate_atr(market_data)
-        stop_loss = current_price - atr * self.stop_loss_atr if direction == 'LONG' else current_price + atr * self.stop_loss_atr
-        risk = abs(current_price - stop_loss)
-        take_profit = current_price + risk * self.take_profit_r if direction == 'LONG' else current_price - risk * self.take_profit_r
+        # Import institutional SL/TP (NO ATR)
+        from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
+
+        stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
+        take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, self.take_profit_r)
 
         return Signal(
             timestamp=current_time,
@@ -184,9 +185,5 @@ class SpoofingDetectionL2(StrategyBase):
             }
         )
 
-    def _calculate_atr(self, market_data: pd.DataFrame, period: int = 14) -> float:
-        high = market_data['high']
-        low = market_data['low']
-        close = market_data['close'].shift(1)
-        tr = pd.concat([high - low, (high - close).abs(), (low - close).abs()], axis=1).max(axis=1)
-        return tr.rolling(window=period, min_periods=1).mean().iloc[-1]
+    # REMOVED: _calculate_atr() - NO ATR in institutional system
+    # Replaced with institutional_sl_tp module (% price + structure)
