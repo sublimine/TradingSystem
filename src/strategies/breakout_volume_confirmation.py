@@ -64,12 +64,12 @@ class BreakoutVolumeConfirmation(StrategyBase):
 
         Required config parameters:
             - range_compression_bars: Minimum consolidation bars
-            - range_compression_atr_max: Maximum range in ATR
+            - range_compression_pips_max: Maximum range in pips (NO ATR)
             - volume_expansion_multiplier: Volume spike threshold
             - ofi_breakout_threshold: OFI threshold for breakout execution
             - cvd_confirmation_threshold: CVD threshold
             - vpin_threshold_max: Maximum VPIN (clean flow)
-            - displacement_atr_min: Minimum displacement follow-through
+            - displacement_pips_min: Minimum displacement follow-through in pips (NO ATR)
             - min_confirmation_score: Minimum score (0-5) to enter
         """
         super().__init__(config)
@@ -456,7 +456,7 @@ class BreakoutVolumeConfirmation(StrategyBase):
         if len(data) < 100:
             return False
 
-        required_features = ['ofi', 'cvd', 'vpin', 'atr']
+        required_features = ['ofi', 'cvd', 'vpin']  # NO ATR - pips-based thresholds
         for feature in required_features:
             if feature not in features:
                 self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")

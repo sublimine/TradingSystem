@@ -288,8 +288,8 @@ class OFIRefinement(StrategyBase):
                 'ofi_z_score': float(z_score),
                 'vpin': float(vpin) if vpin else None,
                 'price_change_20p': float(price_change_pct),
-                'atr': float(atr),
-                'risk_reward_ratio': self.take_profit_atr_multiplier / self.stop_loss_atr_multiplier
+                'atr': float(atr),  # TYPE B - descriptive metric only
+                'risk_reward_ratio': self.take_profit_pct / self.stop_loss_pct  # ~2.08 (2.5% / 1.2%)
             }
         )
         

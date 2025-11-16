@@ -62,12 +62,10 @@ class OrderBlockInstitutional(StrategyBase):
 
         Required config parameters:
             - volume_sigma_threshold: Volume Z-score for displacement
-            - displacement_atr_multiplier: ATR multiplier for displacement
             - ofi_absorption_threshold: OFI threshold at block retest
             - cvd_confirmation_threshold: CVD threshold for confirmation
             - vpin_threshold_max: Maximum VPIN (too high = toxic)
             - no_retest_enforcement: Only trade first retest
-            - buffer_atr: Buffer for block zone
             - min_confirmation_score: Minimum score (0-5) to enter
         """
         super().__init__(params)
@@ -138,11 +136,10 @@ class OrderBlockInstitutional(StrategyBase):
         current_time = data.iloc[-1].get('timestamp', datetime.now())
 
         # Detect new displacement (institutional moves creating order blocks)
-        # NOTE: detect_displacement still uses ATR internally (TYPE B - descriptive metric)
-        # We convert our pips threshold to ATR-like multiplier for compatibility
-        displacement_multiplier_equivalent = self.displacement_pips_min / (atr * 10000) if atr > 0 else 2.0
+        # NOTE: detect_displacement uses ATR (TYPE B - descriptive metric for pattern detection)
+        displacement_threshold = 2.0  # Standard threshold: body must be 2x ATR (TYPE B - pattern detection)
         new_blocks = detect_displacement(
-            data, atr, displacement_multiplier_equivalent,
+            data, atr, displacement_threshold,  # TYPE B
             self.volume_sigma_threshold
         )
 
@@ -173,12 +170,9 @@ class OrderBlockInstitutional(StrategyBase):
             if self.no_retest_enforcement and block.tested_count > 0:
                 continue
 
-            # Check if price is retesting block
-            # NOTE: validate_order_block_retest uses ATR internally (TYPE B - descriptive)
-            # Convert our pips buffer to ATR-like multiplier for compatibility
-            buffer_multiplier_equivalent = self.buffer_pips / (atr * 10000) if atr > 0 else 0.5
+            # Check if price is retesting block (NO ATR - pips based)
             is_retesting, shows_rejection = validate_order_block_retest(
-                block, recent_data, buffer_multiplier_equivalent, atr
+                block, recent_data, self.buffer_pips  # Updated: uses pips directly
             )
 
             if not is_retesting:
@@ -191,7 +185,7 @@ class OrderBlockInstitutional(StrategyBase):
 
             if confirmation_score >= self.min_confirmation_score:
                 signal = self._create_order_block_signal(
-                    block, current_price, atr, data,
+                    block, current_price, data,
                     confirmation_score, criteria
                 )
 
