@@ -74,9 +74,9 @@ class BreakoutVolumeConfirmation(StrategyBase):
         """
         super().__init__(config)
 
-        # Range compression parameters
+        # Range compression parameters (NO ATR - pips based)
         self.range_compression_bars = config.get('range_compression_bars', 10)
-        self.range_compression_atr_max = config.get('range_compression_atr_max', 0.5)
+        self.range_compression_pips_max = config.get('range_compression_pips_max', 25.0)  # Max 25 pips range
 
         # Volume parameters
         self.volume_expansion_multiplier = config.get('volume_expansion_multiplier', 3.0)
@@ -87,15 +87,15 @@ class BreakoutVolumeConfirmation(StrategyBase):
         self.cvd_confirmation_threshold = config.get('cvd_confirmation_threshold', 0.6)
         self.vpin_threshold_max = config.get('vpin_threshold_max', 0.30)
 
-        # Displacement parameters
-        self.displacement_atr_min = config.get('displacement_atr_min', 1.5)
+        # Displacement parameters (NO ATR - pips based)
+        self.displacement_pips_min = config.get('displacement_pips_min', 20.0)  # Min 20 pips displacement
         self.displacement_bars = config.get('displacement_bars', 5)
 
         # Confirmation score
         self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
 
-        # Risk management
-        self.stop_loss_atr = config.get('stop_loss_atr', 1.5)
+        # Risk management (NO ATR - % price based)
+        self.stop_loss_pct = config.get('stop_loss_pct', 0.012)  # 1.2% stop
         self.take_profit_r_multiple = config.get('take_profit_r_multiple', 3.0)
 
         # State tracking
@@ -129,14 +129,10 @@ class BreakoutVolumeConfirmation(StrategyBase):
         if not self.validate_inputs(data, features):
             return []
 
-        # Get required order flow features
+        # Get required order flow features (NO ATR)
         ofi = features.get('ofi')
         cvd = features.get('cvd')
         vpin = features.get('vpin')
-        atr = features.get('atr')
-
-        if atr is None or atr <= 0:
-            atr = self._calculate_atr(data)
 
         # Get symbol and current price
         symbol = data.attrs.get('symbol', 'UNKNOWN')
@@ -149,14 +145,14 @@ class BreakoutVolumeConfirmation(StrategyBase):
             if bars_since_last < self.breakout_cooldown_bars:
                 return []
 
-        # STEP 1: Detect range compression (consolidation)
-        range_info = self._detect_range_compression(data, atr)
+        # STEP 1: Detect range compression (consolidation - NO ATR)
+        range_info = self._detect_range_compression(data)
 
         if not range_info:
             return []
 
-        # STEP 2: Detect breakout from range
-        breakout_direction = self._detect_breakout(data, range_info, atr)
+        # STEP 2: Detect breakout from range (NO ATR)
+        breakout_direction = self._detect_breakout(data, range_info)
 
         if not breakout_direction:
             return []
@@ -167,9 +163,9 @@ class BreakoutVolumeConfirmation(StrategyBase):
         if not has_volume_expansion:
             return []
 
-        # STEP 4: INSTITUTIONAL CONFIRMATION using order flow
+        # STEP 4: INSTITUTIONAL CONFIRMATION using order flow (NO ATR)
         confirmation_score, criteria = self._evaluate_institutional_confirmation(
-            data, breakout_direction, ofi, cvd, vpin, atr, features
+            data, breakout_direction, ofi, cvd, vpin, features
         )
 
         signals = []
@@ -189,9 +185,10 @@ class BreakoutVolumeConfirmation(StrategyBase):
 
         return signals
 
-    def _detect_range_compression(self, data: pd.DataFrame, atr: float) -> Optional[Dict]:
+    def _detect_range_compression(self, data: pd.DataFrame) -> Optional[Dict]:
         """
         Detect range compression (consolidation before breakout).
+        NO ATR - uses pips-based thresholds.
 
         Returns:
             Dict with range info if compression detected, None otherwise
@@ -206,23 +203,24 @@ class BreakoutVolumeConfirmation(StrategyBase):
         range_high = recent_bars['high'].max()
         range_low = recent_bars['low'].min()
         range_size = range_high - range_low
-        range_size_atr = range_size / atr if atr > 0 else 999
+        range_size_pips = range_size * 10000  # Convert to pips (for FX)
 
-        # Check if range is compressed
-        if range_size_atr <= self.range_compression_atr_max:
+        # Check if range is compressed (pips-based threshold)
+        if range_size_pips <= self.range_compression_pips_max:
             return {
                 'range_high': range_high,
                 'range_low': range_low,
                 'range_size': range_size,
-                'range_size_atr': range_size_atr,
+                'range_size_pips': range_size_pips,
                 'bars': self.range_compression_bars
             }
 
         return None
 
-    def _detect_breakout(self, data: pd.DataFrame, range_info: Dict, atr: float) -> Optional[str]:
+    def _detect_breakout(self, data: pd.DataFrame, range_info: Dict) -> Optional[str]:
         """
         Detect breakout from compressed range.
+        NO ATR - uses pips-based threshold.
 
         Returns:
             'LONG' for bullish breakout
@@ -239,18 +237,18 @@ class BreakoutVolumeConfirmation(StrategyBase):
         # Bullish breakout (break above range)
         if current_high > range_high and current_price > range_high:
             breakout_size = current_high - range_high
-            breakout_size_atr = breakout_size / atr if atr > 0 else 0
+            breakout_size_pips = breakout_size * 10000  # Convert to pips
 
-            # Require meaningful breakout (not just 1 pip)
-            if breakout_size_atr >= 0.2:
+            # Require meaningful breakout (not just 1 pip - at least 3 pips)
+            if breakout_size_pips >= 3.0:
                 return 'LONG'
 
         # Bearish breakout (break below range)
         elif current_low < range_low and current_price < range_low:
             breakout_size = range_low - current_low
-            breakout_size_atr = breakout_size / atr if atr > 0 else 0
+            breakout_size_pips = breakout_size * 10000  # Convert to pips
 
-            if breakout_size_atr >= 0.2:
+            if breakout_size_pips >= 3.0:
                 return 'SHORT'
 
         return None
@@ -270,10 +268,11 @@ class BreakoutVolumeConfirmation(StrategyBase):
 
     def _evaluate_institutional_confirmation(self, data: pd.DataFrame,
                                             direction: str, ofi: float,
-                                            cvd: float, vpin: float, atr: float,
+                                            cvd: float, vpin: float,
                                             features: Dict) -> Tuple[float, Dict]:
         """
         INSTITUTIONAL order flow confirmation of breakout.
+        NO ATR - uses pips-based displacement.
 
         Evaluates 5 criteria (each worth 0-1.0 points):
         1. OFI Surge (institutions executing breakout)
@@ -327,15 +326,15 @@ class BreakoutVolumeConfirmation(StrategyBase):
 
         criteria['volume_quality'] = volume_score
 
-        # CRITERION 5: DISPLACEMENT FOLLOW-THROUGH
+        # CRITERION 5: DISPLACEMENT FOLLOW-THROUGH (NO ATR - pips based)
         # Check if price has sustained displacement after breakout
         recent_bars = data.tail(min(self.displacement_bars, len(data)))
 
         if len(recent_bars) >= 2:
             displacement = abs(recent_bars['close'].iloc[-1] - recent_bars['close'].iloc[0])
-            displacement_atr = displacement / atr if atr > 0 else 0
+            displacement_pips = displacement * 10000  # Convert to pips
 
-            displacement_score = min(displacement_atr / self.displacement_atr_min, 1.0)
+            displacement_score = min(displacement_pips / self.displacement_pips_min, 1.0)
         else:
             displacement_score = 0.5
 
@@ -356,28 +355,44 @@ class BreakoutVolumeConfirmation(StrategyBase):
                                 direction: str, range_info: Dict,
                                 confirmation_score: float, criteria: Dict,
                                 data: pd.DataFrame, features: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed institutional breakout."""
+        """Generate signal for confirmed institutional breakout. NO ATR - % price + structure based."""
 
         try:
-            atr = features.get('atr')
-            if atr is None or atr <= 0:
-                atr = self._calculate_atr(data)
+            from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
+            entry_price = current_price
+
+            # Institutional stop: prioritize range boundary, with % price buffer
             if direction == 'LONG':
-                entry_price = current_price
-                # Stop below range low
-                stop_loss = range_info['range_low'] - (self.stop_loss_atr * atr)
+                # Stop below range low with small buffer
+                buffer_pips = 5.0  # 5 pip buffer
+                buffer_price = buffer_pips / 10000
+                stop_loss = range_info['range_low'] - buffer_price
+
+                # Validate stop is reasonable (not more than stop_loss_pct)
+                max_stop = entry_price * (1.0 - self.stop_loss_pct)
+                if stop_loss < max_stop:
+                    stop_loss = max_stop
+
                 risk = entry_price - stop_loss
                 take_profit = entry_price + (risk * self.take_profit_r_multiple)
             else:  # SHORT
-                entry_price = current_price
-                # Stop above range high
-                stop_loss = range_info['range_high'] + (self.stop_loss_atr * atr)
+                # Stop above range high with small buffer
+                buffer_pips = 5.0  # 5 pip buffer
+                buffer_price = buffer_pips / 10000
+                stop_loss = range_info['range_high'] + buffer_price
+
+                # Validate stop is reasonable (not more than stop_loss_pct)
+                max_stop = entry_price * (1.0 + self.stop_loss_pct)
+                if stop_loss > max_stop:
+                    stop_loss = max_stop
+
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * self.take_profit_r_multiple)
 
-            # Validate risk
-            if risk <= 0 or risk > atr * 5.0:
+            # Validate risk (% price based, not ATR)
+            max_risk_pct = 0.025  # 2.5% max risk
+            if risk <= 0 or risk > (entry_price * max_risk_pct):
                 return None
 
             rr_ratio = abs(take_profit - entry_price) / abs(entry_price - stop_loss) if risk > 0 else 0
@@ -407,7 +422,7 @@ class BreakoutVolumeConfirmation(StrategyBase):
                 metadata={
                     'range_high': float(range_info['range_high']),
                     'range_low': float(range_info['range_low']),
-                    'range_size_atr': float(range_info['range_size_atr']),
+                    'range_size_pips': float(range_info['range_size_pips']),
                     'range_bars': range_info['bars'],
                     'confirmation_score': float(confirmation_score),
                     'ofi_surge_score': float(criteria['ofi_surge']),
@@ -420,7 +435,7 @@ class BreakoutVolumeConfirmation(StrategyBase):
                     'expected_win_rate': 0.68 + (confirmation_score / 25.0),  # 68-74% WR
                     'rationale': f"{direction} breakout from {range_info['bars']}-bar compression "
                                f"with institutional order flow confirmation. "
-                               f"Range size: {range_info['range_size_atr']:.2f} ATR.",
+                               f"Range size: {range_info['range_size_pips']:.1f} pips.",
                     # Partial exits
                     'partial_exit_1': {'r_level': 1.5, 'percent': 50},
                     'partial_exit_2': {'r_level': 2.5, 'percent': 30},
@@ -433,20 +448,8 @@ class BreakoutVolumeConfirmation(StrategyBase):
             self.logger.error(f"Breakout signal creation failed: {str(e)}", exc_info=True)
             return None
 
-    def _calculate_atr(self, data: pd.DataFrame, period: int = 14) -> float:
-        """Calculate ATR."""
-        high = data['high']
-        low = data['low']
-        close = data['close'].shift(1)
-
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
-
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        return atr if not pd.isna(atr) else (data['high'].iloc[-1] - data['low'].iloc[-1])
+    # REMOVED: _calculate_atr() - NO ATR in institutional system
+    # Replaced with institutional_sl_tp module (% price + structure)
 
     def validate_inputs(self, data: pd.DataFrame, features: Dict) -> bool:
         """Validate required inputs are present."""

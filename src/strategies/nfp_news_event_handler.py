@@ -95,8 +95,8 @@ class NFPNewsEventHandler(StrategyBase):
         self.wave_detection_enabled = config.get('wave_detection_enabled', True)
         self.wave_fib_levels = [0.382, 0.5, 0.618, 1.0, 1.272, 1.618]  # Fibonacci extensions
 
-        # Risk management - INSTITUTIONAL SIZING
-        self.stop_loss_atr = config.get('stop_loss_atr', 3.0)  # Wider stops for news volatility
+        # Risk management - INSTITUTIONAL SIZING (NO ATR)
+        self.stop_loss_pct = config.get('stop_loss_pct', 0.015)  # 1.5% stop (wider for news volatility)
         self.take_profit_r = config.get('take_profit_r', 2.5)  # Initial target
 
         # Partial exits (Position Manager handles this, we just set metadata)
@@ -289,17 +289,11 @@ class NFPNewsEventHandler(StrategyBase):
             self.logger.debug(f"{symbol}: PRE-EVENT - Confidence too low ({confidence:.1%})")
             return None
 
-        # Calculate institutional stops/targets (ATR-based, Brain applies strategic)
-        atr = self._calculate_atr(market_data)
+        # Calculate institutional stops/targets (NO ATR - % price based)
+        from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
-        if direction == 'LONG':
-            stop_loss = current_price - (atr * self.stop_loss_atr)
-            risk = current_price - stop_loss
-            take_profit = current_price + (risk * self.take_profit_r)
-        else:
-            stop_loss = current_price + (atr * self.stop_loss_atr)
-            risk = stop_loss - current_price
-            take_profit = current_price - (risk * self.take_profit_r)
+        stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
+        take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, self.take_profit_r)
 
         signal = Signal(
             timestamp=current_time,
@@ -410,17 +404,11 @@ class NFPNewsEventHandler(StrategyBase):
             setup_type = 'EVENT_SPIKE_CONTINUATION'
             confidence = 0.70
 
-        # Calculate stops/targets
-        atr = self._calculate_atr(market_data)
+        # Calculate stops/targets (NO ATR - % price based)
+        from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
-        if direction == 'LONG':
-            stop_loss = current_price - (atr * self.stop_loss_atr)
-            risk = current_price - stop_loss
-            take_profit = current_price + (risk * self.take_profit_r)
-        else:
-            stop_loss = current_price + (atr * self.stop_loss_atr)
-            risk = stop_loss - current_price
-            take_profit = current_price - (risk * self.take_profit_r)
+        stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
+        take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, self.take_profit_r)
 
         signal = Signal(
             timestamp=current_time,
@@ -545,17 +533,22 @@ class NFPNewsEventHandler(StrategyBase):
             self.logger.debug(f"{symbol}: {setup_type} - VPIN too high ({vpin:.2f})")
             return None
 
-        # Calculate stops/targets based on wave structure
-        atr = self._calculate_atr(market_data)
+        # Calculate stops/targets based on wave structure (NO ATR - % price based)
+        from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
+
         wave_target = wave_info.get('target_price', current_price)
 
+        # Use wave structure stop if available, otherwise institutional % price stop
+        if 'stop_price' in wave_info:
+            stop_loss = wave_info['stop_price']
+        else:
+            stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
+
+        risk = abs(current_price - stop_loss)
+
         if direction == 'LONG':
-            stop_loss = wave_info.get('stop_price', current_price - atr * self.stop_loss_atr)
-            risk = current_price - stop_loss
             take_profit = wave_target if wave_target > current_price else current_price + (risk * self.take_profit_r)
         else:
-            stop_loss = wave_info.get('stop_price', current_price + atr * self.stop_loss_atr)
-            risk = stop_loss - current_price
             take_profit = wave_target if wave_target < current_price else current_price - (risk * self.take_profit_r)
 
         signal = Signal(
@@ -624,17 +617,11 @@ class NFPNewsEventHandler(StrategyBase):
             if ofi < 0:  # OFI still negative = no divergence yet
                 return None
 
-        # Calculate stops/targets
-        atr = self._calculate_atr(market_data)
+        # Calculate stops/targets (NO ATR - % price based)
+        from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
-        if direction == 'LONG':
-            stop_loss = current_price - (atr * self.stop_loss_atr)
-            risk = current_price - stop_loss
-            take_profit = current_price + (risk * self.take_profit_r)
-        else:
-            stop_loss = current_price + (atr * self.stop_loss_atr)
-            risk = stop_loss - current_price
-            take_profit = current_price - (risk * self.take_profit_r)
+        stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
+        take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, self.take_profit_r)
 
         signal = Signal(
             timestamp=current_time,
@@ -761,17 +748,5 @@ class NFPNewsEventHandler(StrategyBase):
             'wave_1_size': wave_1_size if 'wave_1_size' in locals() else 0,
         }
 
-    def _calculate_atr(self, market_data: pd.DataFrame, period: int = 14) -> float:
-        """Calculate ATR for stop/target placement."""
-        high = market_data['high']
-        low = market_data['low']
-        close = market_data['close'].shift(1)
-
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
-
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        return atr if not pd.isna(atr) else (market_data['high'].iloc[-1] - market_data['low'].iloc[-1])
+    # REMOVED: _calculate_atr() - NO ATR in institutional system
+    # Replaced with institutional_sl_tp module (% price + structure)
