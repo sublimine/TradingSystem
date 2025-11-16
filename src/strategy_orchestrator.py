@@ -47,6 +47,8 @@ from src.strategies.nfp_news_event_handler import NFPNewsEventHandler
 from src.execution.adaptive_participation_rate import APRExecutor
 from src.core.microstructure_engine import MicrostructureEngine
 from src.strategies.strategy_base import Signal
+from src.execution.execution_manager import ExecutionManager
+from src.execution.execution_mode import ExecutionConfig
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +65,18 @@ class StrategyOrchestrator:
     6. Tracking performance attribution by strategy
     """
 
-    def __init__(self, config_path: str = 'config/strategies_institutional.yaml', brain=None):
-        """Initialize the orchestrator with configuration."""
+    def __init__(self, config_path: str = 'config/strategies_institutional.yaml',
+                 brain=None,
+                 execution_config: Optional[ExecutionConfig] = None):
+        """
+        Initialize the orchestrator with configuration.
+
+        Args:
+            config_path: Path to strategy configuration YAML
+            brain: Brain reference for coordination (optional)
+            execution_config: ExecutionConfig for automatic execution (optional)
+                If None, orchestrator only generates signals without executing
+        """
         self.config = self._load_config(config_path)
         self.brain = brain  # Store brain reference for strategy coordination
         self.strategies = {}
@@ -76,6 +88,15 @@ class StrategyOrchestrator:
         # PLAN OMEGA FASE 3.1b: Integration
         self.microstructure_engine = MicrostructureEngine()
         logger.info("MicrostructureEngine initialized for live trading")
+
+        # Initialize ExecutionManager for order execution
+        # PLAN OMEGA FASE 3.2: ExecutionMode + Adapters
+        self.execution_manager: Optional[ExecutionManager] = None
+        if execution_config:
+            self.execution_manager = ExecutionManager(execution_config)
+            logger.info(f"ExecutionManager initialized in {execution_config.mode} mode")
+        else:
+            logger.info("ExecutionManager not initialized - signal generation only")
 
         self._initialize_strategies()
         self._initialize_apr()
@@ -203,3 +224,78 @@ class StrategyOrchestrator:
         logger.info(f"Total signals generated: {len(all_signals)} from {len(self.strategies)} strategies")
 
         return all_signals
+
+    def evaluate_and_execute(self, market_data: pd.DataFrame) -> Dict:
+        """
+        Evaluar estrategias Y ejecutar señales automáticamente.
+
+        PLAN OMEGA FASE 3.2: ExecutionMode Integration
+        Workflow completo: Features → Señales → Ejecución
+
+        Args:
+            market_data: DataFrame con datos OHLCV
+                Required columns: 'timestamp', 'open', 'high', 'low', 'close', 'volume'
+
+        Returns:
+            Dictionary con resultados:
+                - 'signals': Lista de señales generadas
+                - 'executed': Número de señales ejecutadas
+                - 'positions': Posiciones abiertas actuales
+                - 'balance': Balance de la cuenta
+                - 'equity': Equity de la cuenta
+        """
+        # PASO 1: Evaluar estrategias y generar señales
+        signals = self.evaluate_strategies(market_data)
+
+        result = {
+            'signals': signals,
+            'executed': 0,
+            'positions': [],
+            'balance': 0.0,
+            'equity': 0.0
+        }
+
+        # PASO 2: Ejecutar señales si hay ExecutionManager
+        if self.execution_manager and signals:
+            # Obtener precio actual del mercado
+            current_price = market_data['close'].iloc[-1]
+            symbol = market_data.attrs.get('symbol', 'EURUSD')
+
+            market_prices = {symbol: current_price}
+
+            # Actualizar posiciones con datos actuales
+            market_bar = {
+                symbol: {
+                    'bid': current_price,
+                    'ask': current_price,
+                    'high': market_data['high'].iloc[-1],
+                    'low': market_data['low'].iloc[-1],
+                    'close': current_price
+                }
+            }
+            self.execution_manager.update_positions(market_bar)
+
+            # Ejecutar señales
+            executed = self.execution_manager.execute_signals(signals, market_prices)
+            result['executed'] = executed
+
+            logger.info(f"Executed {executed}/{len(signals)} signals")
+
+        # PASO 3: Obtener estado actual
+        if self.execution_manager:
+            result['positions'] = self.execution_manager.get_positions()
+            result['balance'] = self.execution_manager.get_account_balance()
+            result['equity'] = self.execution_manager.get_account_equity()
+
+        return result
+
+    def get_execution_statistics(self) -> Optional[Dict]:
+        """
+        Obtener estadísticas de ejecución.
+
+        Returns:
+            Dict con estadísticas o None si no hay ExecutionManager
+        """
+        if self.execution_manager:
+            return self.execution_manager.get_statistics()
+        return None
