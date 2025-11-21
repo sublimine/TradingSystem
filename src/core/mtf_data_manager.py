@@ -1,4 +1,4 @@
-"""
+﻿"""
 Multi-Timeframe Data Manager - Institutional Implementation
 
 Manages synchronized data across multiple timeframes with efficient caching.
@@ -102,8 +102,8 @@ class MultiTimeframeDataManager:
         """
         Process raw OHLCV data into DataFrame with indicators.
 
-        ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
-        ATR is calculated here for PATTERN DETECTION (order blocks, FVGs, liquidity zones).
+        âš ï¸ indicador de rango USAGE: TYPE B - DESCRIPTIVE METRIC ONLY âš ï¸
+        indicador de rango is calculated here for PATTERN DETECTION (order blocks, FVGs, liquidity zones).
         NOT used for risk sizing, stop loss, or take profit calculations.
         """
         df = pd.DataFrame(rates)
@@ -119,12 +119,12 @@ class MultiTimeframeDataManager:
         df['ema_50'] = df['close'].ewm(span=50, adjust=False).mean()
         df['ema_200'] = df['close'].ewm(span=200, adjust=False).mean()
 
-        # ATR (TYPE B - descriptive metric for pattern detection)
+        # indicador de rango (TYPE B - descriptive metric for pattern detection)
         high_low = df['high'] - df['low']
         high_close = (df['high'] - df['close'].shift()).abs()
         low_close = (df['low'] - df['close'].shift()).abs()
         true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-        df['atr'] = true_range.rolling(14).mean()  # TYPE B - descriptive metric only
+        df['indicador de rango'] = true_range.rolling(14).mean()  # TYPE B - descriptive metric only
 
         # Volume profile
         df['volume_ma'] = df['volume'].rolling(20).mean()
@@ -136,15 +136,15 @@ class MultiTimeframeDataManager:
         """
         Update market structure information for timeframe.
 
-        ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
-        ATR is used for PATTERN DETECTION (order blocks, FVGs, liquidity zones).
+        âš ï¸ indicador de rango USAGE: TYPE B - DESCRIPTIVE METRIC ONLY âš ï¸
+        indicador de rango is used for PATTERN DETECTION (order blocks, FVGs, liquidity zones).
         NOT used for risk sizing, stop loss, or take profit calculations.
 
         Identifies:
         - Swing highs/lows (institutional levels)
-        - Order blocks (displacement candles - >1.5 ATR range)
-        - Fair value gaps (minimum gap size >0.3 ATR)
-        - Liquidity zones (ATR compression <0.6 mean ATR)
+        - Order blocks (displacement candles - >1.5 indicador de rango range)
+        - Fair value gaps (minimum gap size >0.3 indicador de rango)
+        - Liquidity zones (indicador de rango compression <0.6 mean indicador de rango)
         """
         if len(df) < 50:
             return
@@ -180,12 +180,12 @@ class MultiTimeframeDataManager:
                     'index': i
                 })
 
-        # Order blocks: Strong displacement candles (>1.5 ATR range)
-        if 'atr' in df.columns:
+        # Order blocks: Strong displacement candles (>1.5 indicador de rango range)
+        if 'indicador de rango' in df.columns:
             df_tail = df.tail(100)
             for idx, row in df_tail.iterrows():
                 candle_range = row['high'] - row['low']
-                if candle_range > row['atr'] * 1.5:
+                if candle_range > row['indicador de rango'] * 1.5:
                     ob_type = 'BULLISH' if row['close'] > row['open'] else 'BEARISH'
                     structure['order_blocks'].append({
                         'type': ob_type,
@@ -199,7 +199,7 @@ class MultiTimeframeDataManager:
             # Bullish FVG: candle[i-2].high < candle[i].low
             if df.iloc[i-2]['high'] < df.iloc[i]['low']:
                 gap_size = df.iloc[i]['low'] - df.iloc[i-2]['high']
-                if gap_size > df.iloc[i]['atr'] * 0.3:  # Minimum gap size
+                if gap_size > df.iloc[i]['indicador de rango'] * 0.3:  # Minimum gap size
                     structure['fvgs'].append({
                         'type': 'BULLISH',
                         'high': float(df.iloc[i]['low']),
@@ -210,7 +210,7 @@ class MultiTimeframeDataManager:
             # Bearish FVG: candle[i-2].low > candle[i].high
             elif df.iloc[i-2]['low'] > df.iloc[i]['high']:
                 gap_size = df.iloc[i-2]['low'] - df.iloc[i]['high']
-                if gap_size > df.iloc[i]['atr'] * 0.3:
+                if gap_size > df.iloc[i]['indicador de rango'] * 0.3:
                     structure['fvgs'].append({
                         'type': 'BEARISH',
                         'high': float(df.iloc[i-2]['low']),
@@ -219,14 +219,14 @@ class MultiTimeframeDataManager:
                     })
 
         # Liquidity zones: Consolidation areas (low volatility clusters)
-        # Identify using ATR compression
-        if 'atr' in df.columns:
+        # Identify using indicador de rango compression
+        if 'indicador de rango' in df.columns:
             df_tail = df.tail(50)
-            atr_values = df_tail['atr'].values
+            atr_values = df_tail['indicador de rango'].values
             atr_mean = np.mean(atr_values)
 
             for i in range(5, len(df_tail)):
-                window_atr = df_tail.iloc[i-5:i]['atr'].mean()
+                window_atr = df_tail.iloc[i-5:i]['indicador de rango'].mean()
                 if window_atr < atr_mean * 0.6:  # Low volatility
                     zone_high = df_tail.iloc[i-5:i]['high'].max()
                     zone_low = df_tail.iloc[i-5:i]['low'].min()

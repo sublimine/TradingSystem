@@ -1,4 +1,4 @@
-"""
+﻿"""
 Volatility Institutional Strategy
 
 INSTITUTIONAL regime-adaptive strategy that adjusts parameters dynamically based on
@@ -43,8 +43,8 @@ class VolatilityInstitutional(StrategyBase):
             - regime_lookback: Recent observations for regime prediction (typically 50)
             - low_vol_entry_threshold: Entry threshold for low vol regime (typically 1.5)
             - high_vol_entry_threshold: Entry threshold for high vol regime (typically 2.5)
-            - low_vol_stop_multiplier: ATR multiplier for stops in low vol (typically 1.5)
-            - high_vol_stop_multiplier: ATR multiplier for stops in high vol (typically 2.5)
+            - low_vol_stop_multiplier: indicador de rango multiplier for stops in low vol (typically 1.5)
+            - high_vol_stop_multiplier: indicador de rango multiplier for stops in high vol (typically 2.5)
             - low_vol_sizing_boost: Sizing boost factor for low vol (typically 1.2)
             - high_vol_sizing_reduction: Sizing reduction factor for high vol (typically 0.7)
             - min_regime_confidence: Minimum confidence to apply regime (typically 0.7)
@@ -55,7 +55,7 @@ class VolatilityInstitutional(StrategyBase):
         self.regime_lookback = config.get('regime_lookback', 40)
         self.low_vol_entry_threshold = config.get('low_vol_entry_threshold', 1.0)  # Entry threshold
         self.high_vol_entry_threshold = config.get('high_vol_entry_threshold', 2.0)
-        # Risk management (NO ATR - % price based)
+        # Risk management (sin indicadores de rango - % price based)
         self.low_vol_stop_pct = config.get('low_vol_stop_pct', 0.010)  # 1.0% stop in low vol
         self.high_vol_stop_pct = config.get('high_vol_stop_pct', 0.015)  # 1.5% stop in high vol
         self.low_vol_sizing_boost = config.get('low_vol_sizing_boost', 1.2)
@@ -64,7 +64,7 @@ class VolatilityInstitutional(StrategyBase):
 
         self.hmm_model = None
         # FIX BUG #10: Use deque with maxlen to prevent memory leak
-        # CR6 FIX: Ajustar maxlen a 200 (límite real usado en código)
+        # CR6 FIX: Ajustar maxlen a 200 (lÃ­mite real usado en cÃ³digo)
         self.volatility_history = deque(maxlen=200)
         self.current_regime = None
         self.regime_confidence = 0.0
@@ -102,7 +102,7 @@ class VolatilityInstitutional(StrategyBase):
 
         current_volatility = self._calculate_current_volatility(market_data)
         self.volatility_history.append(current_volatility)
-        # CR6 FIX: Eliminado pop(0) redundante - deque con maxlen=200 lo hace automáticamente
+        # CR6 FIX: Eliminado pop(0) redundante - deque con maxlen=200 lo hace automÃ¡ticamente
 
         if len(self.volatility_history) >= 100 and not self.hmm_model.fitted:
             self._fit_regime_model()
@@ -224,7 +224,7 @@ class VolatilityInstitutional(StrategyBase):
         current_price = signal_dict['price']
         direction = signal_dict['direction']
 
-        # Risk management (NO ATR - % price based on regime)
+        # Risk management (sin indicadores de rango - % price based on regime)
         from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
         stop_pct = self.low_vol_stop_pct if self.current_regime == 0 else self.high_vol_stop_pct
@@ -250,14 +250,14 @@ class VolatilityInstitutional(StrategyBase):
             'regime_confidence': float(self.regime_confidence),
             'current_volatility': float(self.volatility_history[-1]),
             'entry_threshold_used': float(self.low_vol_entry_threshold if self.current_regime == 0 else self.high_vol_entry_threshold),
-            'stop_pct_used': float(stop_pct),  # % price stop (NO ATR)
+            'stop_pct_used': float(stop_pct),  # % price stop (sin indicadores de rango)
             'take_profit_r': float(take_profit_r),
             'ofi': float(signal_dict['ofi']),                        # ELITE: OFI not RSI
             'structure_score': float(signal_dict['structure_score']), # ELITE: Structure
             'volume_ratio': float(signal_dict['volume_ratio']),      # ELITE: Volume
             'signal_strength': float(signal_dict['signal_strength']),
             'signal_type': 'INSTITUTIONAL_FLOW',                     # ELITE: Not retail
-            'strategy_version': '3.0'                                # Version bump (ATR purged)
+            'strategy_version': '3.0'                                # Version bump (indicador de rango purged)
         }
 
         signal = Signal(

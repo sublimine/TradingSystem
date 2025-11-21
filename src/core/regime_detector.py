@@ -1,4 +1,4 @@
-"""
+﻿"""
 Market Regime Detection - Institutional Implementation
 
 Detects and classifies market regimes using multiple methods:
@@ -63,12 +63,12 @@ class RegimeDetector:
                 ADX <20 = confirmed ranging, optimal for mean reversion
 
         Volatility Thresholds (percentile-based):
-            ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
+            âš ï¸ indicador de rango USAGE: TYPE B - DESCRIPTIVE METRIC ONLY âš ï¸
             - low_vol_percentile (float): Percentile for low volatility (default: 30)
-                ATR below 30th percentile = low vol regime (TYPE B - regime detection)
+                indicador de rango below 30th percentile = low vol regime (TYPE B - regime detection)
             - high_vol_percentile (float): Percentile for high volatility (default: 70)
-                ATR above 70th percentile = high vol regime (TYPE B - regime detection)
-            ATR is used ONLY for volatility regime classification, NOT for risk sizing.
+                indicador de rango above 70th percentile = high vol regime (TYPE B - regime detection)
+            indicador de rango is used ONLY for volatility regime classification, NOT for risk sizing.
 
         These thresholds are based on:
         - Ang & Bekaert (2002) regime switching research
@@ -165,26 +165,26 @@ class RegimeDetector:
 
     def _detect_volatility_regime(self, market_data: pd.DataFrame) -> Dict:
         """
-        Detect volatility regime using ATR analysis.
+        Detect volatility regime using indicador de rango analysis.
 
-        ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
-        ATR is used here for VOLATILITY REGIME DETECTION (pattern identification).
+        âš ï¸ indicador de rango USAGE: TYPE B - DESCRIPTIVE METRIC ONLY âš ï¸
+        indicador de rango is used here for VOLATILITY REGIME DETECTION (pattern identification).
         NOT used for risk sizing, stop loss, or take profit calculations.
-        Similar to crisis_mode_volatility_spike.py ATR spike detection.
+        Similar to crisis_mode_volatility_spike.py indicador de rango spike detection.
 
         Returns:
             {'regime': 'LOW'|'NORMAL'|'HIGH', 'confidence': float}
         """
-        # Calculate recent ATR (TYPE B - regime detection)
-        if 'atr' in market_data.columns:
-            recent_atr = market_data['atr'].tail(20).mean()
+        # Calculate recent indicador de rango (TYPE B - regime detection)
+        if 'indicador de rango' in market_data.columns:
+            recent_atr = market_data['indicador de rango'].tail(20).mean()
         else:
             high_low = market_data['high'] - market_data['low']
             recent_atr = high_low.tail(20).mean()
 
-        # Calculate historical ATR distribution (TYPE B - regime detection)
-        if 'atr' in market_data.columns:
-            historical_atr = market_data['atr'].tail(self.lookback_period * 3)
+        # Calculate historical indicador de rango distribution (TYPE B - regime detection)
+        if 'indicador de rango' in market_data.columns:
+            historical_atr = market_data['indicador de rango'].tail(self.lookback_period * 3)
         else:
             high_low_hist = market_data['high'] - market_data['low']
             historical_atr = high_low_hist.tail(self.lookback_period * 3)

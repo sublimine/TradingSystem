@@ -1,4 +1,4 @@
-"""
+﻿"""
 Metadata Builder - MANDATO 16 Integration Helper
 
 Construye metadata enriquecida para QualityScorer a partir de:
@@ -6,7 +6,7 @@ Construye metadata enriquecida para QualityScorer a partir de:
 - MultiFrameOrchestrator
 - Datos de estrategia
 
-Elimina duplicación de código entre estrategias.
+Elimina duplicaciÃ³n de cÃ³digo entre estrategias.
 """
 
 import numpy as np
@@ -33,7 +33,7 @@ def build_enriched_metadata(
 
     Args:
         base_metadata: Metadata base de estrategia (legacy)
-        symbol: Símbolo
+        symbol: SÃ­mbolo
         current_price: Precio actual
         signal_direction: 1 (LONG) o -1 (SHORT)
         market_data: DataFrame OHLCV
@@ -41,13 +41,13 @@ def build_enriched_metadata(
         multiframe_orchestrator: MultiFrameOrchestrator instance (optional)
         signal_strength_value: Signal strength pre-calculado [0-1] (optional)
         structure_reference_price: Precio de referencia estructural (order block, nivel clave)
-        structure_reference_size: Tamaño de referencia (rango del nivel, NO ATR en fórmula)
+        structure_reference_size: TamaÃ±o de referencia (rango del nivel, sin indicadores de rango en fÃ³rmula)
 
     Returns:
         metadata enriquecida con:
         - signal_strength: [0-1]
         - mtf_confluence: [0-1]
-        - structure_alignment: [0-1] (distancia normalizada, NO ATR)
+        - structure_alignment: [0-1] (distancia normalizada, sin indicadores de rango)
         - microstructure_quality: [0-1]
         - regime_confidence: [0-1]
     """

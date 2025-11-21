@@ -1,7 +1,7 @@
-"""
+﻿"""
 FVG Institutional Strategy - TRULY INSTITUTIONAL GRADE
 
-🏆 REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL MEAN REVERSION GARBAGE
+ðŸ† REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL MEAN REVERSION GARBAGE
 
 Detects Fair Value Gaps and trades them with REAL order flow confirmation:
 - Gap detection (rapid price movement leaving inefficiency)
@@ -87,7 +87,7 @@ class FVGInstitutional(StrategyBase):
         Initialize INSTITUTIONAL FVG strategy.
 
         Required config parameters:
-            - gap_pips_minimum: Minimum gap size in pips (10+ for significance) ⚠️ NO ATR
+            - gap_pips_minimum: Minimum gap size in pips (10+ for significance) âš ï¸ sin indicadores de rango
             - ofi_absorption_threshold: OFI threshold for gap defense
             - cvd_confirmation_threshold: CVD threshold for confirmation
             - vpin_threshold_max: Maximum VPIN (too high = toxic)
@@ -97,7 +97,7 @@ class FVGInstitutional(StrategyBase):
         """
         super().__init__(config)
 
-        # Gap detection parameters (NO ATR - pips based)
+        # Gap detection parameters (sin indicadores de rango - pips based)
         self.gap_pips_minimum = config.get('gap_pips_minimum', 10.0)  # 10 pips minimum
         self.volume_anomaly_required = config.get('volume_anomaly_required', True)
         self.volume_percentile = config.get('volume_percentile', 70)
@@ -112,7 +112,7 @@ class FVGInstitutional(StrategyBase):
         self.max_gap_age_bars = config.get('max_gap_age_bars', 100)
         self.max_active_gaps = config.get('max_active_gaps', 5)
 
-        # Risk management (NO ATR - pips based)
+        # Risk management (sin indicadores de rango - pips based)
         self.stop_buffer_pips = config.get('stop_buffer_pips', 15.0)  # 15 pips buffer beyond gap
         self.target_gap_multiples = config.get('target_gap_multiples', 2.0)
 
@@ -124,8 +124,8 @@ class FVGInstitutional(StrategyBase):
         self.filled_gaps: deque = deque(maxlen=500)  # FIX: Limit to prevent memory leak
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info(f"🏆 INSTITUTIONAL FVG initialized")
-        self.logger.info(f"   Gap minimum: {self.gap_pips_minimum} pips (NO ATR)")
+        self.logger.info(f"ðŸ† INSTITUTIONAL FVG initialized")
+        self.logger.info(f"   Gap minimum: {self.gap_pips_minimum} pips (sin indicadores de rango)")
         self.logger.info(f"   OFI absorption threshold: {self.ofi_absorption_threshold}")
         self.logger.info(f"   CVD confirmation threshold: {self.cvd_confirmation_threshold}")
         self.logger.info(f"   VPIN threshold max: {self.vpin_threshold_max}")
@@ -138,7 +138,7 @@ class FVGInstitutional(StrategyBase):
 
         Bullish FVG: Bar[i-2].high < Bar[i].low (gap between bars)
 
-        ⚠️ NO ATR - pips-based threshold per PLAN OMEGA
+        âš ï¸ sin indicadores de rango - pips-based threshold per PLAN OMEGA
 
         Args:
             data: DataFrame with OHLCV data (need at least 3 bars)
@@ -159,7 +159,7 @@ class FVGInstitutional(StrategyBase):
             gap_size = gap_end - gap_start
             gap_size_pips = gap_size * 10000  # Convert to pips
 
-            # Institutional filter: minimum gap size (PIPS, NO ATR)
+            # Institutional filter: minimum gap size (PIPS, sin indicadores de rango)
             if gap_size_pips < self.gap_pips_minimum:
                 return None
 
@@ -198,7 +198,7 @@ class FVGInstitutional(StrategyBase):
 
         Args:
             data: DataFrame with OHLCV data (need at least 3 bars)
-            ⚠️ NO ATR - pips-based threshold per PLAN OMEGA
+            âš ï¸ sin indicadores de rango - pips-based threshold per PLAN OMEGA
 
         Returns:
             FVGZone if FVG detected and meets criteria, None otherwise
@@ -403,8 +403,8 @@ class FVGInstitutional(StrategyBase):
         if not self.validate_inputs(data, features):
             return []
 
-        # Get ATR (TYPE B - descriptive metric for gap size normalization)
-        atr = features.get('atr', 0.0001)  # Small default if missing
+        # Get indicador de rango (TYPE B - descriptive metric for gap size normalization)
+        indicador de rango = features.get('indicador de rango', 0.0001)  # Small default if missing
 
         # Get required order flow features
         ofi = features.get('ofi')
@@ -448,14 +448,14 @@ class FVGInstitutional(StrategyBase):
 
             if confirmation_score >= self.min_confirmation_score:
                 signal = self._generate_fvg_signal(
-                    symbol, current_price, gap, atr,
+                    symbol, current_price, gap, indicador de rango,
                     confirmation_score, criteria, data
                 )
 
                 if signal:
                     signals.append(signal)
                     gap.entry_triggered = True
-                    self.logger.warning(f"🎯 {symbol}: INSTITUTIONAL FVG - "
+                    self.logger.warning(f"ðŸŽ¯ {symbol}: INSTITUTIONAL FVG - "
                                       f"{gap.gap_type}, Score={confirmation_score:.1f}/5.0, "
                                       f"OFI={ofi:.2f}, CVD={cvd:.1f}, VPIN={vpin:.2f}")
 
@@ -543,8 +543,8 @@ class FVGInstitutional(StrategyBase):
             self.logger.error(f"FVG signal creation failed: {str(e)}", exc_info=True)
             return None
 
-    # REMOVED: _calculate_atr() - NO ATR calculation needed
-    # ATR comes from features (TYPE B - descriptive metric for gap size normalization)
+    # REMOVED: _calculate_atr() - sin indicadores de rango calculation needed
+    # indicador de rango comes from features (TYPE B - descriptive metric for gap size normalization)
 
     def validate_inputs(self, data: pd.DataFrame, features: Dict) -> bool:
         """Validate required inputs are present."""

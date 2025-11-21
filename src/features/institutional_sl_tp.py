@@ -1,14 +1,14 @@
-"""
-Institutional Stop Loss & Take Profit Calculation - NO ATR VERSION
+﻿"""
+Institutional Stop Loss & Take Profit Calculation - sin indicadores de rango VERSION
 
-ZERO TOLERANCE for ATR in operational decisions.
+ZERO TOLERANCE for indicador de rango in operational decisions.
 
-This module replaces ALL ATR-based stop/target logic with:
+This module replaces ALL indicador de rango-based stop/target logic with:
 1. Percentage-based stops (% of price)
 2. Structural levels (swing highs/lows, order blocks, liquidity zones)
 3. R-multiple targets (based on fixed % risk)
 
-NO ATR. Period.
+sin indicadores de rango. Period.
 
 Research Basis:
 - Institutional risk management: Fixed % risk per trade (0-2% of capital)
@@ -16,7 +16,7 @@ Research Basis:
 - Risk:Reward: Fixed R-multiples independent of volatility
 
 Author: SUBLIMINE Institutional System
-Version: 1.0 - ATR-FREE
+Version: 1.0 - indicador de rango-FREE
 """
 
 import numpy as np
@@ -37,7 +37,7 @@ def calculate_stop_loss_price(
     """
     Calculate stop loss price using % of entry price.
 
-    NO ATR. Uses fixed percentage of price.
+    sin indicadores de rango. Uses fixed percentage of price.
 
     Args:
         direction: 'LONG' or 'SHORT'
@@ -84,7 +84,7 @@ def calculate_take_profit_price(
     """
     Calculate take profit price using R-multiple or fixed %.
 
-    NO ATR. Uses either:
+    sin indicadores de rango. Uses either:
     - R-multiple of risk (distance from entry to stop)
     - Fixed % of price
 
@@ -330,7 +330,7 @@ def calculate_position_size(
     """
     Calculate position size based on fixed % risk.
 
-    NO ATR. Uses fixed % of account balance.
+    sin indicadores de rango. Uses fixed % of account balance.
 
     Args:
         account_balance: Total account balance

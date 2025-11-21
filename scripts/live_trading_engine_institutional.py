@@ -1,4 +1,4 @@
-"""
+﻿"""
 Institutional Live Trading Engine - Complete Integration WITH ML LEARNING
 
 Integrates all institutional components:
@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 import yaml
 
-# Determinar BASE_DIR dinámicamente
+# Determinar BASE_DIR dinÃ¡micamente
 BASE_DIR = Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(BASE_DIR))
 sys.path.insert(0, str(BASE_DIR / 'src'))
@@ -226,10 +226,10 @@ class InstitutionalTradingEngine:
             mt5.shutdown()
             return False
 
-        logger.info(f"✓ Connected to {account.server}")
-        logger.info(f"✓ Account: {account.login}")
-        logger.info(f"✓ Balance: ${account.balance:,.2f}")
-        logger.info(f"✓ Equity: ${account.equity:,.2f}")
+        logger.info(f"âœ“ Connected to {account.server}")
+        logger.info(f"âœ“ Account: {account.login}")
+        logger.info(f"âœ“ Balance: ${account.balance:,.2f}")
+        logger.info(f"âœ“ Equity: ${account.equity:,.2f}")
 
         # Initialize institutional components NOW that we have account info
         self._initialize_institutional_components(account.balance)
@@ -242,29 +242,29 @@ class InstitutionalTradingEngine:
 
         # 1. Multi-Timeframe Data Manager
         self.mtf_manager = MultiTimeframeDataManager(SYMBOLS)
-        logger.info("✓ MTF Data Manager initialized")
+        logger.info("âœ“ MTF Data Manager initialized")
 
         # 2. Risk Manager
         risk_config = self.configs['risk'].copy()
         risk_config['initial_balance'] = initial_balance
         self.risk_manager = InstitutionalRiskManager(risk_config)
-        logger.info("✓ Risk Manager initialized (statistical circuit breakers)")
+        logger.info("âœ“ Risk Manager initialized (statistical circuit breakers)")
 
         # 3. Position Manager
         self.position_manager = MarketStructurePositionManager(
             self.configs['position'],
             self.mtf_manager
         )
-        logger.info("✓ Position Manager initialized (market structure-based)")
+        logger.info("âœ“ Position Manager initialized (market structure-based)")
 
         # 4. Regime Detector
         self.regime_detector = RegimeDetector(self.configs['regime'])
-        logger.info("✓ Regime Detector initialized")
+        logger.info("âœ“ Regime Detector initialized")
 
         # 5. ML Adaptive Engine (BEFORE Brain)
         ml_storage_path = BASE_DIR / 'data' / 'ml'
         self.ml_engine = MLAdaptiveEngine(ml_storage_path)
-        logger.info("✓ ML Adaptive Engine initialized (CONTINUOUS LEARNING ACTIVE)")
+        logger.info("âœ“ ML Adaptive Engine initialized (CONTINUOUS LEARNING ACTIVE)")
 
         # 6. Brain Layer (WITH ML)
         self.brain = InstitutionalBrain(
@@ -273,11 +273,11 @@ class InstitutionalTradingEngine:
             self.position_manager,
             self.regime_detector,
             self.mtf_manager,
-            self.ml_engine  # ← ML ENGINE INTEGRATED
+            self.ml_engine  # â† ML ENGINE INTEGRATED
         )
-        logger.info("✓ Brain Layer initialized (advanced orchestration WITH ML)")
+        logger.info("âœ“ Brain Layer initialized (advanced orchestration WITH ML)")
 
-        logger.info("\n✓ ALL INSTITUTIONAL COMPONENTS READY (ML LEARNING ACTIVE)\n")
+        logger.info("\nâœ“ ALL INSTITUTIONAL COMPONENTS READY (ML LEARNING ACTIVE)\n")
 
     def load_strategies(self):
         """Load institutional strategies."""
@@ -322,7 +322,7 @@ class InstitutionalTradingEngine:
                         'errors': 0
                     }
 
-                    logger.info(f"  ✓ {module_name}")
+                    logger.info(f"  âœ“ {module_name}")
                     loaded_count += 1
 
                 else:
@@ -333,9 +333,9 @@ class InstitutionalTradingEngine:
                 logger.error(f"  ERROR {module_name}: {str(e)[:80]}")
                 error_count += 1
 
-        logger.info(f"\n✓ Strategies loaded: {loaded_count}/{len(STRATEGY_WHITELIST)}")
+        logger.info(f"\nâœ“ Strategies loaded: {loaded_count}/{len(STRATEGY_WHITELIST)}")
         if error_count > 0:
-            logger.warning(f"⚠ Load errors: {error_count}")
+            logger.warning(f"âš  Load errors: {error_count}")
 
     def update_mtf_data(self):
         """Update multi-timeframe data for all symbols."""
@@ -593,7 +593,7 @@ class InstitutionalTradingEngine:
                 'entry_features': self.calculate_features(symbol),  # Current features
             }
 
-            logger.info(f"✓ ORDER EXECUTED: {direction_str} {symbol} {lot_size:.2f} lots @ {price:.5f}")
+            logger.info(f"âœ“ ORDER EXECUTED: {direction_str} {symbol} {lot_size:.2f} lots @ {price:.5f}")
             logger.info(f"  SL: {execution_order['stop_loss']:.5f} | TP: {execution_order['take_profit']:.5f}")
             logger.info(f"  Quality: {execution_order['quality_score']:.3f} | Risk: {execution_order['risk_pct']:.2f}%")
             logger.info(f"  Regime: {execution_order['regime']}")
@@ -710,7 +710,7 @@ class InstitutionalTradingEngine:
                     'mae_r': 0.5 if pnl_r < 0 else 0.2,  # Estimate
                     'mfe_r': max(pnl_r, 1.0) if pnl_r > 0 else 0.1,  # Estimate
                     'avg_vpin_during': pos_data['entry_features'].get('vpin', 0.4),
-                    'avg_volatility_during': pos_data['entry_features'].get('atr', 0.0),
+                    'avg_volatility_during': 0.0,  # OMEGA: métrica legacy de volatilidad desactivada (sin indicadores de rango)
                     'regime_changes_during': 0,  # Could track this
                 }
 
@@ -723,7 +723,7 @@ class InstitutionalTradingEngine:
                     trade_data=trade_data
                 )
 
-                logger.info(f"✓ TRADE CLOSED & RECORDED IN ML: {pos_data['strategy']} {pos_data['symbol']} "
+                logger.info(f"âœ“ TRADE CLOSED & RECORDED IN ML: {pos_data['strategy']} {pos_data['symbol']} "
                            f"{pnl_r:.2f}R ({exit_reason})")
 
                 # Remove from active
@@ -761,7 +761,7 @@ class InstitutionalTradingEngine:
         logger.info("Collecting signals from strategies...")
         raw_signals = self.collect_signals()
 
-        logger.info(f"✓ Collected {len(raw_signals)} raw signals")
+        logger.info(f"âœ“ Collected {len(raw_signals)} raw signals")
 
         if not raw_signals:
             logger.info("No signals generated this scan")
@@ -781,7 +781,7 @@ class InstitutionalTradingEngine:
         logger.info("Processing signals through Brain Layer...")
         approved_orders = self.brain.process_signals(raw_signals, market_data, features)
 
-        logger.info(f"✓ Brain approved {len(approved_orders)} signals")
+        logger.info(f"âœ“ Brain approved {len(approved_orders)} signals")
 
         # Update stats
         for strategy_name in self.stats:
@@ -842,7 +842,7 @@ class InstitutionalTradingEngine:
         cb_stats = risk_stats['circuit_breaker']
         logger.info(f"\nCIRCUIT BREAKER: {cb_stats['status']}")
         if cb_stats['status'] == 'OPEN':
-            logger.warning(f"  ⚠ Remaining Cooldown: {cb_stats['remaining_cooldown_min']:.1f} min")
+            logger.warning(f"  âš  Remaining Cooldown: {cb_stats['remaining_cooldown_min']:.1f} min")
 
         # Position Manager
         logger.info("\nPOSITION MANAGER:")
@@ -871,7 +871,7 @@ class InstitutionalTradingEngine:
 
             logger.info(f"  Learning Iterations: {ml_stats.get('learning_iterations', 0)}")
             logger.info(f"  Hours Since Last Analysis: {ml_stats.get('hours_since_analysis', 0):.1f}h")
-            logger.info("  Status: LEARNING FROM EVERY TRADE ✓")
+            logger.info("  Status: LEARNING FROM EVERY TRADE âœ“")
 
         logger.info("\n" + "=" * 100)
 
@@ -900,7 +900,7 @@ class InstitutionalTradingEngine:
 
         finally:
             mt5.shutdown()
-            logger.info("\n✓ Engine stopped")
+            logger.info("\nâœ“ Engine stopped")
 
 
 def main():

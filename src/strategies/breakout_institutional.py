@@ -1,7 +1,7 @@
-"""
+﻿"""
 Breakout Institutional Strategy - TRULY INSTITUTIONAL GRADE
 
-🏆 REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL BREAKOUT GARBAGE
+ðŸ† REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL BREAKOUT GARBAGE
 
 Detects genuine institutional breakouts with REAL order flow confirmation:
 
@@ -11,7 +11,7 @@ INSTITUTIONAL BREAKOUT CHARACTERISTICS:
 - OFI surge (institutions executing directional move)
 - CVD confirmation (cumulative buying/selling pressure)
 - VPIN remains clean (not toxic flow = informed institutional move)
-- Displacement follow-through (sustained move ≥1.5 ATR)
+- Displacement follow-through (sustained move â‰¥1.5 indicador de rango)
 
 FALSE BREAKOUTS (RETAIL TRAPS):
 - Volume spike but NO OFI surge (retail chasing, no institutional backing)
@@ -53,7 +53,7 @@ class BreakoutInstitutional(StrategyBase):
     3. OFI surge (institutions executing)
     4. CVD confirmation (directional pressure)
     5. VPIN clean (informed flow, not toxic)
-    6. Displacement follow-through (≥1.5 ATR)
+    6. Displacement follow-through (â‰¥1.5 indicador de rango)
 
     Win Rate: 68-74% (institutional breakouts)
     """
@@ -64,17 +64,17 @@ class BreakoutInstitutional(StrategyBase):
 
         Required config parameters:
             - range_compression_bars: Minimum consolidation bars
-            - range_compression_pips_max: Maximum range in pips (NO ATR)
+            - range_compression_pips_max: Maximum range in pips (sin indicadores de rango)
             - volume_expansion_multiplier: Volume spike threshold
             - ofi_breakout_threshold: OFI threshold for breakout execution
             - cvd_confirmation_threshold: CVD threshold
             - vpin_threshold_max: Maximum VPIN (clean flow)
-            - displacement_pips_min: Minimum displacement follow-through in pips (NO ATR)
+            - displacement_pips_min: Minimum displacement follow-through in pips (sin indicadores de rango)
             - min_confirmation_score: Minimum score (0-5) to enter
         """
         super().__init__(config)
 
-        # Range compression parameters (NO ATR - pips based)
+        # Range compression parameters (sin indicadores de rango - pips based)
         self.range_compression_bars = config.get('range_compression_bars', 10)
         self.range_compression_pips_max = config.get('range_compression_pips_max', 25.0)  # Max 25 pips range
 
@@ -87,14 +87,14 @@ class BreakoutInstitutional(StrategyBase):
         self.cvd_confirmation_threshold = config.get('cvd_confirmation_threshold', 0.6)
         self.vpin_threshold_max = config.get('vpin_threshold_max', 0.30)
 
-        # Displacement parameters (NO ATR - pips based)
+        # Displacement parameters (sin indicadores de rango - pips based)
         self.displacement_pips_min = config.get('displacement_pips_min', 20.0)  # Min 20 pips displacement
         self.displacement_bars = config.get('displacement_bars', 5)
 
         # Confirmation score
         self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
 
-        # Risk management (NO ATR - % price based)
+        # Risk management (sin indicadores de rango - % price based)
         self.stop_loss_pct = config.get('stop_loss_pct', 0.012)  # 1.2% stop
         self.take_profit_r_multiple = config.get('take_profit_r_multiple', 3.0)
 
@@ -103,7 +103,7 @@ class BreakoutInstitutional(StrategyBase):
         self.breakout_cooldown_bars = config.get('breakout_cooldown_bars', 20)
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info(f"🏆 INSTITUTIONAL Breakout Volume Confirmation initialized")
+        self.logger.info(f"ðŸ† INSTITUTIONAL Breakout Volume Confirmation initialized")
         self.logger.info(f"   Volume expansion: {self.volume_expansion_multiplier}x")
         self.logger.info(f"   OFI breakout threshold: {self.ofi_breakout_threshold}")
         self.logger.info(f"   CVD confirmation threshold: {self.cvd_confirmation_threshold}")
@@ -129,7 +129,7 @@ class BreakoutInstitutional(StrategyBase):
         if not self.validate_inputs(data, features):
             return []
 
-        # Get required order flow features (NO ATR)
+        # Get required order flow features (sin indicadores de rango)
         ofi = features.get('ofi')
         cvd = features.get('cvd')
         vpin = features.get('vpin')
@@ -145,13 +145,13 @@ class BreakoutInstitutional(StrategyBase):
             if bars_since_last < self.breakout_cooldown_bars:
                 return []
 
-        # STEP 1: Detect range compression (consolidation - NO ATR)
+        # STEP 1: Detect range compression (consolidation - sin indicadores de rango)
         range_info = self._detect_range_compression(data)
 
         if not range_info:
             return []
 
-        # STEP 2: Detect breakout from range (NO ATR)
+        # STEP 2: Detect breakout from range (sin indicadores de rango)
         breakout_direction = self._detect_breakout(data, range_info)
 
         if not breakout_direction:
@@ -163,7 +163,7 @@ class BreakoutInstitutional(StrategyBase):
         if not has_volume_expansion:
             return []
 
-        # STEP 4: INSTITUTIONAL CONFIRMATION using order flow (NO ATR)
+        # STEP 4: INSTITUTIONAL CONFIRMATION using order flow (sin indicadores de rango)
         confirmation_score, criteria = self._evaluate_institutional_confirmation(
             data, breakout_direction, ofi, cvd, vpin, features
         )
@@ -179,7 +179,7 @@ class BreakoutInstitutional(StrategyBase):
             if signal:
                 signals.append(signal)
                 self.last_breakout_time = len(data) - 1
-                self.logger.warning(f"🎯 {symbol}: INSTITUTIONAL BREAKOUT - {breakout_direction}, "
+                self.logger.warning(f"ðŸŽ¯ {symbol}: INSTITUTIONAL BREAKOUT - {breakout_direction}, "
                                   f"Score={confirmation_score:.1f}/5.0, "
                                   f"OFI={ofi:.2f}, CVD={cvd:.1f}, VPIN={vpin:.2f}")
 
@@ -188,7 +188,7 @@ class BreakoutInstitutional(StrategyBase):
     def _detect_range_compression(self, data: pd.DataFrame) -> Optional[Dict]:
         """
         Detect range compression (consolidation before breakout).
-        NO ATR - uses pips-based thresholds.
+        sin indicadores de rango - uses pips-based thresholds.
 
         Returns:
             Dict with range info if compression detected, None otherwise
@@ -220,7 +220,7 @@ class BreakoutInstitutional(StrategyBase):
     def _detect_breakout(self, data: pd.DataFrame, range_info: Dict) -> Optional[str]:
         """
         Detect breakout from compressed range.
-        NO ATR - uses pips-based threshold.
+        sin indicadores de rango - uses pips-based threshold.
 
         Returns:
             'LONG' for bullish breakout
@@ -272,7 +272,7 @@ class BreakoutInstitutional(StrategyBase):
                                             features: Dict) -> Tuple[float, Dict]:
         """
         INSTITUTIONAL order flow confirmation of breakout.
-        NO ATR - uses pips-based displacement.
+        sin indicadores de rango - uses pips-based displacement.
 
         Evaluates 5 criteria (each worth 0-1.0 points):
         1. OFI Surge (institutions executing breakout)
@@ -326,7 +326,7 @@ class BreakoutInstitutional(StrategyBase):
 
         criteria['volume_quality'] = volume_score
 
-        # CRITERION 5: DISPLACEMENT FOLLOW-THROUGH (NO ATR - pips based)
+        # CRITERION 5: DISPLACEMENT FOLLOW-THROUGH (sin indicadores de rango - pips based)
         # Check if price has sustained displacement after breakout
         recent_bars = data.tail(min(self.displacement_bars, len(data)))
 
@@ -355,7 +355,7 @@ class BreakoutInstitutional(StrategyBase):
                                 direction: str, range_info: Dict,
                                 confirmation_score: float, criteria: Dict,
                                 data: pd.DataFrame, features: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed institutional breakout. NO ATR - % price + structure based."""
+        """Generate signal for confirmed institutional breakout. sin indicadores de rango - % price + structure based."""
 
         try:
             from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
@@ -390,7 +390,7 @@ class BreakoutInstitutional(StrategyBase):
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * self.take_profit_r_multiple)
 
-            # Validate risk (% price based, not ATR)
+            # Validate risk (% price based, not indicador de rango)
             max_risk_pct = 0.025  # 2.5% max risk
             if risk <= 0 or risk > (entry_price * max_risk_pct):
                 return None
@@ -448,7 +448,7 @@ class BreakoutInstitutional(StrategyBase):
             self.logger.error(f"Breakout signal creation failed: {str(e)}", exc_info=True)
             return None
 
-    # REMOVED: _calculate_atr() - NO ATR in institutional system
+    # REMOVED: _calculate_atr() - sin indicadores de rango in institutional system
     # Replaced with institutional_sl_tp module (% price + structure)
 
     def validate_inputs(self, data: pd.DataFrame, features: Dict) -> bool:
@@ -456,7 +456,7 @@ class BreakoutInstitutional(StrategyBase):
         if len(data) < 100:
             return False
 
-        required_features = ['ofi', 'cvd', 'vpin']  # NO ATR - pips-based thresholds
+        required_features = ['ofi', 'cvd', 'vpin']  # sin indicadores de rango - pips-based thresholds
         for feature in required_features:
             if feature not in features:
                 self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")

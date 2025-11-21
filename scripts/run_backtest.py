@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Institutional Backtest CLI - MANDATO 17
 
@@ -16,7 +16,7 @@ Usage:
 Parameters:
     --start-date: Fecha inicio (YYYY-MM-DD)
     --end-date: Fecha fin (YYYY-MM-DD)
-    --symbols: Lista de símbolos
+    --symbols: Lista de sÃ­mbolos
     --strategies: Lista de estrategias a usar
     --timeframe: Timeframe base (M1, M5, M15, H1, H4, D1)
     --mode: Modo de datos ('csv' o 'mt5')
@@ -25,7 +25,7 @@ Parameters:
 
 Respeta:
 - config/risk_limits.yaml (0-2% caps)
-- SL/TP estructurales (NO ATR)
+- SL/TP estructurales (sin indicadores de rango)
 - Statistical circuit breakers
 - Trazabilidad completa (ExecutionEventLogger)
 """
@@ -248,7 +248,7 @@ def main():
             logger.error(f"Report generation failed: {e}")
 
     logger.info("="*80)
-    logger.info("✅ BACKTEST COMPLETED SUCCESSFULLY")
+    logger.info("âœ… BACKTEST COMPLETED SUCCESSFULLY")
     logger.info("="*80)
 
     # Show summary

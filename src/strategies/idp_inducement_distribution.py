@@ -1,27 +1,27 @@
-"""
-⚠️⚠️⚠️ ESTRATEGIA RETIRED - MANDATO 9 FASE 2 (2025-11-14) ⚠️⚠️⚠️
+﻿"""
+âš ï¸âš ï¸âš ï¸ ESTRATEGIA RETIRED - MANDATO 9 FASE 2 (2025-11-14) âš ï¸âš ï¸âš ï¸
 
 ESTADO: RETIRED
-RAZÓN: Overlap masivo con liquidity_sweep (S004) + order_block_institutional (S011)
+RAZÃ“N: Overlap masivo con liquidity_sweep (S004) + order_block_institutional (S011)
 REEMPLAZO: Usar liquidity_sweep para stop hunts
 
-ANÁLISIS INSTITUCIONAL:
+ANÃLISIS INSTITUCIONAL:
 - Fase 1 (Inducement) = liquidity_sweep (ya existe, mejor implementado)
 - Fase 2 (Distribution) = order_block_institutional (ya existe)
 - Fase 3 (Displacement) = breakout_volume_confirmation (ya existe)
 - Fraude conceptual SMC: Conceptos "inducement/distribution/displacement" son rebranding de estrategias existentes
 - Sin edge diferenciado cuantificable
-- Factor crowding crítico
+- Factor crowding crÃ­tico
 
 Ver: docs/strategies/DESIGN_idp_inducement_RETIRED_20251114.md
 
 ---
-CÓDIGO ORIGINAL (DEPRECATED):
+CÃ“DIGO ORIGINAL (DEPRECATED):
 ---
 
 IDP (Inducement-Distribution-Displacement) Strategy - TRULY INSTITUTIONAL GRADE
 
-🏆 REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL PATTERN MATCHING GARBAGE
+ðŸ† REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL PATTERN MATCHING GARBAGE
 
 Detects the 3-phase institutional manipulation pattern with REAL order flow:
 
@@ -131,7 +131,7 @@ class IDPInducement(StrategyBase):
         self.completed_patterns: deque = deque(maxlen=500)  # FIX: Limit to prevent memory leak
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info(f"🏆 INSTITUTIONAL IDP initialized")
+        self.logger.info(f"ðŸ† INSTITUTIONAL IDP initialized")
         self.logger.info(f"   OFI absorption threshold: {self.ofi_absorption_threshold}")
         self.logger.info(f"   CVD accumulation min: {self.cvd_accumulation_min}")
         self.logger.info(f"   VPIN threshold max: {self.vpin_threshold_max}")
@@ -197,8 +197,8 @@ class IDPInducement(StrategyBase):
         if not self.validate_inputs(data, features):
             return []
 
-        # Get ATR (TYPE B - for pattern detection in identify_idp_pattern, not risk sizing)
-        atr = features.get('atr', 0.0001)  # TYPE B - descriptive metric for displacement detection
+        # Get indicador de rango (TYPE B - for pattern detection in identify_idp_pattern, not risk sizing)
+        indicador de rango = features.get('indicador de rango', 0.0001)  # TYPE B - descriptive metric for displacement detection
 
         # Get required order flow features
         ofi = features.get('ofi')
@@ -218,7 +218,7 @@ class IDPInducement(StrategyBase):
         pattern = identify_idp_pattern(
             data.tail(50),
             key_levels,
-            atr,
+            indicador de rango,
             {
                 'penetration_pips_min': self.penetration_pips_min,
                 'penetration_pips_max': self.penetration_pips_max,
@@ -252,13 +252,13 @@ class IDPInducement(StrategyBase):
 
         if confirmation_score >= self.min_confirmation_score:
             signal = self._create_idp_signal(
-                pattern, data, atr, confirmation_score, criteria, features
+                pattern, data, indicador de rango, confirmation_score, criteria, features
             )
 
             if signal:
                 signals.append(signal)
                 self.completed_patterns.append(pattern)
-                self.logger.warning(f"🎯 {symbol}: INSTITUTIONAL IDP COMPLETE - "
+                self.logger.warning(f"ðŸŽ¯ {symbol}: INSTITUTIONAL IDP COMPLETE - "
                                   f"Score={confirmation_score:.1f}/5.0, "
                                   f"OFI={ofi:.2f}, CVD={cvd:.1f}, VPIN={vpin:.2f}")
 
@@ -354,15 +354,15 @@ class IDPInducement(StrategyBase):
         return total_score, criteria
 
     def _create_idp_signal(self, pattern: Dict, data: pd.DataFrame,
-                          atr: float, confirmation_score: float,
+                          indicador de rango: float, confirmation_score: float,
                           criteria: Dict, features: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed institutional IDP pattern. NO ATR for risk - pips + % price based."""
+        """Generate signal for confirmed institutional IDP pattern. sin indicadores de rango for risk - pips + % price based."""
 
         try:
             current_price = data.iloc[-1]['close']
             displacement_direction = pattern['displacement']['direction']
 
-            # NO ATR - use pips buffer beyond inducement level
+            # sin indicadores de rango - use pips buffer beyond inducement level
             stop_buffer_pips = 10.0  # 10 pip buffer beyond inducement
             buffer_price = stop_buffer_pips / 10000
 
@@ -370,7 +370,7 @@ class IDPInducement(StrategyBase):
                 direction = "LONG"
                 entry_price = current_price
 
-                # Stop below inducement level + buffer (NO ATR)
+                # Stop below inducement level + buffer (sin indicadores de rango)
                 if self.stop_loss_beyond_inducement:
                     inducement_low = pattern['level_swept'] - (self.penetration_pips_max * 0.0001)
                     stop_loss = inducement_low - buffer_price
@@ -385,7 +385,7 @@ class IDPInducement(StrategyBase):
                 direction = "SHORT"
                 entry_price = current_price
 
-                # Stop above inducement level + buffer (NO ATR)
+                # Stop above inducement level + buffer (sin indicadores de rango)
                 if self.stop_loss_beyond_inducement:
                     inducement_high = pattern['level_swept'] + (self.penetration_pips_max * 0.0001)
                     stop_loss = inducement_high + buffer_price
@@ -396,7 +396,7 @@ class IDPInducement(StrategyBase):
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * self.take_profit_r_multiple)
 
-            # Validate risk (% price based, not ATR)
+            # Validate risk (% price based, not indicador de rango)
             max_risk_pct = 0.025  # 2.5% max risk for IDP
             if risk <= 0 or risk > (entry_price * max_risk_pct):
                 return None
@@ -465,7 +465,7 @@ class IDPInducement(StrategyBase):
         if len(data) < 50:
             return False
 
-        required_features = ['ofi', 'cvd', 'vpin', 'atr']
+        required_features = ['ofi', 'cvd', 'vpin', 'indicador de rango']
         for feature in required_features:
             if feature not in features:
                 self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")

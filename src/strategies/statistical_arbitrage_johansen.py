@@ -1,15 +1,15 @@
-"""
+﻿"""
 Statistical Arbitrage - REAL Johansen Cointegration (REESCRITURA INSTITUCIONAL)
 
 MANDATO 9 - FASE 2 (2025-11-14)
 ESTADO: REESCRITO - FRAUDE CONCEPTUAL ELIMINADO
 
-CAMBIOS vs VERSIÓN BROKEN:
-- ✅ Implementación REAL de Johansen test (statsmodels.tsa.johansen)
-- ✅ VECM (Vector Error Correction Model) para cointegración
-- ✅ Stop loss estructural (z-score breakdown, NO ATR)
-- ✅ Take profit basado en reversión estadística del spread
-- ✅ Integración rigurosa con OFI/CVD/VPIN
+CAMBIOS vs VERSIÃ“N BROKEN:
+- âœ… ImplementaciÃ³n REAL de Johansen test (statsmodels.tsa.johansen)
+- âœ… VECM (Vector Error Correction Model) para cointegraciÃ³n
+- âœ… Stop loss estructural (z-score breakdown, sin indicadores de rango)
+- âœ… Take profit basado en reversiÃ³n estadÃ­stica del spread
+- âœ… IntegraciÃ³n rigurosa con OFI/CVD/VPIN
 
 REFERENCIAS:
 - Johansen, S. (1988, 1991): Cointegration test
@@ -40,14 +40,14 @@ class StatisticalArbitrageJohansen(StrategyBase):
 
     Entry Logic:
     1. Johansen test (statsmodels) confirms cointegration (trace statistic > critical value @ 95%)
-    2. Calculate spread using cointegration vector β from VECM
+    2. Calculate spread using cointegration vector Î² from VECM
     3. Z-score of spread extreme (|z| > 2.5)
     4. Half-life < 5 days (mean reversion speed acceptable)
     5. OFI/CVD/VPIN confirmation (institutional flow alignment)
     6. Enter convergence trade
 
     Exit Logic:
-    - TP: Parciales @ z=±1.0, ±0.5, 0 (spread normalization)
+    - TP: Parciales @ z=Â±1.0, Â±0.5, 0 (spread normalization)
     - SL: Spread breakdown (z < -4.0 for long, z > +4.0 for short)
 
     Win Rate Expected: 68-74%
@@ -85,12 +85,12 @@ class StatisticalArbitrageJohansen(StrategyBase):
         ])
 
         # State
-        self.cointegrated_pairs = {}  # {pair_key: {'vector': β, 'test_time': ...}}
+        self.cointegrated_pairs = {}  # {pair_key: {'vector': Î², 'test_time': ...}}
         self.spread_history = {}
         self.last_test_time = {}
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info(f"✅ INSTITUTIONAL Johansen initialized: {len(self.monitored_pairs)} pairs, REAL statsmodels")
+        self.logger.info(f"âœ… INSTITUTIONAL Johansen initialized: {len(self.monitored_pairs)} pairs, REAL statsmodels")
 
     def evaluate(self, market_data: pd.DataFrame, features: Dict) -> List[Signal]:
         """Evaluate for statistical arbitrage opportunities."""
@@ -157,7 +157,7 @@ class StatisticalArbitrageJohansen(StrategyBase):
 
             if is_cointegrated:
                 cointegration_vector = result.evec[:, 0]  # First eigenvector
-                self.logger.info(f"✓ JOHANSEN: trace={trace_stat:.2f} > crit={critical_value:.2f}, vector={cointegration_vector}")
+                self.logger.info(f"âœ“ JOHANSEN: trace={trace_stat:.2f} > crit={critical_value:.2f}, vector={cointegration_vector}")
             else:
                 cointegration_vector = np.array([1.0, -1.0])  # Fallback
 
@@ -207,11 +207,11 @@ class StatisticalArbitrageJohansen(StrategyBase):
                     'symbol2': symbol2,
                     'test_time': current_time
                 }
-                self.logger.info(f"✓ COINTEGRATION: {pair_key}, β={hedge_ratio:.4f}")
+                self.logger.info(f"âœ“ COINTEGRATION: {pair_key}, Î²={hedge_ratio:.4f}")
             else:
                 if pair_key in self.cointegrated_pairs:
                     del self.cointegrated_pairs[pair_key]
-                    self.logger.info(f"✗ Cointegration lost: {pair_key}")
+                    self.logger.info(f"âœ— Cointegration lost: {pair_key}")
 
             self.last_test_time[pair_key] = current_time
 
@@ -233,7 +233,7 @@ class StatisticalArbitrageJohansen(StrategyBase):
             current_price1 = prices1[-1] if isinstance(prices1, (list, np.ndarray)) else prices1
             current_price2 = prices2[-1] if isinstance(prices2, (list, np.ndarray)) else prices2
 
-            # Spread = Y - β*X
+            # Spread = Y - Î²*X
             spread = current_price1 - hedge_ratio * current_price2
 
             if pair_key not in self.spread_history:
@@ -271,7 +271,7 @@ class StatisticalArbitrageJohansen(StrategyBase):
         if len(spread_array) < 20:
             return None
 
-        # AR(1): spread_t = α + ρ * spread_(t-1) + ε
+        # AR(1): spread_t = Î± + Ï * spread_(t-1) + Îµ
         spread_lag = spread_array[:-1]
         spread_current = spread_array[1:]
 
@@ -320,7 +320,7 @@ class StatisticalArbitrageJohansen(StrategyBase):
         # Entry price
         entry_price = spread_data['price1']
 
-        # STOP LOSS: Structural (spread breakdown @ z = ±4.0)
+        # STOP LOSS: Structural (spread breakdown @ z = Â±4.0)
         std_spread = spread_data['std']
         hedge_ratio = spread_data['hedge_ratio']
 
@@ -366,7 +366,7 @@ class StatisticalArbitrageJohansen(StrategyBase):
             }
         )
 
-        self.logger.warning(f"🎯 JOHANSEN SIGNAL: {direction} {pair_key} @ z={zscore:.2f}, hl={half_life:.1f}h")
+        self.logger.warning(f"ðŸŽ¯ JOHANSEN SIGNAL: {direction} {pair_key} @ z={zscore:.2f}, hl={half_life:.1f}h")
         return signal
 
     def _calculate_confluence_score(self, zscore, ofi, vpin, ofi_aligned) -> float:

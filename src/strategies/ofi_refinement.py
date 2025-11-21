@@ -1,10 +1,10 @@
-"""
+﻿"""
 OFI Refinement Strategy - Institutional Implementation
 
 Order Flow Imbalance (OFI) strategy based on microstructure analysis
 of bid-ask volume dynamics to detect directional pressure.
 
-FUNDAMENTO ACADÃ‰MICO:
+FUNDAMENTO ACADÃƒâ€°MICO:
 - Cont, Kukanov & Stoikov (2014): "The Price Impact of Order Book Events"
   Journal of Financial Econometrics, 12(1), 47-88
 - Cartea, Jaimungal & Penalva (2015): "Algorithmic and High-Frequency Trading"
@@ -13,7 +13,7 @@ FUNDAMENTO ACADÃ‰MICO:
   Journal of Finance, 46(2), 733-746
 
 DIFERENCIADORES INSTITUCIONALES:
-1. Z-score threshold at 1.8Ïƒ for higher frequency signals (vs 2.5Ïƒ retail)
+1. Z-score threshold at 1.8ÃÆ’ for higher frequency signals (vs 2.5ÃÆ’ retail)
 2. VPIN toxicity filter to avoid adverse selection (Easley et al., 2012)
 3. Price-OFI coherence requirement to confirm genuine flow
 4. Dynamic window adjustment based on market regime
@@ -55,7 +55,7 @@ class OFIRefinement(StrategyBase):
         self.price_coherence_required = config.get('price_coherence_required', True)
         self.min_data_points = config.get('min_data_points', 200)
         
-        # Risk management - INSTITUTIONAL (NO ATR)
+        # Risk management - INSTITUTIONAL (sin indicadores de rango)
         self.stop_loss_pct = config.get('stop_loss_pct', 0.012)  # 1.2% stop
         self.take_profit_pct = config.get('take_profit_pct', 0.025)  # 2.5% target
         
@@ -66,7 +66,7 @@ class OFIRefinement(StrategyBase):
         self.signal_cooldown = timedelta(minutes=5)
         
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info(f"OFI Refinement initialized with threshold={self.z_entry_threshold}Ïƒ, "
+        self.logger.info(f"OFI Refinement initialized with threshold={self.z_entry_threshold}ÃÆ’, "
                         f"window={self.window_ticks} ticks")
         self.name = 'ofi_refinement'
     
@@ -74,11 +74,11 @@ class OFIRefinement(StrategyBase):
         """
         Calculate Order Flow Imbalance using bid-ask volume changes.
         
-        OFI(t) = Î£[Î”bid_volume(t) - Î”ask_volume(t)]
+        OFI(t) = ÃŽÂ£[ÃŽâ€bid_volume(t) - ÃŽâ€ask_volume(t)]
         
         Uses tick rule classification when true bid-ask data unavailable:
-        - If close > midpoint â†’ buy-initiated (ask volume)
-        - If close < midpoint â†’ sell-initiated (bid volume)
+        - If close > midpoint Ã¢â€ â€™ buy-initiated (ask volume)
+        - If close < midpoint Ã¢â€ â€™ sell-initiated (bid volume)
         
         Args:
             data: DataFrame with OHLCV data
@@ -120,7 +120,7 @@ class OFIRefinement(StrategyBase):
         """
         Normalize current OFI against historical distribution.
         
-        Z-score = (OFI_current - Î¼_historical) / Ïƒ_historical
+        Z-score = (OFI_current - ÃŽÂ¼_historical) / ÃÆ’_historical
         
         Args:
             ofi_series: Series of OFI values
@@ -177,7 +177,7 @@ class OFIRefinement(StrategyBase):
         
         return coherent
     
-    # REMOVED: calculate_atr() - NO ATR in institutional system
+    # REMOVED: calculate_atr() - sin indicadores de rango in institutional system
     # Replaced with institutional_sl_tp module (% price + structure)
     
     def evaluate(self, data: pd.DataFrame, features: Dict) -> Optional[Signal]:
@@ -187,10 +187,10 @@ class OFIRefinement(StrategyBase):
         Process:
         1. Calculate OFI from order flow
         2. Normalize to z-score against historical window
-        3. Check if |z-score| > threshold (1.8Ïƒ)
+        3. Check if |z-score| > threshold (1.8ÃÆ’)
         4. Verify VPIN < max_safe threshold (if available)
         5. Confirm price-OFI coherence
-        6. Generate signal with ATR-based stops
+        6. Generate signal with indicador de rango-based stops
         
         Args:
             data: DataFrame with OHLCV data
@@ -227,7 +227,7 @@ class OFIRefinement(StrategyBase):
             self.logger.debug(f"OFI z-score {z_score:.3f} below threshold {self.z_entry_threshold}")
             return None
         
-        self.logger.info(f"OFI signal candidate: z-score={z_score:.3f}Ïƒ, OFI={current_ofi:.2f}")
+        self.logger.info(f"OFI signal candidate: z-score={z_score:.3f}ÃÆ’, OFI={current_ofi:.2f}")
         
         # STEP 4: Check VPIN if available
         vpin = features.get('vpin')
@@ -246,10 +246,10 @@ class OFIRefinement(StrategyBase):
                 self.logger.warning("Price-OFI coherence check failed")
                 return None
         
-        # STEP 6: Generate signal (INSTITUTIONAL - NO ATR)
+        # STEP 6: Generate signal (INSTITUTIONAL - sin indicadores de rango)
         current_price = data['close'].iloc[-1]
 
-        # Import institutional SL/TP module (NO ATR)
+        # Import institutional SL/TP module (sin indicadores de rango)
         from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
         if z_score > 0:
@@ -288,7 +288,7 @@ class OFIRefinement(StrategyBase):
                 'ofi_z_score': float(z_score),
                 'vpin': float(vpin) if vpin else None,
                 'price_change_20p': float(price_change_pct),
-                'atr': float(atr),  # TYPE B - descriptive metric only
+                'indicador de rango': float(indicador de rango),  # TYPE B - descriptive metric only
                 'risk_reward_ratio': self.take_profit_pct / self.stop_loss_pct  # ~2.08 (2.5% / 1.2%)
             }
         )

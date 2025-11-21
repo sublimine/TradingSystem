@@ -1,13 +1,13 @@
-"""
+﻿"""
 NFP & High-Impact News Event Handler - INSTITUTIONAL ULTRA ADVANCED
 
-🏆 ELITE IMPLEMENTATION - NO RETAIL GARBAGE
+ðŸ† ELITE IMPLEMENTATION - NO RETAIL GARBAGE
 
 This is NOT your typical retail news strategy. This is institutional-grade event trading
 using order flow, Level 2 book pressure, cumulative delta, and multi-wave analysis.
 
 INSTITUTIONAL APPROACH:
-══════════════════════════════════════════════════════════════════════════════════════
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 1. **PRE-EVENT (30 min before):**
    - Detect institutional accumulation using OFI (Order Flow Imbalance)
    - Measure L2 book pressure (bid/ask depth changes)
@@ -73,7 +73,7 @@ class NFPNewsEventHandler(StrategyBase):
             - cvd_divergence_threshold: CVD divergence threshold (0.7)
             - vpin_spike_threshold: VPIN spike threshold (0.75)
             - wave_detection_enabled: Enable multi-wave detection (True)
-            - stop_loss_atr: Stop loss in ATR (3.0)
+            - stop_loss_atr: Stop loss in indicador de rango (3.0)
             - take_profit_r: Initial target in R (2.5)
             - partial_exit_1r: First partial at 1.5R (50%)
             - partial_exit_2r: Second partial at 2.5R (30%)
@@ -95,7 +95,7 @@ class NFPNewsEventHandler(StrategyBase):
         self.wave_detection_enabled = config.get('wave_detection_enabled', True)
         self.wave_fib_levels = [0.382, 0.5, 0.618, 1.0, 1.272, 1.618]  # Fibonacci extensions
 
-        # Risk management - INSTITUTIONAL SIZING (NO ATR)
+        # Risk management - INSTITUTIONAL SIZING (sin indicadores de rango)
         self.stop_loss_pct = config.get('stop_loss_pct', 0.015)  # 1.5% stop (wider for news volatility)
         self.take_profit_r = config.get('take_profit_r', 2.5)  # Initial target
 
@@ -111,7 +111,7 @@ class NFPNewsEventHandler(StrategyBase):
         self.active_waves: Dict[str, Dict] = {}  # Track active wave structures per symbol
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info(f"🏆 INSTITUTIONAL NFP Handler initialized: {len(self.event_types)} event types")
+        self.logger.info(f"ðŸ† INSTITUTIONAL NFP Handler initialized: {len(self.event_types)} event types")
         self.logger.info(f"   OFI threshold: {self.ofi_threshold}")
         self.logger.info(f"   CVD divergence: {self.cvd_divergence_threshold}")
         self.logger.info(f"   VPIN spike: {self.vpin_spike_threshold}")
@@ -148,7 +148,7 @@ class NFPNewsEventHandler(StrategyBase):
         event_time = event_info['event_time']
         minutes_to_event = event_info['minutes_to_event']
 
-        self.logger.info(f"📰 {symbol}: {event_type} EVENT DETECTED - {minutes_to_event:.0f} minutes")
+        self.logger.info(f"ðŸ“° {symbol}: {event_type} EVENT DETECTED - {minutes_to_event:.0f} minutes")
 
         # STEP 2: Pre-event INSTITUTIONAL accumulation detection
         if -self.pre_event_window_minutes <= minutes_to_event < 0:
@@ -241,7 +241,7 @@ class NFPNewsEventHandler(StrategyBase):
         - Position OPPOSITE to retail front-running
 
         RETAIL LOGIC (GARBAGE):
-        - "If price up >0.5%, fade it" ← TOO SIMPLISTIC
+        - "If price up >0.5%, fade it" â† TOO SIMPLISTIC
 
         We use REAL institutional order flow analysis.
         """
@@ -289,7 +289,7 @@ class NFPNewsEventHandler(StrategyBase):
             self.logger.debug(f"{symbol}: PRE-EVENT - Confidence too low ({confidence:.1%})")
             return None
 
-        # Calculate institutional stops/targets (NO ATR - % price based)
+        # Calculate institutional stops/targets (sin indicadores de rango - % price based)
         from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
         stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
@@ -322,7 +322,7 @@ class NFPNewsEventHandler(StrategyBase):
             }
         )
 
-        self.logger.warning(f"📰 {symbol}: PRE-EVENT INSTITUTIONAL SIGNAL - {direction} "
+        self.logger.warning(f"ðŸ“° {symbol}: PRE-EVENT INSTITUTIONAL SIGNAL - {direction} "
                           f"(OFI={ofi:.2f}, CVD={cvd:.1f}, conf={confidence:.1%})")
 
         return signal
@@ -340,7 +340,7 @@ class NFPNewsEventHandler(StrategyBase):
         - Distinguish continuation vs reversal using VPIN and delta
 
         RETAIL LOGIC (GARBAGE):
-        - "If volatility >2.5x, enter direction of spike" ← TOO SIMPLISTIC
+        - "If volatility >2.5x, enter direction of spike" â† TOO SIMPLISTIC
 
         We use REAL institutional order flow to confirm spike quality.
         """
@@ -397,14 +397,14 @@ class NFPNewsEventHandler(StrategyBase):
             direction = 'SHORT' if spike_direction == 'LONG' else 'LONG'
             setup_type = 'EVENT_ABSORPTION_FADE'
             confidence = 0.75
-            self.logger.warning(f"📰 {symbol}: ABSORPTION DETECTED - Fading {spike_direction} spike")
+            self.logger.warning(f"ðŸ“° {symbol}: ABSORPTION DETECTED - Fading {spike_direction} spike")
         else:
             # Continuation - trade with the spike
             direction = spike_direction
             setup_type = 'EVENT_SPIKE_CONTINUATION'
             confidence = 0.70
 
-        # Calculate stops/targets (NO ATR - % price based)
+        # Calculate stops/targets (sin indicadores de rango - % price based)
         from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
         stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
@@ -436,7 +436,7 @@ class NFPNewsEventHandler(StrategyBase):
             }
         )
 
-        self.logger.warning(f"📰 {symbol}: EVENT SPIKE {direction} - {setup_type} "
+        self.logger.warning(f"ðŸ“° {symbol}: EVENT SPIKE {direction} - {setup_type} "
                           f"(vol={vol_ratio:.1f}x, OFI={ofi:.1f}, VPIN={vpin:.2f})")
 
         return signal
@@ -454,7 +454,7 @@ class NFPNewsEventHandler(StrategyBase):
         - Use order flow to detect wave exhaustion
 
         RETAIL LOGIC (GARBAGE):
-        - "If Z-score >2.5, mean reversion" ← ONE WAVE ONLY, SIMPLISTIC
+        - "If Z-score >2.5, mean reversion" â† ONE WAVE ONLY, SIMPLISTIC
 
         We detect and trade Elliott-style waves with institutional order flow confirmation.
         """
@@ -533,7 +533,7 @@ class NFPNewsEventHandler(StrategyBase):
             self.logger.debug(f"{symbol}: {setup_type} - VPIN too high ({vpin:.2f})")
             return None
 
-        # Calculate stops/targets based on wave structure (NO ATR - % price based)
+        # Calculate stops/targets based on wave structure (sin indicadores de rango - % price based)
         from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
         wave_target = wave_info.get('target_price', current_price)
@@ -578,7 +578,7 @@ class NFPNewsEventHandler(StrategyBase):
             }
         )
 
-        self.logger.warning(f"📰 {symbol}: POST-EVENT {direction} - Wave {current_wave} {wave_direction} "
+        self.logger.warning(f"ðŸ“° {symbol}: POST-EVENT {direction} - Wave {current_wave} {wave_direction} "
                           f"(OFI={ofi:.1f}, conf={wave_confidence:.1%})")
 
         return signal
@@ -617,7 +617,7 @@ class NFPNewsEventHandler(StrategyBase):
             if ofi < 0:  # OFI still negative = no divergence yet
                 return None
 
-        # Calculate stops/targets (NO ATR - % price based)
+        # Calculate stops/targets (sin indicadores de rango - % price based)
         from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
 
         stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
@@ -646,8 +646,8 @@ class NFPNewsEventHandler(StrategyBase):
             }
         )
 
-        self.logger.warning(f"📰 {symbol}: POST-EVENT {direction} - Mean reversion "
-                          f"(Z={zscore:.2f}σ, OFI={ofi:.1f})")
+        self.logger.warning(f"ðŸ“° {symbol}: POST-EVENT {direction} - Mean reversion "
+                          f"(Z={zscore:.2f}Ïƒ, OFI={ofi:.1f})")
 
         return signal
 
@@ -748,5 +748,5 @@ class NFPNewsEventHandler(StrategyBase):
             'wave_1_size': wave_1_size if 'wave_1_size' in locals() else 0,
         }
 
-    # REMOVED: _calculate_atr() - NO ATR in institutional system
+    # REMOVED: _calculate_atr() - sin indicadores de rango in institutional system
     # Replaced with institutional_sl_tp module (% price + structure)

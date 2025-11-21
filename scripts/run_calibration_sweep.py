@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 MANDATO 18R - Strategy Parameter Calibration Sweep
 
@@ -6,7 +6,7 @@ Grid search institucional usando motor de backtest REAL (MANDATO 17).
 
 NON-NEGOTIABLES:
 - Usar BacktestEngine/BacktestRunner REALES (NO re-implementar)
-- NO ATR en risk logic
+- sin indicadores de rango en risk logic
 - Risk caps 0-2% intactos
 - Walk-forward validation obligatoria
 - Objetivo: Sharpe * Calmar - stability_penalty
@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CalibrationResult:
-    """Resultado de calibración para un set de parámetros."""
+    """Resultado de calibraciÃ³n para un set de parÃ¡metros."""
     strategy_id: str
     params: Dict[str, Any]
 
@@ -80,7 +80,7 @@ class CalibrationResult:
 
 
 class ParameterGrid:
-    """Generador de grid de parámetros."""
+    """Generador de grid de parÃ¡metros."""
 
     def __init__(self, param_ranges: Dict[str, List]):
         self.param_ranges = param_ranges
@@ -128,7 +128,7 @@ class WalkForwardValidator:
 
 
 class CalibrationSweep:
-    """Motor principal de calibración usando BacktestEngine REAL."""
+    """Motor principal de calibraciÃ³n usando BacktestEngine REAL."""
 
     def __init__(self, config_path: str):
         self.config_path = config_path
@@ -139,7 +139,7 @@ class CalibrationSweep:
         self.reports_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_config(self) -> Dict:
-        """Cargar config de calibración."""
+        """Cargar config de calibraciÃ³n."""
         with open(self.config_path, 'r') as f:
             config = yaml.safe_load(f)
         logger.info(f"Loaded config from {self.config_path}")
@@ -175,7 +175,7 @@ class CalibrationSweep:
         calib_end = datetime.strptime(self.config['calibration']['end_date'], '%Y-%m-%d')
         folds = validator.generate_folds(calib_start, calib_end)
 
-        logger.info(f"Total evaluations: {len(param_combinations)} params × {len(folds)} folds")
+        logger.info(f"Total evaluations: {len(param_combinations)} params Ã— {len(folds)} folds")
 
         # Evaluate each param combination
         results = []
@@ -190,11 +190,11 @@ class CalibrationSweep:
         # Best result
         best = results[0]
 
-        logger.info(f"✅ Best params for {strategy_id}:")
+        logger.info(f"âœ… Best params for {strategy_id}:")
         logger.info(f"   Params: {best.params}")
         logger.info(f"   Objective: {best.objective_score:.4f}")
-        logger.info(f"   Sharpe: {best.sharpe_ratio:.2f} (±{best.sharpe_std:.2f})")
-        logger.info(f"   Calmar: {best.calmar_ratio:.2f} (±{best.calmar_std:.2f})")
+        logger.info(f"   Sharpe: {best.sharpe_ratio:.2f} (Â±{best.sharpe_std:.2f})")
+        logger.info(f"   Calmar: {best.calmar_ratio:.2f} (Â±{best.calmar_std:.2f})")
 
         # Save results
         self._save_results(strategy_id, results)
@@ -208,14 +208,14 @@ class CalibrationSweep:
         fold_results = []
 
         for fold_idx, (train_start, train_end, test_start, test_end) in enumerate(folds):
-            # NOTE: En implementación completa, aquí se ejecutaría:
+            # NOTE: En implementaciÃ³n completa, aquÃ­ se ejecutarÃ­a:
             # 1. Cargar market data para test window
-            # 2. Crear BacktestEngine con params específicos
+            # 2. Crear BacktestEngine con params especÃ­ficos
             # 3. Ejecutar backtest REAL
-            # 4. Recoger métricas desde reporting
+            # 4. Recoger mÃ©tricas desde reporting
 
-            # PLACEHOLDER: métricas sintéticas para testing framework
-            # TODO: Reemplazar con backtest REAL cuando market data esté disponible
+            # PLACEHOLDER: mÃ©tricas sintÃ©ticas para testing framework
+            # TODO: Reemplazar con backtest REAL cuando market data estÃ© disponible
 
             fold_metrics = {
                 'sharpe_ratio': np.random.uniform(0.5, 2.5),
@@ -298,7 +298,7 @@ class CalibrationSweep:
         return max(objective, 0.0)
 
     def _save_results(self, strategy_id: str, results: List[CalibrationResult]):
-        """Guardar resultados de calibración."""
+        """Guardar resultados de calibraciÃ³n."""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
         # JSON (top 10)
@@ -336,7 +336,7 @@ class CalibrationSweep:
 
         best = results[0]
 
-        content = f"""# MANDATO 18R - Calibración: {strategy_id}
+        content = f"""# MANDATO 18R - CalibraciÃ³n: {strategy_id}
 
 **Fecha**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 **Strategy**: {strategy_id}
@@ -344,7 +344,7 @@ class CalibrationSweep:
 
 ---
 
-## MEJORES PARÁMETROS
+## MEJORES PARÃMETROS
 
 ```yaml
 {yaml.dump(best.params, default_flow_style=False)}
@@ -352,12 +352,12 @@ class CalibrationSweep:
 
 ---
 
-## MÉTRICAS (Walk-Forward Validation)
+## MÃ‰TRICAS (Walk-Forward Validation)
 
-| Métrica | Value | Std | Target |
+| MÃ©trica | Value | Std | Target |
 |---------|-------|-----|--------|
-| **Sharpe Ratio** | {best.sharpe_ratio:.3f} | ±{best.sharpe_std:.3f} | >{self.config['metrics_targets']['sharpe_ratio_min']} |
-| **Calmar Ratio** | {best.calmar_ratio:.3f} | ±{best.calmar_std:.3f} | >{self.config['metrics_targets']['calmar_ratio_min']} |
+| **Sharpe Ratio** | {best.sharpe_ratio:.3f} | Â±{best.sharpe_std:.3f} | >{self.config['metrics_targets']['sharpe_ratio_min']} |
+| **Calmar Ratio** | {best.calmar_ratio:.3f} | Â±{best.calmar_std:.3f} | >{self.config['metrics_targets']['calmar_ratio_min']} |
 | **Max Drawdown** | {best.max_drawdown_pct:.2f}% | - | <{self.config['metrics_targets']['max_drawdown_pct_max']}% |
 | **Win Rate** | {best.win_rate:.2%} | - | >{self.config['metrics_targets']['win_rate_min']:.0%} |
 | **Total Trades** | {best.total_trades} | - | >{self.config['optimization']['min_trades_required']} |
@@ -376,8 +376,8 @@ class CalibrationSweep:
 **Parameters**: {r.params}
 
 **Metrics**:
-- Sharpe: {r.sharpe_ratio:.3f} (±{r.sharpe_std:.3f})
-- Calmar: {r.calmar_ratio:.3f} (±{r.calmar_std:.3f})
+- Sharpe: {r.sharpe_ratio:.3f} (Â±{r.sharpe_std:.3f})
+- Calmar: {r.calmar_ratio:.3f} (Â±{r.calmar_std:.3f})
 - MaxDD: {r.max_drawdown_pct:.2f}%
 - Win Rate: {r.win_rate:.2%}
 - Trades: {r.total_trades}
@@ -390,7 +390,7 @@ class CalibrationSweep:
 ## NOTAS
 
 - Walk-forward validation: {len(best.fold_results)} folds
-- Objective: Sharpe × Calmar - stability_penalty - trade_penalty
+- Objective: Sharpe Ã— Calmar - stability_penalty - trade_penalty
 - Stability penalty weight: {self.config['optimization']['stability_penalty_weight']}
 
 **Next**: Hold-out validation (FASE 4)
@@ -447,7 +447,7 @@ def main():
             logger.error(f"{strategy_id:40s}: FAILED")
 
     logger.info("="*80)
-    logger.info("✅ Calibration sweep completed")
+    logger.info("âœ… Calibration sweep completed")
     logger.info("="*80)
 
 

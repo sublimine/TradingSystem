@@ -1,4 +1,4 @@
-"""
+﻿"""
 Delta volume and trade classification module for IDP pattern detection.
 
 Based on:
@@ -144,12 +144,12 @@ def detect_distribution_phase(data: pd.DataFrame, start_idx: int,
 def detect_displacement_phase(data: pd.DataFrame, start_idx: int,
                              min_velocity_pips_per_min: float = 7,
                              min_displacement_atr: float = 1.5,
-                             atr: float = None, pip_value: float = 0.0001) -> Optional[Dict]:
+                             indicador de rango: float = None, pip_value: float = 0.0001) -> Optional[Dict]:
     """
     Detect displacement phase in IDP pattern.
 
-    ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
-    ATR is used here for DISPLACEMENT DETECTION (pattern identification), NOT risk sizing.
+    âš ï¸ indicador de rango USAGE: TYPE B - DESCRIPTIVE METRIC ONLY âš ï¸
+    indicador de rango is used here for DISPLACEMENT DETECTION (pattern identification), NOT risk sizing.
     displacement_atr ratio measures displacement strength relative to normal volatility.
     This is a legitimate use case per PLAN OMEGA.
 
@@ -157,8 +157,8 @@ def detect_displacement_phase(data: pd.DataFrame, start_idx: int,
         data: OHLCV DataFrame
         start_idx: Starting index for detection
         min_velocity_pips_per_min: Minimum velocity in pips/minute (default: 7)
-        min_displacement_atr: Minimum displacement/ATR ratio (default: 1.5)
-        atr: Average True Range for normalization (TYPE B - descriptive metric only)
+        min_displacement_atr: Minimum displacement/indicador de rango ratio (default: 1.5)
+        indicador de rango: Average True Range for normalization (TYPE B - descriptive metric only)
         pip_value: Pip value for conversion (default: 0.0001)
 
     Returns:
@@ -179,8 +179,8 @@ def detect_displacement_phase(data: pd.DataFrame, start_idx: int,
                     if ((bar['close'] > bar['open'] and next_bar['close'] > bar['close']) or
                         (bar['close'] < bar['open'] and next_bar['close'] < bar['close'])):
                         
-                        if atr and atr > 0:
-                            displacement_atr = bar_move / atr
+                        if indicador de rango and indicador de rango > 0:
+                            displacement_atr = bar_move / indicador de rango
                             if displacement_atr >= min_displacement_atr:
                                 return {
                                     'timestamp': bar['timestamp'],
@@ -198,19 +198,19 @@ def detect_displacement_phase(data: pd.DataFrame, start_idx: int,
         return None
 
 def identify_idp_pattern(data: pd.DataFrame, levels: List[float],
-                        atr: float, params: Dict) -> Optional[Dict]:
+                        indicador de rango: float, params: Dict) -> Optional[Dict]:
     """
     Identify complete 3-phase IDP (Inducement-Distribution-Placement) pattern.
 
-    ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
-    ATR is used for DISPLACEMENT DETECTION (pattern identification), NOT risk sizing.
+    âš ï¸ indicador de rango USAGE: TYPE B - DESCRIPTIVE METRIC ONLY âš ï¸
+    indicador de rango is used for DISPLACEMENT DETECTION (pattern identification), NOT risk sizing.
     Passed to detect_displacement_phase() for displacement strength normalization.
     This is a legitimate use case per PLAN OMEGA.
 
     Args:
         data: OHLCV DataFrame
         levels: List of price levels to check for sweeps
-        atr: Average True Range for normalization (TYPE B - descriptive metric only)
+        indicador de rango: Average True Range for normalization (TYPE B - descriptive metric only)
         params: Dict with detection parameters
 
     Returns:
@@ -238,7 +238,7 @@ def identify_idp_pattern(data: pd.DataFrame, levels: List[float],
                     displacement = detect_displacement_phase(
                         data, distribution['end_idx'] + 1,
                         params.get('displacement_velocity_pips_per_minute', 7),
-                        1.5, atr
+                        1.5, indicador de rango
                     )
                     
                     if displacement:

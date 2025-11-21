@@ -1,4 +1,4 @@
-"""
+﻿"""
 Institutional Backtest Engine - MANDATO 17
 
 Orquestador del backtest institucional. Inicializa y conecta TODOS los componentes reales:
@@ -9,14 +9,14 @@ Orquestador del backtest institucional. Inicializa y conecta TODOS los component
 4. QualityScorer (5-factor scoring)
 5. InstitutionalRiskManager (0-2% sizing, exposure limits, circuit breakers)
 6. MarketStructurePositionManager (structure-based stops)
-7. ExecutionEventLogger (trazabilidad completa → DB)
+7. ExecutionEventLogger (trazabilidad completa â†’ DB)
 
-NO versión simplificada. El backtest ejecuta el sistema idéntico a producción.
+NO versiÃ³n simplificada. El backtest ejecuta el sistema idÃ©ntico a producciÃ³n.
 
 Respeta:
 - config/risk_limits.yaml (0-2% caps)
-- SL/TP estructurales (NO ATR)
-- Brain-layer governance (si está conectado)
+- SL/TP estructurales (sin indicadores de rango)
+- Brain-layer governance (si estÃ¡ conectado)
 - Statistical circuit breakers
 """
 
@@ -66,13 +66,13 @@ class BacktestEngine:
         Inicializar motor de backtest.
 
         Args:
-            config_path: Ruta a configuración de backtest
+            config_path: Ruta a configuraciÃ³n de backtest
         """
         logger.info("="*60)
         logger.info("MANDATO 17 - INSTITUTIONAL BACKTEST ENGINE")
         logger.info("="*60)
 
-        # Cargar configuración
+        # Cargar configuraciÃ³n
         self.config = self._load_config(config_path)
 
         # Inicializar data loader
@@ -108,13 +108,13 @@ class BacktestEngine:
 
     def _load_config(self, config_path: str) -> Dict:
         """
-        Cargar configuración de backtest.
+        Cargar configuraciÃ³n de backtest.
 
         Args:
             config_path: Ruta al archivo YAML
 
         Returns:
-            Dict de configuración
+            Dict de configuraciÃ³n
         """
         config_file = Path(config_path)
 
@@ -143,7 +143,7 @@ class BacktestEngine:
         """
         Inicializar todos los componentes del sistema institucional.
 
-        CRÍTICO: Usa componentes REALES, NO simulaciones.
+        CRÃTICO: Usa componentes REALES, NO simulaciones.
         """
         logger.info("Initializing institutional components...")
 
@@ -192,7 +192,7 @@ class BacktestEngine:
             multiframe_orchestrator=self.multiframe_orchestrator
         )
 
-        # 5. MarketStructurePositionManager (gestión de posiciones)
+        # 5. MarketStructurePositionManager (gestiÃ³n de posiciones)
         logger.info("5. Initializing MarketStructurePositionManager...")
         # Necesita mtf_manager para estructura - creamos wrapper simple
         class MTFDataWrapper:
@@ -201,8 +201,8 @@ class BacktestEngine:
                 self.multiframe_orch = multiframe_orch
 
             def get_structure(self, symbol: str, timeframe: str) -> Optional[Dict]:
-                """Obtener estructura de mercado para un símbolo."""
-                # Retornar estructura vacía para backtest inicial
+                """Obtener estructura de mercado para un sÃ­mbolo."""
+                # Retornar estructura vacÃ­a para backtest inicial
                 # TODO: Integrar con MultiFrameOrchestrator para estructura real
                 return None
 
@@ -226,7 +226,7 @@ class BacktestEngine:
         logger.info("6. Initializing strategies...")
         self._initialize_strategies()
 
-        logger.info("✅ All institutional components initialized")
+        logger.info("âœ… All institutional components initialized")
 
     def _initialize_strategies(self):
         """
@@ -240,7 +240,7 @@ class BacktestEngine:
             logger.warning("No strategies configured, using defaults")
             strategy_configs = ['liquidity_sweep', 'vpin_reversal_extreme']
 
-        # Configuración común: integración con motores institucionales
+        # ConfiguraciÃ³n comÃºn: integraciÃ³n con motores institucionales
         common_config = {
             'microstructure_engine': self.microstructure_engine,
             'multiframe_orchestrator': self.multiframe_orchestrator,
@@ -263,7 +263,7 @@ class BacktestEngine:
             try:
                 strategy_class = strategy_map[strategy_name]
 
-                # Config específico de estrategia
+                # Config especÃ­fico de estrategia
                 strategy_config = common_config.copy()
                 strategy_config.update({
                     'lookback': 20,
@@ -274,7 +274,7 @@ class BacktestEngine:
                 strategy_instance = strategy_class(strategy_config)
                 self.strategies[strategy_name] = strategy_instance
 
-                logger.info(f"  ✓ {strategy_name} initialized")
+                logger.info(f"  âœ“ {strategy_name} initialized")
 
             except Exception as e:
                 logger.error(f"Failed to initialize strategy {strategy_name}: {e}")
@@ -284,10 +284,10 @@ class BacktestEngine:
     def load_data(self, symbols: List[str], start_date: datetime, end_date: datetime,
                   timeframe: str = 'M15', data_source: str = 'csv'):
         """
-        Cargar datos históricos para backtest.
+        Cargar datos histÃ³ricos para backtest.
 
         Args:
-            symbols: Lista de símbolos
+            symbols: Lista de sÃ­mbolos
             start_date: Fecha inicio
             end_date: Fecha fin
             timeframe: Timeframe base
@@ -323,7 +323,7 @@ class BacktestEngine:
                     continue
 
                 self.market_data[symbol] = df
-                logger.info(f"  ✓ {symbol}: {len(df)} bars loaded")
+                logger.info(f"  âœ“ {symbol}: {len(df)} bars loaded")
 
             except Exception as e:
                 logger.error(f"Failed to load data for {symbol}: {e}")
@@ -331,18 +331,18 @@ class BacktestEngine:
         if not self.market_data:
             raise ValueError("No market data loaded, cannot run backtest")
 
-        logger.info(f"✅ Data loaded for {len(self.market_data)} symbols")
+        logger.info(f"âœ… Data loaded for {len(self.market_data)} symbols")
 
     def get_statistics(self) -> Dict:
         """
-        Obtener estadísticas del backtest.
+        Obtener estadÃ­sticas del backtest.
 
         Returns:
-            Dict con estadísticas
+            Dict con estadÃ­sticas
         """
         stats = self.stats.copy()
 
-        # Añadir stats de componentes
+        # AÃ±adir stats de componentes
         if self.risk_manager:
             stats['risk_manager'] = self.risk_manager.get_statistics()
 

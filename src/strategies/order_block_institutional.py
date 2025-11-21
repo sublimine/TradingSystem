@@ -1,7 +1,7 @@
-"""
+﻿"""
 Order Block Institutional Strategy - TRULY INSTITUTIONAL GRADE
 
-🏆 REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL DISPLACEMENT GARBAGE
+ðŸ† REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL DISPLACEMENT GARBAGE
 
 Detects institutional order blocks using REAL order flow analysis:
 - Displacement detection (strong institutional move leaving imbalance)
@@ -70,7 +70,7 @@ class OrderBlockInstitutional(StrategyBase):
         """
         super().__init__(params)
 
-        # Displacement detection (NO ATR - pips based)
+        # Displacement detection (sin indicadores de rango - pips based)
         self.volume_sigma_threshold = params.get('volume_sigma_threshold', 2.5)
         self.displacement_pips_min = params.get('displacement_pips_min', 30.0)  # Min 30 pips displacement
 
@@ -79,13 +79,13 @@ class OrderBlockInstitutional(StrategyBase):
         self.cvd_confirmation_threshold = params.get('cvd_confirmation_threshold', 0.6)
         self.vpin_threshold_max = params.get('vpin_threshold_max', 0.30)
 
-        # Block management (NO ATR - pips based)
+        # Block management (sin indicadores de rango - pips based)
         self.no_retest_enforcement = params.get('no_retest_enforcement', True)
         self.buffer_pips = params.get('buffer_pips', 8.0)  # 8 pip buffer for block zone
         self.max_active_blocks = params.get('max_active_blocks', 5)
         self.block_expiry_hours = params.get('block_expiry_hours', 24)
 
-        # Risk management (NO ATR - % price + pips based)
+        # Risk management (sin indicadores de rango - % price + pips based)
         self.stop_loss_pct = params.get('stop_loss_pct', 0.012)  # 1.2% stop
         self.stop_loss_buffer_pips = params.get('stop_loss_buffer_pips', 10.0)  # 10 pip buffer beyond block
         self.take_profit_r_multiple = params.get('take_profit_r_multiple', [1.5, 3.0])
@@ -97,7 +97,7 @@ class OrderBlockInstitutional(StrategyBase):
         self.active_blocks: List[OrderBlock] = []
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info(f"🏆 INSTITUTIONAL Order Block initialized")
+        self.logger.info(f"ðŸ† INSTITUTIONAL Order Block initialized")
         self.logger.info(f"   OFI absorption threshold: {self.ofi_absorption_threshold}")
         self.logger.info(f"   CVD confirmation threshold: {self.cvd_confirmation_threshold}")
         self.logger.info(f"   VPIN threshold max: {self.vpin_threshold_max}")
@@ -120,9 +120,9 @@ class OrderBlockInstitutional(StrategyBase):
         if not self.validate_inputs(data, features):
             return []
 
-        # Get ATR
-        atr = features.get('atr')
-        if atr is None or np.isnan(atr) or atr <= 0:
+        # Get indicador de rango
+        indicador de rango = features.get('indicador de rango')
+        if indicador de rango is None or np.isnan(indicador de rango) or indicador de rango <= 0:
             return []
 
         # Get required order flow features
@@ -136,10 +136,10 @@ class OrderBlockInstitutional(StrategyBase):
         current_time = data.iloc[-1].get('timestamp', datetime.now())
 
         # Detect new displacement (institutional moves creating order blocks)
-        # NOTE: detect_displacement uses ATR (TYPE B - descriptive metric for pattern detection)
-        displacement_threshold = 2.0  # Standard threshold: body must be 2x ATR (TYPE B - pattern detection)
+        # NOTE: detect_displacement uses indicador de rango (TYPE B - descriptive metric for pattern detection)
+        displacement_threshold = 2.0  # Standard threshold: body must be 2x indicador de rango (TYPE B - pattern detection)
         new_blocks = detect_displacement(
-            data, atr, displacement_threshold,  # TYPE B
+            data, indicador de rango, displacement_threshold,  # TYPE B
             self.volume_sigma_threshold
         )
 
@@ -149,7 +149,7 @@ class OrderBlockInstitutional(StrategyBase):
             for block in new_blocks:
                 if block.timestamp not in existing_times:
                     self.active_blocks.append(block)
-                    self.logger.info(f"📦 {symbol}: New {block.block_type} order block detected at {block.zone_low:.5f}-{block.zone_high:.5f}")
+                    self.logger.info(f"ðŸ“¦ {symbol}: New {block.block_type} order block detected at {block.zone_low:.5f}-{block.zone_high:.5f}")
 
         # Clean expired blocks
         expiry_cutoff = current_time - timedelta(hours=self.block_expiry_hours)
@@ -170,7 +170,7 @@ class OrderBlockInstitutional(StrategyBase):
             if self.no_retest_enforcement and block.tested_count > 0:
                 continue
 
-            # Check if price is retesting block (NO ATR - pips based)
+            # Check if price is retesting block (sin indicadores de rango - pips based)
             is_retesting, shows_rejection = validate_order_block_retest(
                 block, recent_data, self.buffer_pips  # Updated: uses pips directly
             )
@@ -193,7 +193,7 @@ class OrderBlockInstitutional(StrategyBase):
                     signals.append(signal)
                     block.tested_count += 1
                     block.last_test_timestamp = current_time
-                    self.logger.warning(f"🎯 {symbol}: INSTITUTIONAL ORDER BLOCK - "
+                    self.logger.warning(f"ðŸŽ¯ {symbol}: INSTITUTIONAL ORDER BLOCK - "
                                       f"{block.block_type}, Score={confirmation_score:.1f}/5.0, "
                                       f"OFI={ofi:.2f}, CVD={cvd:.1f}, VPIN={vpin:.2f}")
 
@@ -345,9 +345,9 @@ class OrderBlockInstitutional(StrategyBase):
         return total_score, criteria
 
     def _create_order_block_signal(self, block: OrderBlock, current_price: float,
-                                  atr: float, data: pd.DataFrame,
+                                  indicador de rango: float, data: pd.DataFrame,
                                   confirmation_score: float, criteria: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed institutional order block. NO ATR - % price + structure based."""
+        """Generate signal for confirmed institutional order block. sin indicadores de rango - % price + structure based."""
 
         try:
             from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
@@ -382,7 +382,7 @@ class OrderBlockInstitutional(StrategyBase):
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * 3.0)
 
-            # Validate risk (% price based, not ATR)
+            # Validate risk (% price based, not indicador de rango)
             max_risk_pct = 0.025  # 2.5% max risk
             if risk <= 0 or risk > (entry_price * max_risk_pct):
                 return None
@@ -448,7 +448,7 @@ class OrderBlockInstitutional(StrategyBase):
         if len(data) < 50:
             return False
 
-        required_features = ['ofi', 'cvd', 'vpin', 'atr']
+        required_features = ['ofi', 'cvd', 'vpin', 'indicador de rango']
         for feature in required_features:
             if feature not in features:
                 self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")

@@ -1,12 +1,12 @@
-"""
+﻿"""
 Mean Reversion Institutional Strategy - TRULY INSTITUTIONAL GRADE
 
-🏆 REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL Z-SCORE GARBAGE
+ðŸ† REAL INSTITUTIONAL IMPLEMENTATION - NO RETAIL Z-SCORE GARBAGE
 
 Detects genuine institutional mean reversion with order flow exhaustion:
 
 INSTITUTIONAL MEAN REVERSION CHARACTERISTICS:
-- Price ≥3 sigma from mean (statistical extreme)
+- Price â‰¥3 sigma from mean (statistical extreme)
 - OFI exhaustion (buying dries up at top, selling at bottom)
 - CVD divergence (cumulative pressure reverses)
 - VPIN NOT toxic (clean exhaustion, not panic)
@@ -48,7 +48,7 @@ class MeanReversionInstitutional(StrategyBase):
     INSTITUTIONAL Mean Reversion strategy using order flow exhaustion.
 
     Entry occurs after confirming:
-    1. Price ≥3 sigma from mean (statistical extreme)
+    1. Price â‰¥3 sigma from mean (statistical extreme)
     2. OFI exhaustion (buying/selling dries up)
     3. CVD divergence (reversal starting)
     4. VPIN clean (NOT toxic panic)
@@ -96,12 +96,12 @@ class MeanReversionInstitutional(StrategyBase):
         # Confirmation score
         self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
 
-        # Risk management (NO ATR - % price based)
+        # Risk management (sin indicadores de rango - % price based)
         self.stop_loss_pct = config.get('stop_loss_pct', 0.015)  # 1.5% stop (mean reversion needs room)
         self.take_profit_mean = config.get('take_profit_mean', True)  # Take profit at mean
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.info(f"🏆 INSTITUTIONAL Mean Reversion Statistical initialized")
+        self.logger.info(f"ðŸ† INSTITUTIONAL Mean Reversion Statistical initialized")
         self.logger.info(f"   Entry sigma: {self.entry_sigma_threshold}")
         self.logger.info(f"   OFI exhaustion threshold: {self.ofi_exhaustion_threshold}")
         self.logger.info(f"   CVD divergence threshold: {self.cvd_divergence_threshold}")
@@ -131,7 +131,7 @@ class MeanReversionInstitutional(StrategyBase):
         ofi = features.get('ofi')
         cvd = features.get('cvd')
         vpin = features.get('vpin')
-        atr = features.get('atr')  # TYPE B - descriptive metric only (not for risk decisions)
+        indicador de rango = features.get('indicador de rango')  # TYPE B - descriptive metric only (not for risk decisions)
         adx = features.get('adx', 50)  # Default high if not available
 
         # Get symbol and current price
@@ -174,8 +174,8 @@ class MeanReversionInstitutional(StrategyBase):
 
             if signal:
                 signals.append(signal)
-                self.logger.warning(f"🎯 {symbol}: INSTITUTIONAL MEAN REVERSION - {reversion_direction}, "
-                                  f"Z-score={statistical_extreme['z_score']:.2f}σ, "
+                self.logger.warning(f"ðŸŽ¯ {symbol}: INSTITUTIONAL MEAN REVERSION - {reversion_direction}, "
+                                  f"Z-score={statistical_extreme['z_score']:.2f}Ïƒ, "
                                   f"Score={confirmation_score:.1f}/5.0, "
                                   f"OFI={ofi:.2f}, CVD={cvd:.1f}, VPIN={vpin:.2f}")
 
@@ -294,7 +294,7 @@ class MeanReversionInstitutional(StrategyBase):
                                 direction: str, statistical_extreme: Dict,
                                 confirmation_score: float, criteria: Dict,
                                 market_data: pd.DataFrame, features: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed institutional mean reversion. NO ATR - % price based."""
+        """Generate signal for confirmed institutional mean reversion. sin indicadores de rango - % price based."""
 
         try:
             from src.features.institutional_sl_tp import calculate_stop_loss_price
@@ -306,7 +306,7 @@ class MeanReversionInstitutional(StrategyBase):
             stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
             take_profit = mean_price  # Target mean (statistical reversion)
 
-            # Validate risk (% price based, not ATR)
+            # Validate risk (% price based, not indicador de rango)
             risk = abs(entry_price - stop_loss)
             reward = abs(take_profit - entry_price)
 
@@ -354,7 +354,7 @@ class MeanReversionInstitutional(StrategyBase):
                     'risk_reward_ratio': float(rr_ratio),
                     'setup_type': 'INSTITUTIONAL_MEAN_REVERSION',
                     'expected_win_rate': 0.66 + (confirmation_score / 25.0),  # 66-72% WR
-                    'rationale': f"{direction} mean reversion at {statistical_extreme['z_score']:.2f}σ "
+                    'rationale': f"{direction} mean reversion at {statistical_extreme['z_score']:.2f}Ïƒ "
                                f"with institutional exhaustion confirmation. Target mean at {mean_price:.5f}.",
                     # Partial exits (for mean reversion, single exit at mean is typical)
                     'partial_exit_1': {'r_level': 0.6, 'percent': 50},  # Partial at 60% to mean
@@ -368,7 +368,7 @@ class MeanReversionInstitutional(StrategyBase):
             self.logger.error(f"Mean reversion signal creation failed: {str(e)}", exc_info=True)
             return None
 
-    # REMOVED: _calculate_atr() - NO ATR in institutional system
+    # REMOVED: _calculate_atr() - sin indicadores de rango in institutional system
     # Replaced with institutional_sl_tp module (% price + structure)
 
     def validate_inputs(self, market_data: pd.DataFrame, features: Dict) -> bool:
@@ -376,7 +376,7 @@ class MeanReversionInstitutional(StrategyBase):
         if len(market_data) < self.lookback_period:
             return False
 
-        required_features = ['ofi', 'cvd', 'vpin', 'atr']
+        required_features = ['ofi', 'cvd', 'vpin', 'indicador de rango']
         for feature in required_features:
             if feature not in features:
                 self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")
