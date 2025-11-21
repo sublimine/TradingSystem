@@ -59,7 +59,7 @@ class TopologicalDataAnalysisRegime(StrategyBase):
         self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
 
         # Risk management
-        self.stop_loss_atr = config.get('stop_loss_atr', 1.8)
+        self.stop_loss_pct = config.get('stop_loss_pct', 0.020)  # 2.0% stop loss
         self.take_profit_r = config.get('take_profit_r', 2.8)
 
         # State tracking
@@ -73,15 +73,13 @@ class TopologicalDataAnalysisRegime(StrategyBase):
         if len(market_data) < 100:
             return False
 
-        required_features = ['ofi', 'cvd', 'vpin', 'atr']
+        required_features = ['ofi', 'cvd', 'vpin']  # ATR optional - TYPE B only
         for feature in required_features:
             if feature not in features:
                 self.logger.debug(f"Missing {feature}")
                 return False
 
-        atr = features.get('atr')
-        if atr is None or np.isnan(atr) or atr <= 0:
-            return False
+        # ATR is TYPE B (optional) - used for volatility regime detection, NOT risk sizing
 
         return True
 
@@ -114,7 +112,6 @@ class TopologicalDataAnalysisRegime(StrategyBase):
         ofi = features['ofi']
         cvd = features['cvd']
         vpin = features['vpin']
-        atr = features['atr']
 
         recent_bars = market_data.tail(20)
         confirmation_score, criteria = self._evaluate_institutional_confirmation(
@@ -129,7 +126,7 @@ class TopologicalDataAnalysisRegime(StrategyBase):
         # STEP 5: Generate signal
         signal = self._create_regime_signal(
             market_data, current_time, topology_change,
-            confirmation_score, criteria, atr, features
+            confirmation_score, criteria, features
         )
 
         self.last_topology = current_topology
@@ -242,7 +239,7 @@ class TopologicalDataAnalysisRegime(StrategyBase):
 
     def _create_regime_signal(self, market_data: pd.DataFrame, current_time,
                              topology_change: float, confirmation_score: float,
-                             criteria: Dict, atr: float, features: Dict) -> Optional[Signal]:
+                             criteria: Dict, features: Dict) -> Optional[Signal]:
         """Create regime change signal."""
         current_price = market_data.iloc[-1]['close']
 
@@ -261,11 +258,11 @@ class TopologicalDataAnalysisRegime(StrategyBase):
 
         # Entry, stop, target
         if direction == 'LONG':
-            stop_loss = current_price - (self.stop_loss_atr * atr)
+            stop_loss = current_price * (1.0 - self.stop_loss_pct)
             risk = current_price - stop_loss
             take_profit = current_price + (risk * self.take_profit_r)
         else:
-            stop_loss = current_price + (self.stop_loss_atr * atr)
+            stop_loss = current_price * (1.0 + self.stop_loss_pct)
             risk = stop_loss - current_price
             take_profit = current_price - (risk * self.take_profit_r)
 

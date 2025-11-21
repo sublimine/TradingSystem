@@ -145,7 +145,25 @@ def detect_displacement_phase(data: pd.DataFrame, start_idx: int,
                              min_velocity_pips_per_min: float = 7,
                              min_displacement_atr: float = 1.5,
                              atr: float = None, pip_value: float = 0.0001) -> Optional[Dict]:
-    """Detect displacement phase."""
+    """
+    Detect displacement phase in IDP pattern.
+
+    ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
+    ATR is used here for DISPLACEMENT DETECTION (pattern identification), NOT risk sizing.
+    displacement_atr ratio measures displacement strength relative to normal volatility.
+    This is a legitimate use case per PLAN OMEGA.
+
+    Args:
+        data: OHLCV DataFrame
+        start_idx: Starting index for detection
+        min_velocity_pips_per_min: Minimum velocity in pips/minute (default: 7)
+        min_displacement_atr: Minimum displacement/ATR ratio (default: 1.5)
+        atr: Average True Range for normalization (TYPE B - descriptive metric only)
+        pip_value: Pip value for conversion (default: 0.0001)
+
+    Returns:
+        Dict with displacement info if detected, None otherwise
+    """
     try:
         if start_idx >= len(data) - 1:
             return None
@@ -181,7 +199,23 @@ def detect_displacement_phase(data: pd.DataFrame, start_idx: int,
 
 def identify_idp_pattern(data: pd.DataFrame, levels: List[float],
                         atr: float, params: Dict) -> Optional[Dict]:
-    """Identify complete 3-phase IDP pattern."""
+    """
+    Identify complete 3-phase IDP (Inducement-Distribution-Placement) pattern.
+
+    ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
+    ATR is used for DISPLACEMENT DETECTION (pattern identification), NOT risk sizing.
+    Passed to detect_displacement_phase() for displacement strength normalization.
+    This is a legitimate use case per PLAN OMEGA.
+
+    Args:
+        data: OHLCV DataFrame
+        levels: List of price levels to check for sweeps
+        atr: Average True Range for normalization (TYPE B - descriptive metric only)
+        params: Dict with detection parameters
+
+    Returns:
+        Dict with complete IDP pattern if detected, None otherwise
+    """
     try:
         data = classify_trades(data.copy())
         

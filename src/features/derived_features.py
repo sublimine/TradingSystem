@@ -9,11 +9,14 @@ import pandas as pd
 from typing import Dict, List, Tuple, Optional
 
 
-def calculate_normalized_spread(spread: float, atr: float, 
+def calculate_normalized_spread(spread: float, atr: float,
                                 min_atr: float = 0.0001) -> float:
     """
     Calculate spread normalized by Average True Range.
-    
+
+    NOTE: ATR is TYPE B (descriptive) - used for metric normalization, NOT risk decisions.
+    This function is currently UNUSED in the codebase.
+
     Normalization by ATR makes spread comparable across instruments
     and market conditions with different volatility levels.
     
@@ -207,7 +210,10 @@ def calculate_liquidity_score(bid_volume: float, ask_volume: float,
                               spread: float, atr: float) -> float:
     """
     Calculate composite liquidity score.
-    
+
+    NOTE: ATR is TYPE B (descriptive) - used for spread normalization, NOT risk decisions.
+    This function is currently UNUSED in the codebase.
+
     Combines order book depth, spread tightness and volatility.
     
     Args:

@@ -197,10 +197,8 @@ class IDPInducement(StrategyBase):
         if not self.validate_inputs(data, features):
             return []
 
-        # Get ATR
-        atr = features.get('atr')
-        if atr is None or np.isnan(atr) or atr <= 0:
-            return []
+        # Get ATR (TYPE B - for pattern detection in identify_idp_pattern, not risk sizing)
+        atr = features.get('atr', 0.0001)  # TYPE B - descriptive metric for displacement detection
 
         # Get required order flow features
         ofi = features.get('ofi')
@@ -358,22 +356,27 @@ class IDPInducement(StrategyBase):
     def _create_idp_signal(self, pattern: Dict, data: pd.DataFrame,
                           atr: float, confirmation_score: float,
                           criteria: Dict, features: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed institutional IDP pattern."""
+        """Generate signal for confirmed institutional IDP pattern. NO ATR for risk - pips + % price based."""
 
         try:
             current_price = data.iloc[-1]['close']
             displacement_direction = pattern['displacement']['direction']
 
+            # NO ATR - use pips buffer beyond inducement level
+            stop_buffer_pips = 10.0  # 10 pip buffer beyond inducement
+            buffer_price = stop_buffer_pips / 10000
+
             if displacement_direction == 'UP':
                 direction = "LONG"
                 entry_price = current_price
 
-                # Stop below inducement level
+                # Stop below inducement level + buffer (NO ATR)
                 if self.stop_loss_beyond_inducement:
                     inducement_low = pattern['level_swept'] - (self.penetration_pips_max * 0.0001)
-                    stop_loss = min(inducement_low, entry_price - 2 * atr)
+                    stop_loss = inducement_low - buffer_price
                 else:
-                    stop_loss = entry_price - 1.5 * atr
+                    # Fallback: % price based stop
+                    stop_loss = entry_price * (1.0 - 0.015)  # 1.5% stop
 
                 risk = entry_price - stop_loss
                 take_profit = entry_price + (risk * self.take_profit_r_multiple)
@@ -382,15 +385,21 @@ class IDPInducement(StrategyBase):
                 direction = "SHORT"
                 entry_price = current_price
 
-                # Stop above inducement level
+                # Stop above inducement level + buffer (NO ATR)
                 if self.stop_loss_beyond_inducement:
                     inducement_high = pattern['level_swept'] + (self.penetration_pips_max * 0.0001)
-                    stop_loss = max(inducement_high, entry_price + 2 * atr)
+                    stop_loss = inducement_high + buffer_price
                 else:
-                    stop_loss = entry_price + 1.5 * atr
+                    # Fallback: % price based stop
+                    stop_loss = entry_price * (1.0 + 0.015)  # 1.5% stop
 
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * self.take_profit_r_multiple)
+
+            # Validate risk (% price based, not ATR)
+            max_risk_pct = 0.025  # 2.5% max risk for IDP
+            if risk <= 0 or risk > (entry_price * max_risk_pct):
+                return None
 
             # Validate risk
             actual_risk = abs(entry_price - stop_loss)

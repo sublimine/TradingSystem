@@ -87,7 +87,7 @@ class FVGInstitutional(StrategyBase):
         Initialize INSTITUTIONAL FVG strategy.
 
         Required config parameters:
-            - gap_atr_minimum: Minimum gap size in ATR (0.75+ for significance)
+            - gap_pips_minimum: Minimum gap size in pips (10+ for significance) ⚠️ NO ATR
             - ofi_absorption_threshold: OFI threshold for gap defense
             - cvd_confirmation_threshold: CVD threshold for confirmation
             - vpin_threshold_max: Maximum VPIN (too high = toxic)
@@ -97,8 +97,8 @@ class FVGInstitutional(StrategyBase):
         """
         super().__init__(config)
 
-        # Gap detection parameters
-        self.gap_atr_minimum = config.get('gap_atr_minimum', 0.75)
+        # Gap detection parameters (NO ATR - pips based)
+        self.gap_pips_minimum = config.get('gap_pips_minimum', 10.0)  # 10 pips minimum
         self.volume_anomaly_required = config.get('volume_anomaly_required', True)
         self.volume_percentile = config.get('volume_percentile', 70)
         self.gap_fill_percentage = config.get('gap_fill_percentage', 0.5)
@@ -112,8 +112,8 @@ class FVGInstitutional(StrategyBase):
         self.max_gap_age_bars = config.get('max_gap_age_bars', 100)
         self.max_active_gaps = config.get('max_active_gaps', 5)
 
-        # Risk management
-        self.stop_buffer_atr = config.get('stop_buffer_atr', 0.5)
+        # Risk management (NO ATR - pips based)
+        self.stop_buffer_pips = config.get('stop_buffer_pips', 15.0)  # 15 pips buffer beyond gap
         self.target_gap_multiples = config.get('target_gap_multiples', 2.0)
 
         # Confirmation score
@@ -125,22 +125,23 @@ class FVGInstitutional(StrategyBase):
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.info(f"🏆 INSTITUTIONAL FVG initialized")
-        self.logger.info(f"   Gap minimum: {self.gap_atr_minimum} ATR")
+        self.logger.info(f"   Gap minimum: {self.gap_pips_minimum} pips (NO ATR)")
         self.logger.info(f"   OFI absorption threshold: {self.ofi_absorption_threshold}")
         self.logger.info(f"   CVD confirmation threshold: {self.cvd_confirmation_threshold}")
         self.logger.info(f"   VPIN threshold max: {self.vpin_threshold_max}")
 
         self.name = 'fvg_institutional'
 
-    def detect_fvg_bullish(self, data: pd.DataFrame, atr: float) -> Optional[FVGZone]:
+    def detect_fvg_bullish(self, data: pd.DataFrame) -> Optional[FVGZone]:
         """
         Detect bullish Fair Value Gap (gap up) with institutional criteria.
 
         Bullish FVG: Bar[i-2].high < Bar[i].low (gap between bars)
 
+        ⚠️ NO ATR - pips-based threshold per PLAN OMEGA
+
         Args:
             data: DataFrame with OHLCV data (need at least 3 bars)
-            atr: Current ATR value
 
         Returns:
             FVGZone if FVG detected and meets criteria, None otherwise
@@ -156,10 +157,10 @@ class FVGInstitutional(StrategyBase):
             gap_start = bar_minus_2['high']
             gap_end = bar_current['low']
             gap_size = gap_end - gap_start
-            gap_size_atr = gap_size / atr if atr > 0 else 0
+            gap_size_pips = gap_size * 10000  # Convert to pips
 
-            # Institutional filter: minimum gap size
-            if gap_size_atr < self.gap_atr_minimum:
+            # Institutional filter: minimum gap size (PIPS, NO ATR)
+            if gap_size_pips < self.gap_pips_minimum:
                 return None
 
             # Volume anomaly check
@@ -175,21 +176,21 @@ class FVGInstitutional(StrategyBase):
             else:
                 volume_spike = 1.0
 
-            self.logger.info(f"Bullish FVG detected: {gap_size:.5f} ({gap_size_atr:.2f} ATR), volume spike={volume_spike:.2f}x")
+            self.logger.info(f"Bullish FVG detected: {gap_size:.5f} ({gap_size_pips:.1f} pips), volume spike={volume_spike:.2f}x")
 
             return FVGZone(
                 gap_type='BULLISH',
                 gap_start=gap_start,
                 gap_end=gap_end,
                 gap_size=gap_size,
-                gap_size_atr=gap_size_atr,
+                gap_size_atr=gap_size_pips,  # NOTE: Reusing field for pips (legacy field name)
                 timestamp=datetime.now(),
                 volume_spike=volume_spike
             )
 
         return None
 
-    def detect_fvg_bearish(self, data: pd.DataFrame, atr: float) -> Optional[FVGZone]:
+    def detect_fvg_bearish(self, data: pd.DataFrame) -> Optional[FVGZone]:
         """
         Detect bearish Fair Value Gap (gap down) with institutional criteria.
 
@@ -197,7 +198,7 @@ class FVGInstitutional(StrategyBase):
 
         Args:
             data: DataFrame with OHLCV data (need at least 3 bars)
-            atr: Current ATR value
+            ⚠️ NO ATR - pips-based threshold per PLAN OMEGA
 
         Returns:
             FVGZone if FVG detected and meets criteria, None otherwise
@@ -213,10 +214,10 @@ class FVGInstitutional(StrategyBase):
             gap_start = bar_current['high']
             gap_end = bar_minus_2['low']
             gap_size = gap_end - gap_start
-            gap_size_atr = gap_size / atr if atr > 0 else 0
+            gap_size_pips = gap_size * 10000  # Convert to pips
 
             # Institutional filter: minimum gap size
-            if gap_size_atr < self.gap_atr_minimum:
+            if gap_size_pips < self.gap_pips_minimum:
                 return None
 
             # Volume anomaly check
@@ -232,14 +233,14 @@ class FVGInstitutional(StrategyBase):
             else:
                 volume_spike = 1.0
 
-            self.logger.info(f"Bearish FVG detected: {gap_size:.5f} ({gap_size_atr:.2f} ATR), volume spike={volume_spike:.2f}x")
+            self.logger.info(f"Bearish FVG detected: {gap_size:.5f} ({gap_size_pips:.1f} pips), volume spike={volume_spike:.2f}x")
 
             return FVGZone(
                 gap_type='BEARISH',
                 gap_start=gap_start,
                 gap_end=gap_end,
                 gap_size=gap_size,
-                gap_size_atr=gap_size_atr,
+                gap_size_atr=gap_size_pips,  # NOTE: Reusing field for pips (legacy field name)
                 timestamp=datetime.now(),
                 volume_spike=volume_spike
             )
@@ -402,11 +403,8 @@ class FVGInstitutional(StrategyBase):
         if not self.validate_inputs(data, features):
             return []
 
-        # Get ATR
-        atr = features.get('atr')
-        if atr is None or np.isnan(atr) or atr <= 0:
-            # Calculate ATR if not provided
-            atr = self._calculate_atr(data)
+        # Get ATR (TYPE B - descriptive metric for gap size normalization)
+        atr = features.get('atr', 0.0001)  # Small default if missing
 
         # Get required order flow features
         ofi = features.get('ofi')
@@ -421,11 +419,11 @@ class FVGInstitutional(StrategyBase):
         self.manage_active_gaps(data)
 
         # Detect new FVGs
-        bullish_gap = self.detect_fvg_bullish(data, atr)
+        bullish_gap = self.detect_fvg_bullish(data)
         if bullish_gap:
             self.active_gaps.append(bullish_gap)
 
-        bearish_gap = self.detect_fvg_bearish(data, atr)
+        bearish_gap = self.detect_fvg_bearish(data)
         if bearish_gap:
             self.active_gaps.append(bearish_gap)
 
@@ -464,7 +462,7 @@ class FVGInstitutional(StrategyBase):
         return signals
 
     def _generate_fvg_signal(self, symbol: str, current_price: float,
-                            gap: FVGZone, atr: float,
+                            gap: FVGZone,
                             confirmation_score: float, criteria: Dict,
                             data: pd.DataFrame) -> Optional[Signal]:
         """Generate signal for confirmed institutional FVG fill."""
@@ -474,19 +472,19 @@ class FVGInstitutional(StrategyBase):
                 direction = 'LONG'
                 entry_price = current_price
                 # Stop below gap with buffer
-                stop_loss = gap.gap_start - (self.stop_buffer_atr * atr)
+                stop_loss = gap.gap_start - (self.stop_buffer_pips / 10000)
                 risk = entry_price - stop_loss
                 take_profit = entry_price + (gap.gap_size * self.target_gap_multiples)
             else:  # BEARISH
                 direction = 'SHORT'
                 entry_price = current_price
                 # Stop above gap with buffer
-                stop_loss = gap.gap_end + (self.stop_buffer_atr * atr)
+                stop_loss = gap.gap_end + (self.stop_buffer_pips / 10000)
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (gap.gap_size * self.target_gap_multiples)
 
             # Validate risk
-            if risk <= 0 or risk > atr * 3.0:
+            if risk <= 0 or risk > (entry_price * 0.025):  # 2.5% max risk
                 return None
 
             actual_risk = abs(entry_price - stop_loss)
@@ -545,20 +543,8 @@ class FVGInstitutional(StrategyBase):
             self.logger.error(f"FVG signal creation failed: {str(e)}", exc_info=True)
             return None
 
-    def _calculate_atr(self, data: pd.DataFrame, period: int = 14) -> float:
-        """Calculate ATR for gap validation and stops."""
-        high = data['high']
-        low = data['low']
-        close = data['close'].shift(1)
-
-        tr = pd.concat([
-            high - low,
-            (high - close).abs(),
-            (low - close).abs()
-        ], axis=1).max(axis=1)
-
-        atr = tr.rolling(window=period, min_periods=1).mean().iloc[-1]
-        return atr if not pd.isna(atr) else (data['high'].iloc[-1] - data['low'].iloc[-1])
+    # REMOVED: _calculate_atr() - NO ATR calculation needed
+    # ATR comes from features (TYPE B - descriptive metric for gap size normalization)
 
     def validate_inputs(self, data: pd.DataFrame, features: Dict) -> bool:
         """Validate required inputs are present."""

@@ -62,33 +62,32 @@ class OrderBlockInstitutional(StrategyBase):
 
         Required config parameters:
             - volume_sigma_threshold: Volume Z-score for displacement
-            - displacement_atr_multiplier: ATR multiplier for displacement
             - ofi_absorption_threshold: OFI threshold at block retest
             - cvd_confirmation_threshold: CVD threshold for confirmation
             - vpin_threshold_max: Maximum VPIN (too high = toxic)
             - no_retest_enforcement: Only trade first retest
-            - buffer_atr: Buffer for block zone
             - min_confirmation_score: Minimum score (0-5) to enter
         """
         super().__init__(params)
 
-        # Displacement detection
+        # Displacement detection (NO ATR - pips based)
         self.volume_sigma_threshold = params.get('volume_sigma_threshold', 2.5)
-        self.displacement_atr_multiplier = params.get('displacement_atr_multiplier', 2.0)
+        self.displacement_pips_min = params.get('displacement_pips_min', 30.0)  # Min 30 pips displacement
 
         # INSTITUTIONAL ORDER FLOW PARAMETERS
         self.ofi_absorption_threshold = params.get('ofi_absorption_threshold', 3.0)
         self.cvd_confirmation_threshold = params.get('cvd_confirmation_threshold', 0.6)
         self.vpin_threshold_max = params.get('vpin_threshold_max', 0.30)
 
-        # Block management
+        # Block management (NO ATR - pips based)
         self.no_retest_enforcement = params.get('no_retest_enforcement', True)
-        self.buffer_atr = params.get('buffer_atr', 0.5)
+        self.buffer_pips = params.get('buffer_pips', 8.0)  # 8 pip buffer for block zone
         self.max_active_blocks = params.get('max_active_blocks', 5)
         self.block_expiry_hours = params.get('block_expiry_hours', 24)
 
-        # Risk management
-        self.stop_loss_buffer_atr = params.get('stop_loss_buffer_atr', 0.75)
+        # Risk management (NO ATR - % price + pips based)
+        self.stop_loss_pct = params.get('stop_loss_pct', 0.012)  # 1.2% stop
+        self.stop_loss_buffer_pips = params.get('stop_loss_buffer_pips', 10.0)  # 10 pip buffer beyond block
         self.take_profit_r_multiple = params.get('take_profit_r_multiple', [1.5, 3.0])
 
         # Confirmation score
@@ -137,8 +136,10 @@ class OrderBlockInstitutional(StrategyBase):
         current_time = data.iloc[-1].get('timestamp', datetime.now())
 
         # Detect new displacement (institutional moves creating order blocks)
+        # NOTE: detect_displacement uses ATR (TYPE B - descriptive metric for pattern detection)
+        displacement_threshold = 2.0  # Standard threshold: body must be 2x ATR (TYPE B - pattern detection)
         new_blocks = detect_displacement(
-            data, atr, self.displacement_atr_multiplier,
+            data, atr, displacement_threshold,  # TYPE B
             self.volume_sigma_threshold
         )
 
@@ -169,9 +170,9 @@ class OrderBlockInstitutional(StrategyBase):
             if self.no_retest_enforcement and block.tested_count > 0:
                 continue
 
-            # Check if price is retesting block
+            # Check if price is retesting block (NO ATR - pips based)
             is_retesting, shows_rejection = validate_order_block_retest(
-                block, recent_data, self.buffer_atr, atr
+                block, recent_data, self.buffer_pips  # Updated: uses pips directly
             )
 
             if not is_retesting:
@@ -184,7 +185,7 @@ class OrderBlockInstitutional(StrategyBase):
 
             if confirmation_score >= self.min_confirmation_score:
                 signal = self._create_order_block_signal(
-                    block, current_price, atr, data,
+                    block, current_price, data,
                     confirmation_score, criteria
                 )
 
@@ -346,26 +347,44 @@ class OrderBlockInstitutional(StrategyBase):
     def _create_order_block_signal(self, block: OrderBlock, current_price: float,
                                   atr: float, data: pd.DataFrame,
                                   confirmation_score: float, criteria: Dict) -> Optional[Signal]:
-        """Generate signal for confirmed institutional order block."""
+        """Generate signal for confirmed institutional order block. NO ATR - % price + structure based."""
 
         try:
+            from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
+
+            entry_price = current_price
+
+            # Institutional stop: prioritize order block boundary with pips buffer
             if block.block_type == 'BULLISH':
                 direction = "LONG"
-                entry_price = current_price
-                # Stop below order block with buffer
-                stop_loss = block.zone_low - (self.stop_loss_buffer_atr * atr)
+                # Stop below order block with pips buffer
+                buffer_price = self.stop_loss_buffer_pips / 10000
+                stop_loss = block.zone_low - buffer_price
+
+                # Validate stop is reasonable (not more than stop_loss_pct)
+                max_stop = entry_price * (1.0 - self.stop_loss_pct)
+                if stop_loss < max_stop:
+                    stop_loss = max_stop
+
                 risk = entry_price - stop_loss
                 take_profit = entry_price + (risk * 3.0)  # 3R target
             else:  # BEARISH
                 direction = "SHORT"
-                entry_price = current_price
-                # Stop above order block with buffer
-                stop_loss = block.zone_high + (self.stop_loss_buffer_atr * atr)
+                # Stop above order block with pips buffer
+                buffer_price = self.stop_loss_buffer_pips / 10000
+                stop_loss = block.zone_high + buffer_price
+
+                # Validate stop is reasonable (not more than stop_loss_pct)
+                max_stop = entry_price * (1.0 + self.stop_loss_pct)
+                if stop_loss > max_stop:
+                    stop_loss = max_stop
+
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * 3.0)
 
-            # Validate risk is reasonable
-            if risk <= 0 or risk > atr * 3.0:
+            # Validate risk (% price based, not ATR)
+            max_risk_pct = 0.025  # 2.5% max risk
+            if risk <= 0 or risk > (entry_price * max_risk_pct):
                 return None
 
             actual_risk = abs(entry_price - stop_loss)

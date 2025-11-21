@@ -56,8 +56,8 @@ class FractalMarketStructure(StrategyBase):
         # Confirmation scoring
         self.min_confirmation_score = config.get('min_confirmation_score', 3.7)
 
-        # Risk management
-        self.stop_loss_atr = config.get('stop_loss_atr', 1.5)
+        # Risk management (NO ATR - pips + % price based)
+        self.stop_buffer_pips = config.get('stop_buffer_pips', 20.0)  # 20 pip buffer beyond fractal
         self.take_profit_r = config.get('take_profit_r', 2.5)
 
         # State tracking
@@ -78,10 +78,7 @@ class FractalMarketStructure(StrategyBase):
                 self.logger.debug(f"Missing {feature}")
                 return False
 
-        atr = features.get('atr')
-        if atr is None or np.isnan(atr) or atr <= 0:
-            return False
-
+        # ATR is TYPE B - descriptive metric only, no validation needed
         return True
 
     def evaluate(self, market_data: pd.DataFrame, features: Dict) -> List[Signal]:
@@ -244,21 +241,28 @@ class FractalMarketStructure(StrategyBase):
     def _create_fractal_signal(self, market_data: pd.DataFrame, current_time,
                               structure_break: Dict, confirmation_score: float,
                               criteria: Dict, atr: float, features: Dict) -> Optional[Signal]:
-        """Create fractal break signal."""
+        """Create fractal break signal. NO ATR - pips + % price based."""
         current_price = market_data.iloc[-1]['close']
         fractal_price = structure_break['fractal_price']
 
         direction = 'LONG' if structure_break['type'] == 'BULLISH' else 'SHORT'
 
-        # Entry, stop, target
+        # Entry, stop, target (NO ATR - fractal level + pips buffer)
+        buffer_price = self.stop_buffer_pips / 10000  # Convert pips to price
+
         if direction == 'LONG':
-            stop_loss = fractal_price - (self.stop_loss_atr * atr)
+            stop_loss = fractal_price - buffer_price
             risk = current_price - stop_loss
             take_profit = current_price + (risk * self.take_profit_r)
         else:
-            stop_loss = fractal_price + (self.stop_loss_atr * atr)
+            stop_loss = fractal_price + buffer_price
             risk = stop_loss - current_price
             take_profit = current_price - (risk * self.take_profit_r)
+
+        # Validate risk (% price based, not ATR)
+        max_risk_pct = 0.025  # 2.5% max risk
+        if risk <= 0 or risk > (current_price * max_risk_pct):
+            return None
 
         # Sizing
         if confirmation_score >= 4.5:

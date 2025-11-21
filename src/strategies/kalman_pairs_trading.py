@@ -63,8 +63,8 @@ class KalmanPairsTrading(StrategyBase):
         # Confirmation scoring
         self.min_confirmation_score = config.get('min_confirmation_score', 3.5)
 
-        # Risk management
-        self.stop_loss_atr = config.get('stop_loss_atr', 2.0)
+        # Risk management (NO ATR - % price based)
+        self.stop_loss_pct = config.get('stop_loss_pct', 0.015)  # 1.5% stop (pairs need room for spread)
         self.take_profit_r = config.get('take_profit_r', 2.5)
 
         # Kalman state
@@ -201,14 +201,11 @@ class KalmanPairsTrading(StrategyBase):
         direction = 'SHORT' if zscore > 0 else 'LONG'
         current_price = market_data.iloc[-1]['close']
 
-        if direction == 'LONG':
-            stop_loss = current_price - (self.stop_loss_atr * atr)
-            risk = current_price - stop_loss
-            take_profit = current_price + (risk * self.take_profit_r)
-        else:
-            stop_loss = current_price + (self.stop_loss_atr * atr)
-            risk = stop_loss - current_price
-            take_profit = current_price - (risk * self.take_profit_r)
+        # Entry, stop, target (NO ATR - % price based)
+        from src.features.institutional_sl_tp import calculate_stop_loss_price, calculate_take_profit_price
+
+        stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
+        take_profit, _ = calculate_take_profit_price(direction, current_price, stop_loss, self.take_profit_r)
 
         sizing_level = 3 if confirmation_score >= 4.0 else 2
 

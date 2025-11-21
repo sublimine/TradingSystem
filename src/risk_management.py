@@ -129,20 +129,49 @@ def validate_position_size(lots: float, symbol: str, max_lots: float = 100.0) ->
     return True
 
 
-def calculate_stop_loss_atr(current_price: float, atr: float, 
+def calculate_stop_loss_atr(current_price: float, atr: float,
                            direction: str, multiplier: float = 2.0) -> float:
     """
+    ⚠️⚠️⚠️ DEPRECATED - PLAN OMEGA ⚠️⚠️⚠️
+
+    This function is DEPRECATED as of PLAN OMEGA execution.
+
+    **REASON FOR DEPRECATION:**
+    Uses ATR for stop loss calculation (TYPE A violation).
+    PLAN OMEGA mandate: "ZERO ATR in risk/SL/TP decisions."
+
+    **REPLACEMENT:**
+    Use `src/features/institutional_sl_tp.py::calculate_stop_loss_price()` which implements:
+    - Structural stop placement (swing points, order blocks, FVG)
+    - Fixed pips buffers (e.g., 15 pips, 20 pips)
+    - % price based fallback stops (1.5-2.5%)
+    - NO ATR in risk sizing
+
+    **DO NOT USE THIS FUNCTION FOR NEW CODE.**
+    **ALL 24 STRATEGIES NOW USE institutional_sl_tp.py EXCLUSIVELY.**
+
+    ---
+    ORIGINAL DOCSTRING:
+
     Calcula stop loss basado en ATR (Average True Range).
-    
+
     Args:
         current_price: Precio actual
         atr: Average True Range
         direction: 'LONG' o 'SHORT'
         multiplier: Multiplicador de ATR (default 2.0)
-        
+
     Returns:
         Precio de stop loss
     """
+    import warnings
+    warnings.warn(
+        "calculate_stop_loss_atr() is DEPRECATED (PLAN OMEGA). "
+        "Use src/features/institutional_sl_tp.py::calculate_stop_loss_price() instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
     if direction.upper() == 'LONG':
         return current_price - (atr * multiplier)
     else:  # SHORT

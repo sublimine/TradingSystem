@@ -1,13 +1,8 @@
 """
-Liquidity Sweep Detection Strategy - MANDATO 16 INTEGRATED
+Liquidity Sweep Detection Strategy
 
 Identifies instances where price briefly penetrates technical levels with anomalous
 volume before reversing, indicating institutional absorption of retail stop orders.
-
-MANDATO 16 INTEGRATION:
-- Uses MicrostructureEngine for VPIN/OFI quality assessment
-- Uses MultiFrameOrchestrator for HTF/MTF alignment validation
-- Produces complete metadata for QualityScorer
 """
 
 import numpy as np
@@ -22,17 +17,15 @@ from .strategy_base import StrategyBase, Signal
 class LiquiditySweepStrategy(StrategyBase):
     """
     Strategy that detects liquidity sweeps at critical technical levels.
-
+    
     Entry occurs after confirming sweep characteristics including penetration depth,
     volume anomaly, reversal velocity, order book imbalance, and order flow toxicity.
-
-    MANDATO 16: Integrated with MicrostructureEngine + MultiFrameOrchestrator.
     """
-
+    
     def __init__(self, config: Dict):
         """
         Initialize liquidity sweep strategy.
-
+        
         Required config parameters:
             - lookback_periods: List of periods for swing point identification [24h, 48h, 72h]
             - proximity_threshold: Distance to level to activate monitoring (pips)
@@ -43,13 +36,9 @@ class LiquiditySweepStrategy(StrategyBase):
             - imbalance_threshold: Minimum order book imbalance during sweep
             - vpin_threshold: Minimum VPIN level indicating toxic flow
             - min_confirmation_score: Minimum total confirmation score (0-5)
-
-        MANDATO 16 new parameters:
-            - microstructure_engine: MicrostructureEngine instance (optional)
-            - multiframe_orchestrator: MultiFrameOrchestrator instance (optional)
         """
         super().__init__(config)
-
+        
         self.lookback_periods = config.get('lookback_periods', [60, 120, 240])  # 1h, 2h, 4h
         self.proximity_threshold = config.get('proximity_threshold', 10)
 
@@ -69,19 +58,10 @@ class LiquiditySweepStrategy(StrategyBase):
         self.imbalance_threshold = config.get('imbalance_threshold', 0.3)
         self.vpin_threshold = config.get('vpin_threshold', 0.45)  # MAX seguro, no mínimo
         self.min_confirmation_score = config.get('min_confirmation_score', 3)
-
-        # MANDATO 16: Motores institucionales (opcionales para retrocompatibilidad)
-        self.microstructure_engine = config.get('microstructure_engine')
-        self.multiframe_orchestrator = config.get('multiframe_orchestrator')
-
+        
         self.identified_levels = {}
         self.active_monitors = {}
         self.logger = logging.getLogger(self.__class__.__name__)
-
-        if self.microstructure_engine:
-            self.logger.info("✓ MicrostructureEngine integrated")
-        if self.multiframe_orchestrator:
-            self.logger.info("✓ MultiFrameOrchestrator integrated")
         
     def evaluate(self, market_data: pd.DataFrame, features: Dict) -> List[Signal]:
         """
@@ -263,38 +243,42 @@ class LiquiditySweepStrategy(StrategyBase):
     def _generate_signal(self, symbol: str, timestamp: datetime, level_price: float,
                         level_info: Dict, confirmation_score: int, criteria_scores: Dict,
                         market_data: pd.DataFrame) -> Optional[Signal]:
-        """
-        Generate trading signal after successful sweep detection.
-
-        MANDATO 16: Enriches metadata with microstructure + multiframe scores.
-        """
+        """Generate trading signal after successful sweep detection. NO ATR - pips + % price based."""
         current_price = market_data['close'].iloc[-1]
 
-        recent_highs = market_data['high'].tail(14)
-        recent_lows = market_data['low'].tail(14)
-        atr_value = (recent_highs - recent_lows).mean()
+        # NO ATR - use pips buffer from swept level
+        stop_buffer_pips = 15.0  # 15 pip buffer from swept level
+        buffer_price = stop_buffer_pips / 10000
 
         if level_info['type'] == 'support':
             direction = 'LONG'
-            signal_direction = 1
             entry_price = current_price
-            stop_loss = level_price - (atr_value * 1.5)
-            take_profit = current_price + (abs(current_price - stop_loss) * 3.0)
+            stop_loss = level_price - buffer_price
+            risk = entry_price - stop_loss
+            take_profit = current_price + (risk * 3.0)
         else:
             direction = 'SHORT'
-            signal_direction = -1
             entry_price = current_price
-            stop_loss = level_price + (atr_value * 1.5)
-            take_profit = current_price - (abs(stop_loss - current_price) * 3.0)
+            stop_loss = level_price + buffer_price
+            risk = stop_loss - entry_price
+            take_profit = current_price - (risk * 3.0)
+
+        # Validate risk (% price based, not ATR)
+        max_risk_pct = 0.025  # 2.5% max risk
+        if risk <= 0 or risk > (entry_price * max_risk_pct):
+            return None
 
         sizing_level = 4 if confirmation_score == 5 else 3
 
-        # MANDATO 16: Calculate enriched metadata for QualityScorer
-        metadata = self._build_metadata(
-            symbol, level_price, level_info, confirmation_score,
-            criteria_scores, atr_value, current_price, signal_direction, market_data
-        )
-
+        metadata = {
+            'level_price': float(level_price),
+            'level_type': level_info['type'],
+            'confirmation_score': confirmation_score,
+            'criteria_scores': criteria_scores,
+            'stop_buffer_pips': float(stop_buffer_pips),
+            'strategy_version': '2.0'  # Version bump - ATR purged
+        }
+        
         signal = Signal(
             timestamp=timestamp,
             symbol=symbol,
@@ -306,88 +290,5 @@ class LiquiditySweepStrategy(StrategyBase):
             sizing_level=sizing_level,
             metadata=metadata
         )
-
+        
         return signal
-
-    def _build_metadata(self, symbol: str, level_price: float, level_info: Dict,
-                       confirmation_score: int, criteria_scores: Dict, atr_value: float,
-                       current_price: float, signal_direction: int,
-                       market_data: pd.DataFrame) -> Dict:
-        """
-        Build complete metadata for QualityScorer.
-
-        MANDATO 16: Integrates microstructure + multiframe scores.
-
-        Returns metadata with:
-        - signal_strength: Based on confirmation criteria [0-1]
-        - mtf_confluence: Multi-timeframe alignment [0-1]
-        - structure_alignment: Distance to level (normalized, NO ATR) [0-1]
-        - microstructure_quality: From MicrostructureEngine [0-1]
-        - regime_confidence: From HTF trend strength [0-1]
-        """
-        # Base metadata (legacy)
-        metadata = {
-            'level_price': float(level_price),
-            'level_type': level_info['type'],
-            'confirmation_score': confirmation_score,
-            'criteria_scores': criteria_scores,
-            'strategy_version': '2.0-MANDATO16'
-        }
-
-        # 1. Signal Strength (based on confirmation criteria, NOT hardcoded)
-        # confirmation_score ∈ [0,5] → signal_strength ∈ [0,1]
-        signal_strength = confirmation_score / 5.0
-        metadata['signal_strength'] = round(signal_strength, 4)
-
-        # 2. Structure Alignment (distance to level, normalized by level size, NO ATR)
-        # Level "size" = atr_value como proxy del rango operativo del nivel
-        distance_to_level = abs(current_price - level_price)
-        level_size = atr_value if atr_value > 0 else abs(current_price * 0.001)  # Fallback 0.1%
-        order_block_distance_normalized = min(distance_to_level / level_size, 1.0)
-        structure_alignment = 1.0 - order_block_distance_normalized  # Cerca = alta alineación
-        metadata['structure_alignment'] = round(structure_alignment, 4)
-        metadata['order_block_distance_normalized'] = round(order_block_distance_normalized, 4)
-
-        # 3. Microstructure Quality (from MicrostructureEngine if available)
-        if self.microstructure_engine:
-            micro_state = self.microstructure_engine.get_detailed_state(symbol)
-            metadata['microstructure_quality'] = micro_state['microstructure_score']
-            metadata['vpin'] = micro_state['vpin']
-            metadata['ofi'] = micro_state['ofi']
-        else:
-            # Fallback: usar VPIN legacy si está en criteria
-            vpin_detected = criteria_scores.get('vpin_toxicity', 0)
-            # Sweep válido con VPIN alto → microstructure_quality moderada (0.5-0.6)
-            metadata['microstructure_quality'] = 0.5 if vpin_detected else 0.4
-            metadata['vpin'] = None
-            metadata['ofi'] = None
-
-        # 4. MTF Confluence (from MultiFrameOrchestrator if available)
-        if self.multiframe_orchestrator and len(market_data) >= 50:
-            # Usar market_data como HTF y MTF (simplificación; en producción serían distintos TFs)
-            htf_data = market_data.tail(200) if len(market_data) >= 200 else market_data
-            mtf_data = market_data.tail(50)
-            mf_result = self.multiframe_orchestrator.analyze_multiframe(
-                symbol, htf_data, mtf_data, current_price, signal_direction
-            )
-            metadata['mtf_confluence'] = mf_result['mtf_confluence']
-            metadata['multiframe_score'] = mf_result['multiframe_score']
-            metadata['mf_conflicts'] = mf_result['conflicts']
-            metadata['mf_recommendation'] = mf_result['recommendation']
-
-            # Regime confidence = HTF trend strength
-            metadata['regime_confidence'] = mf_result['htf_structure']['trend_strength']
-        else:
-            # Fallback: derivar de tendencia simple
-            if len(market_data) >= 20:
-                closes = market_data['close'].tail(20).values
-                slope = np.polyfit(range(len(closes)), closes, 1)[0]
-                trend_strength = min(abs(slope) * 1000, 1.0)  # Escalar
-                metadata['regime_confidence'] = round(trend_strength, 4)
-            else:
-                metadata['regime_confidence'] = 0.5  # Neutral
-
-            # MTF confluence default (neutral)
-            metadata['mtf_confluence'] = 0.5
-
-        return metadata

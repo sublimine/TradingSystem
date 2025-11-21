@@ -199,20 +199,24 @@ def calculate_roll_measure(prices: pd.Series) -> float:
     return spread_estimate
 
 
-def calculate_price_impact(trade_volume: float, avg_volume: float, 
+def calculate_price_impact(trade_volume: float, avg_volume: float,
                           volatility: float, liquidity_factor: float = 0.1) -> float:
     """
     Estimate price impact of a trade based on volume and market conditions.
-    
+
+    ⚠️ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY ⚠️
+    Volatility parameter can be ATR (TYPE B - descriptive metric) for price impact estimation.
+    This is NOT used for risk sizing, only for market impact calculation.
+
     Args:
         trade_volume: Size of trade in base currency units
         avg_volume: Average trade volume in recent period
-        volatility: Recent price volatility (e.g., ATR)
+        volatility: Recent price volatility (e.g., ATR - TYPE B descriptive metric only)
         liquidity_factor: Market-specific liquidity constant
-        
+
     Returns:
         Estimated price impact in price units
-        
+
     Formula:
         impact = liquidity_factor * volatility * (trade_volume / avg_volume)^0.5
     """

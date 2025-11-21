@@ -1,6 +1,50 @@
 """
 Strategic Stop Loss Placement - ELITE Institutional Implementation V2.0
 
+⚠️⚠️⚠️ DEPRECATED - PLAN OMEGA ⚠️⚠️⚠️
+
+This module is DEPRECATED as of PLAN OMEGA execution.
+
+**REASON FOR DEPRECATION:**
+This entire module uses ATR for risk sizing (buffer calculations), which violates
+PLAN OMEGA mandate: "ZERO ATR in risk/SL/TP decisions."
+
+All ATR-based buffer calculations (e.g., `atr * buffer * 0.5`) are TYPE A violations.
+
+**REPLACEMENT:**
+Use `src/features/institutional_sl_tp.py` which implements:
+- Structural stop placement (swing points, order blocks, FVG)
+- Fixed pips buffers (e.g., 15 pips, 20 pips)
+- % price based fallback stops (1.5-2.5%)
+- NO ATR in risk sizing
+
+**CONCEPTS TO PRESERVE FOR FUTURE ENHANCEMENT:**
+This file contains CRITICAL institutional concepts that should be migrated:
+
+1. **WICK LIQUIDITY SWEEP** (lines 92-206):
+   - Detects wicks that swept previous highs/lows (institutional stop hunts)
+   - "Wicks donde se sacó liquidez, el precio acostumbra a NO volver"
+   - Best stop placement = beyond wick sweep levels
+   - TODO: Migrate to institutional_sl_tp.py with PIPS buffers (not ATR)
+
+2. **UNTAKEN LIQUIDITY TARGETS** (lines 428-550):
+   - Detects equal highs/lows (2+ candles at same level)
+   - Liquidity pools never touched = magnets for price
+   - Institutions target resting stop losses
+   - TODO: Migrate to institutional_sl_tp.py for take profit logic
+
+3. **FRACTAL TARGETS** (lines 553-621):
+   - Local highs/lows indicating liquidity zones
+   - Liquidity channels = multiple fractals at similar levels
+   - TODO: Migrate to institutional_sl_tp.py
+
+**DO NOT USE THIS MODULE FOR NEW STRATEGIES.**
+**ALL 24 STRATEGIES NOW USE institutional_sl_tp.py EXCLUSIVELY.**
+
+---
+
+ORIGINAL DOCSTRING:
+
 Stops placed at STRUCTURAL levels, NOT arbitrary ATR multipliers.
 
 **NEW:** Multi-timeframe WICK LIQUIDITY SWEEP detection - wicks that swept liquidity
