@@ -1,5 +1,0 @@
-STATE_20251105_T0
-Created: 2025-11-05T14:17:35.698578
-Timezone: Europe/Zurich
-Strategies: 9/9 active
-Mode: DEMO

@@ -13,3 +13,7 @@ logs/
 # Runtime reports (JSONL fallback, DB dumps)
 reports/raw/
 reports/generated/
+
+# Python cache (OMEGA)
+__pycache__/
+*.py[cod]

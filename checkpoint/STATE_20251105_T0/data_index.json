@@ -1,6 +1,0 @@
-{
-  "historical_data": "MT5 live feed",
-  "cache_location": "none",
-  "local_storage": "logs/ and checkpoints/",
-  "persistence": "File-based (logs, JSON)"
-}
