@@ -197,8 +197,8 @@ class IDPInducement(StrategyBase):
         if not self.validate_inputs(data, features):
             return []
 
-        # Get indicador de rango (TYPE B - for pattern detection in identify_idp_pattern, not risk sizing)
-        indicador de rango = features.get('indicador de rango', 0.0001)  # TYPE B - descriptive metric for displacement detection
+        # Get ATR (TYPE B - for pattern detection in identify_idp_pattern, not risk sizing)
+        ATR = features.get('ATR', 0.0001)  # TYPE B - descriptive metric for displacement detection
 
         # Get required order flow features
         ofi = features.get('ofi')
@@ -218,7 +218,7 @@ class IDPInducement(StrategyBase):
         pattern = identify_idp_pattern(
             data.tail(50),
             key_levels,
-            indicador de rango,
+            ATR,
             {
                 'penetration_pips_min': self.penetration_pips_min,
                 'penetration_pips_max': self.penetration_pips_max,
@@ -252,7 +252,7 @@ class IDPInducement(StrategyBase):
 
         if confirmation_score >= self.min_confirmation_score:
             signal = self._create_idp_signal(
-                pattern, data, indicador de rango, confirmation_score, criteria, features
+                pattern, data, ATR, confirmation_score, criteria, features
             )
 
             if signal:
@@ -354,7 +354,7 @@ class IDPInducement(StrategyBase):
         return total_score, criteria
 
     def _create_idp_signal(self, pattern: Dict, data: pd.DataFrame,
-                          indicador de rango: float, confirmation_score: float,
+                          ATR: float, confirmation_score: float,
                           criteria: Dict, features: Dict) -> Optional[Signal]:
         """Generate signal for confirmed institutional IDP pattern. sin indicadores de rango for risk - pips + % price based."""
 
@@ -396,7 +396,7 @@ class IDPInducement(StrategyBase):
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * self.take_profit_r_multiple)
 
-            # Validate risk (% price based, not indicador de rango)
+            # Validate risk (% price based, not ATR)
             max_risk_pct = 0.025  # 2.5% max risk for IDP
             if risk <= 0 or risk > (entry_price * max_risk_pct):
                 return None
@@ -465,10 +465,11 @@ class IDPInducement(StrategyBase):
         if len(data) < 50:
             return False
 
-        required_features = ['ofi', 'cvd', 'vpin', 'indicador de rango']
+        required_features = ['ofi', 'cvd', 'vpin', 'ATR']
         for feature in required_features:
             if feature not in features:
                 self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")
                 return False
 
         return True
+

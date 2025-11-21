@@ -48,7 +48,6 @@ from src.strategies import (
     OrderFlowToxicityStrategy,
     OFIRefinement,
     VPINReversalExtreme,
-    BreakoutVolumeConfirmation
 )
 
 logger = logging.getLogger(__name__)
@@ -252,7 +251,6 @@ class BacktestEngine:
             'order_flow_toxicity': OrderFlowToxicityStrategy,
             'ofi_refinement': OFIRefinement,
             'vpin_reversal_extreme': VPINReversalExtreme,
-            'breakout_volume_confirmation': BreakoutVolumeConfirmation,
         }
 
         for strategy_name in strategy_configs:

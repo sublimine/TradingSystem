@@ -1,4 +1,4 @@
-"""
+﻿"""
 Machine Learning Adaptive Engine - Continuous Learning System
 
 This is the TRUE institutional edge: A system that LEARNS from every trade,
@@ -309,7 +309,7 @@ class PerformanceAttributionAnalyzer:
 
     3. Quality Score Performance Analysis:
        - Bins trades by quality score ranges (0.6-0.7, 0.7-0.8, 0.8-0.9, 0.9-1.0)
-       - Validates that higher quality scores → better outcomes
+       - Validates that higher quality scores â†’ better outcomes
        - Calibrates minimum quality threshold for signal approval
 
     4. ML Outcome Prediction:
@@ -330,7 +330,7 @@ class PerformanceAttributionAnalyzer:
     5. System adapts parameters and strategy selection
 
     Research basis:
-    - López de Prado (2018): Feature importance via MDI/MDA
+    - LÃ³pez de Prado (2018): Feature importance via MDI/MDA
     - Reinforcement Learning: Reward attribution
     - Institutional quant research: Trade analytics
     """
@@ -499,8 +499,8 @@ class PerformanceAttributionAnalyzer:
             ]
             # P2-026: Slice [:10] arbitrario puede causar inconsistencia
             # PROBLEMA: Si entry_features cambia orden o agregan nuevas features,
-            # slice puede capturar diferentes features entre trades → model drift
-            # RECOMENDACIÓN: Usar claves específicas para garantizar consistencia:
+            # slice puede capturar diferentes features entre trades â†’ model drift
+            # RECOMENDACIÃ“N: Usar claves especÃ­ficas para garantizar consistencia:
             # feature_keys = ['vpin', 'cvd', 'ofi', 'atr', 'volume_profile', ...]
             # features.extend([trade.entry_features.get(k, 0.0) for k in feature_keys])
             # Esto garantiza mismo feature vector siempre, con 0.0 default si falta
@@ -531,7 +531,7 @@ class PerformanceAttributionAnalyzer:
         # Evaluate
         score = self.outcome_predictor.score(X_test, y_test)
 
-        logger.info(f"Outcome predictor trained: R² = {score:.3f}")
+        logger.info(f"Outcome predictor trained: RÂ² = {score:.3f}")
 
         return score
 
@@ -560,7 +560,7 @@ class PerformanceAttributionAnalyzer:
 
         # Add entry features (limit to 10)
         entry_features = signal_features.get('entry_features', {})
-        # P2-026: Slice [:10] - mismo issue que línea 457, usar claves específicas
+        # P2-026: Slice [:10] - mismo issue que lÃ­nea 457, usar claves especÃ­ficas
         features.extend(list(entry_features.values())[:10])
 
         # Pad if necessary
@@ -579,9 +579,9 @@ class AdaptiveParameterOptimizer:
     Optimizes strategy parameters based on recent performance.
 
     This is where the system LEARNS and IMPROVES:
-    - If strategy performing poorly with current parameters → adjust
-    - If regime changes → adapt parameters for new regime
-    - If features change importance → adjust weights
+    - If strategy performing poorly with current parameters â†’ adjust
+    - If regime changes â†’ adapt parameters for new regime
+    - If features change importance â†’ adjust weights
     """
 
     def __init__(self, memory_db: TradeMemoryDatabase, attribution: PerformanceAttributionAnalyzer):
@@ -660,7 +660,7 @@ class AdaptiveParameterOptimizer:
         # If too many stops (MAE analysis)
         avg_mae = np.mean([t.mae_r for t in trades])
         if avg_mae > 0.7:  # Stops too tight
-            adjustments['stop_loss_atr_multiplier'] = 'INCREASE'  # Wider stops
+            adjustments['stop_loss_structural_buffer'] = 'INCREASE'  # OMEGA: widen structural buffer (no ATR multipliers)
 
         return adjustments
 
@@ -728,10 +728,10 @@ class MLAdaptiveEngine:
         # Learning state
         self.last_analysis_time = datetime.now()
         # P2-011: ML analysis interval configurable
-        # 6 horas = balance óptimo entre adaptación rápida y estabilidad estadística
-        # - Menor (2-4h): Sobre-optimización, parámetros inestables por sample pequeño
-        # - Mayor (12-24h): Lag excesivo, sistema no adapta a cambios régimen
-        # 6h captura ~50-100 trades en sesión activa, suficiente para significance estadístico
+        # 6 horas = balance Ã³ptimo entre adaptaciÃ³n rÃ¡pida y estabilidad estadÃ­stica
+        # - Menor (2-4h): Sobre-optimizaciÃ³n, parÃ¡metros inestables por sample pequeÃ±o
+        # - Mayor (12-24h): Lag excesivo, sistema no adapta a cambios rÃ©gimen
+        # 6h captura ~50-100 trades en sesiÃ³n activa, suficiente para significance estadÃ­stico
         self.analysis_interval_hours = 6  # Re-analyze every 6 hours
 
         # Performance tracking
@@ -887,7 +887,7 @@ class MLAdaptiveEngine:
         # 4. Train outcome predictor
         logger.info("\nTraining outcome predictor...")
         r_squared = self.attribution.train_outcome_predictor()
-        logger.info(f"Outcome predictor R²: {r_squared:.3f}")
+        logger.info(f"Outcome predictor RÂ²: {r_squared:.3f}")
 
         # 5. Optimize parameters for each strategy
         logger.info("\nOptimizing strategy parameters...")
@@ -913,3 +913,4 @@ class MLAdaptiveEngine:
             'last_analysis': self.last_analysis_time.isoformat(),
             'hours_since_analysis': (datetime.now() - self.last_analysis_time).total_seconds() / 3600,
         }
+

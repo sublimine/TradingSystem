@@ -38,15 +38,15 @@ class OrderBlock:
     def zone_width(self) -> float:
         return self.zone_high - self.zone_low
 
-def detect_displacement(data: pd.DataFrame, indicador de rango: float, displacement_threshold: float = 2.0,
+def detect_displacement(data: pd.DataFrame, ATR: float, displacement_threshold: float = 2.0,
                        volume_sigma_threshold: float = 2.5, lookback_periods: int = 50) -> List[OrderBlock]:
     """
     Detect institutional displacement creating order blocks.
 
     P2-017: Complete algorithm documentation for displacement detection
 
-    âš ï¸ indicador de rango USAGE: TYPE B - DESCRIPTIVE METRIC ONLY âš ï¸
-    indicador de rango is used here for DISPLACEMENT DETECTION (pattern identification), NOT risk sizing.
+    âš ï¸ ATR USAGE: TYPE B - DESCRIPTIVE METRIC ONLY âš ï¸
+    ATR is used here for DISPLACEMENT DETECTION (pattern identification), NOT risk sizing.
     This is a legitimate use case per PLAN OMEGA.
 
     ALGORITHM:
@@ -54,9 +54,9 @@ def detect_displacement(data: pd.DataFrame, indicador de rango: float, displacem
     anomalous volume, creating imbalance zones that act as future support/resistance.
 
     Detection Process:
-    1. Calculate displacement ratio = body_size / indicador de rango for each candle
+    1. Calculate displacement ratio = body_size / ATR for each candle
        - Body size measures directional price movement
-       - indicador de rango normalization makes threshold instrument-agnostic
+       - ATR normalization makes threshold instrument-agnostic
        - TYPE B: Used for pattern detection, NOT risk decisions
 
     2. Calculate volume z-score over rolling window
@@ -65,7 +65,7 @@ def detect_displacement(data: pd.DataFrame, indicador de rango: float, displacem
 
     3. Order block detected when BOTH conditions met:
        a) Displacement ratio >= displacement_threshold (default: 2.0)
-          - 2.0 = candle body is 2x normal indicador de rango movement
+          - 2.0 = candle body is 2x normal ATR movement
           - Indicates strong institutional push, not drift
 
        b) Volume z-score >= volume_sigma_threshold (default: 2.5)
@@ -78,8 +78,8 @@ def detect_displacement(data: pd.DataFrame, indicador de rango: float, displacem
 
     Args:
         data: OHLCV DataFrame with 'timestamp', 'open', 'high', 'low', 'close', 'tick_volume'
-        indicador de rango: Average True Range value for normalization (TYPE B - descriptive metric only)
-        displacement_threshold: Minimum body/indicador de rango ratio (default: 2.0)
+        ATR: Average True Range value for normalization (TYPE B - descriptive metric only)
+        displacement_threshold: Minimum body/ATR ratio (default: 2.0)
         volume_sigma_threshold: Minimum volume z-score (default: 2.5Ïƒ)
         lookback_periods: Rolling window for volume statistics (default: 50)
 
@@ -94,13 +94,13 @@ def detect_displacement(data: pd.DataFrame, indicador de rango: float, displacem
     try:
         if len(data) < lookback_periods:
             return []
-        if indicador de rango is None or np.isnan(indicador de rango) or indicador de rango <= 0:
+        if ATR is None or np.isnan(ATR) or ATR <= 0:
             return []
         
         volume_mean = data['tick_volume'].rolling(window=lookback_periods).mean()
         volume_std = data['tick_volume'].rolling(window=lookback_periods).std()
         body_sizes = abs(data['close'] - data['open'])
-        displacement_ratios = body_sizes / indicador de rango
+        displacement_ratios = body_sizes / ATR
         
         order_blocks = []
         
@@ -144,7 +144,7 @@ def validate_order_block_retest(block: OrderBlock, price_data: pd.DataFrame,
     Check if order block is being retested with rejection.
 
     âš ï¸ sin indicadores de rango - PIPS BUFFER âš ï¸
-    Uses fixed pips buffer (default: 5 pips) instead of indicador de rango multipliers.
+    Uses fixed pips buffer (default: 5 pips) instead of ATR multipliers.
     This is TYPE A compliant per PLAN OMEGA.
 
     Args:
@@ -226,3 +226,4 @@ def calculate_footprint_direction(data: pd.DataFrame, lookback: int = 10) -> flo
     except Exception as e:
         logger.error(f"Footprint calculation failed: {str(e)}")
         return 0.0
+

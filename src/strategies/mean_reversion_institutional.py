@@ -131,7 +131,7 @@ class MeanReversionInstitutional(StrategyBase):
         ofi = features.get('ofi')
         cvd = features.get('cvd')
         vpin = features.get('vpin')
-        indicador de rango = features.get('indicador de rango')  # TYPE B - descriptive metric only (not for risk decisions)
+        ATR = features.get('ATR')  # TYPE B - descriptive metric only (not for risk decisions)
         adx = features.get('adx', 50)  # Default high if not available
 
         # Get symbol and current price
@@ -306,7 +306,7 @@ class MeanReversionInstitutional(StrategyBase):
             stop_loss, _ = calculate_stop_loss_price(direction, current_price, self.stop_loss_pct, market_data)
             take_profit = mean_price  # Target mean (statistical reversion)
 
-            # Validate risk (% price based, not indicador de rango)
+            # Validate risk (% price based, not ATR)
             risk = abs(entry_price - stop_loss)
             reward = abs(take_profit - entry_price)
 
@@ -376,10 +376,11 @@ class MeanReversionInstitutional(StrategyBase):
         if len(market_data) < self.lookback_period:
             return False
 
-        required_features = ['ofi', 'cvd', 'vpin', 'indicador de rango']
+        required_features = ['ofi', 'cvd', 'vpin', 'ATR']
         for feature in required_features:
             if feature not in features:
                 self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")
                 return False
 
         return True
+

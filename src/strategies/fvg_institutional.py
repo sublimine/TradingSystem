@@ -403,8 +403,8 @@ class FVGInstitutional(StrategyBase):
         if not self.validate_inputs(data, features):
             return []
 
-        # Get indicador de rango (TYPE B - descriptive metric for gap size normalization)
-        indicador de rango = features.get('indicador de rango', 0.0001)  # Small default if missing
+        # Get ATR (TYPE B - descriptive metric for gap size normalization)
+        ATR = features.get('ATR', 0.0001)  # Small default if missing
 
         # Get required order flow features
         ofi = features.get('ofi')
@@ -448,7 +448,7 @@ class FVGInstitutional(StrategyBase):
 
             if confirmation_score >= self.min_confirmation_score:
                 signal = self._generate_fvg_signal(
-                    symbol, current_price, gap, indicador de rango,
+                    symbol, current_price, gap, ATR,
                     confirmation_score, criteria, data
                 )
 
@@ -544,7 +544,7 @@ class FVGInstitutional(StrategyBase):
             return None
 
     # REMOVED: _calculate_atr() - sin indicadores de rango calculation needed
-    # indicador de rango comes from features (TYPE B - descriptive metric for gap size normalization)
+    # ATR comes from features (TYPE B - descriptive metric for gap size normalization)
 
     def validate_inputs(self, data: pd.DataFrame, features: Dict) -> bool:
         """Validate required inputs are present."""
@@ -558,3 +558,4 @@ class FVGInstitutional(StrategyBase):
                 return False
 
         return True
+

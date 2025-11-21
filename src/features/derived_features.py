@@ -9,29 +9,29 @@ import pandas as pd
 from typing import Dict, List, Tuple, Optional
 
 
-def calculate_normalized_spread(spread: float, indicador de rango: float,
+def calculate_normalized_spread(spread: float, ATR: float,
                                 min_atr: float = 0.0001) -> float:
     """
     Calculate spread normalized by Average True Range.
 
-    NOTE: indicador de rango is TYPE B (descriptive) - used for metric normalization, NOT risk decisions.
+    NOTE: ATR is TYPE B (descriptive) - used for metric normalization, NOT risk decisions.
     This function is currently UNUSED in the codebase.
 
-    Normalization by indicador de rango makes spread comparable across instruments
+    Normalization by ATR makes spread comparable across instruments
     and market conditions with different volatility levels.
     
     Args:
         spread: Current bid-ask spread
-        indicador de rango: Average True Range
-        min_atr: Minimum indicador de rango to prevent division by zero
+        ATR: Average True Range
+        min_atr: Minimum ATR to prevent division by zero
         
     Returns:
         Normalized spread value
     """
-    if indicador de rango < min_atr:
-        indicador de rango = min_atr
+    if ATR < min_atr:
+        ATR = min_atr
     
-    return spread / indicador de rango
+    return spread / ATR
 
 
 def calculate_volume_price_correlation(prices: pd.Series, volumes: pd.Series,
@@ -207,11 +207,11 @@ def calculate_spread_velocity(spreads: pd.Series, window: int = 5) -> pd.Series:
 
 
 def calculate_liquidity_score(bid_volume: float, ask_volume: float,
-                              spread: float, indicador de rango: float) -> float:
+                              spread: float, ATR: float) -> float:
     """
     Calculate composite liquidity score.
 
-    NOTE: indicador de rango is TYPE B (descriptive) - used for spread normalization, NOT risk decisions.
+    NOTE: ATR is TYPE B (descriptive) - used for spread normalization, NOT risk decisions.
     This function is currently UNUSED in the codebase.
 
     Combines order book depth, spread tightness and volatility.
@@ -220,7 +220,7 @@ def calculate_liquidity_score(bid_volume: float, ask_volume: float,
         bid_volume: Volume available at best bid
         ask_volume: Volume available at best ask
         spread: Current bid-ask spread
-        indicador de rango: Average True Range
+        ATR: Average True Range
         
     Returns:
         Liquidity score (higher is better)
@@ -229,7 +229,7 @@ def calculate_liquidity_score(bid_volume: float, ask_volume: float,
     
     volume_score = min(total_volume / 1000000, 1.0)
     
-    normalized_spread = spread / indicador de rango if indicador de rango > 0 else 1.0
+    normalized_spread = spread / ATR if ATR > 0 else 1.0
     spread_score = max(0, 1.0 - normalized_spread)
     
     liquidity = (volume_score * 0.6 + spread_score * 0.4)
@@ -371,3 +371,4 @@ def calculate_market_regime_score(volatility_state: int, trend_strength: float,
         'trend_strength': trend_strength,
         'liquidity_score': liquidity_score
     }
+

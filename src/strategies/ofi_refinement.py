@@ -190,7 +190,7 @@ class OFIRefinement(StrategyBase):
         3. Check if |z-score| > threshold (1.8ÃÆ’)
         4. Verify VPIN < max_safe threshold (if available)
         5. Confirm price-OFI coherence
-        6. Generate signal with indicador de rango-based stops
+        6. Generate signal with ATR-based stops
         
         Args:
             data: DataFrame with OHLCV data
@@ -288,7 +288,7 @@ class OFIRefinement(StrategyBase):
                 'ofi_z_score': float(z_score),
                 'vpin': float(vpin) if vpin else None,
                 'price_change_20p': float(price_change_pct),
-                'indicador de rango': float(indicador de rango),  # TYPE B - descriptive metric only
+                'ATR': float(ATR),  # TYPE B - descriptive metric only
                 'risk_reward_ratio': self.take_profit_pct / self.stop_loss_pct  # ~2.08 (2.5% / 1.2%)
             }
         )
@@ -302,3 +302,4 @@ class OFIRefinement(StrategyBase):
         self.ofi_history.append({'timestamp': datetime.now(), 'ofi': current_ofi, 'z_score': z_score})
         
         return signal
+

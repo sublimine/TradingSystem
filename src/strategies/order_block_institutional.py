@@ -120,9 +120,9 @@ class OrderBlockInstitutional(StrategyBase):
         if not self.validate_inputs(data, features):
             return []
 
-        # Get indicador de rango
-        indicador de rango = features.get('indicador de rango')
-        if indicador de rango is None or np.isnan(indicador de rango) or indicador de rango <= 0:
+        # Get ATR
+        ATR = features.get('ATR')
+        if ATR is None or np.isnan(ATR) or ATR <= 0:
             return []
 
         # Get required order flow features
@@ -136,10 +136,10 @@ class OrderBlockInstitutional(StrategyBase):
         current_time = data.iloc[-1].get('timestamp', datetime.now())
 
         # Detect new displacement (institutional moves creating order blocks)
-        # NOTE: detect_displacement uses indicador de rango (TYPE B - descriptive metric for pattern detection)
-        displacement_threshold = 2.0  # Standard threshold: body must be 2x indicador de rango (TYPE B - pattern detection)
+        # NOTE: detect_displacement uses ATR (TYPE B - descriptive metric for pattern detection)
+        displacement_threshold = 2.0  # Standard threshold: body must be 2x ATR (TYPE B - pattern detection)
         new_blocks = detect_displacement(
-            data, indicador de rango, displacement_threshold,  # TYPE B
+            data, ATR, displacement_threshold,  # TYPE B
             self.volume_sigma_threshold
         )
 
@@ -345,7 +345,7 @@ class OrderBlockInstitutional(StrategyBase):
         return total_score, criteria
 
     def _create_order_block_signal(self, block: OrderBlock, current_price: float,
-                                  indicador de rango: float, data: pd.DataFrame,
+                                  ATR: float, data: pd.DataFrame,
                                   confirmation_score: float, criteria: Dict) -> Optional[Signal]:
         """Generate signal for confirmed institutional order block. sin indicadores de rango - % price + structure based."""
 
@@ -382,7 +382,7 @@ class OrderBlockInstitutional(StrategyBase):
                 risk = stop_loss - entry_price
                 take_profit = entry_price - (risk * 3.0)
 
-            # Validate risk (% price based, not indicador de rango)
+            # Validate risk (% price based, not ATR)
             max_risk_pct = 0.025  # 2.5% max risk
             if risk <= 0 or risk > (entry_price * max_risk_pct):
                 return None
@@ -448,10 +448,11 @@ class OrderBlockInstitutional(StrategyBase):
         if len(data) < 50:
             return False
 
-        required_features = ['ofi', 'cvd', 'vpin', 'indicador de rango']
+        required_features = ['ofi', 'cvd', 'vpin', 'ATR']
         for feature in required_features:
             if feature not in features:
                 self.logger.debug(f"Missing required feature: {feature} - strategy will not trade")
                 return False
 
         return True
+
